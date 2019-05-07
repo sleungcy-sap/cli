@@ -35,3 +35,15 @@ func ConvertFilterParameters(filters []Filter) url.Values {
 
 	return params
 }
+
+func FilterEqual(filterType constant.FilterType, value ...string) Filter {
+	return Filter{
+		Type:     filterType,
+		Values:   value,
+		Operator: constant.EqualOperator,
+	}
+}
+
+func FilterByName(value ...string) Filter {
+	return FilterEqual(constant.NameFilter, value...)
+}

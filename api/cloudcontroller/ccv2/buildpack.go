@@ -123,6 +123,25 @@ func (client *Client) GetBuildpacks(filters ...Filter) ([]Buildpack, Warnings, e
 	return buildpacks, warnings, err
 }
 
+// GetBuildpack returns back a buildpack.
+func (client *Client) GetBuildpack(guid string) (Buildpack, Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.GetBuildpackRequest,
+		URIParams:   Params{"buildpack_guid": guid},
+	})
+	if err != nil {
+		return Buildpack{}, nil, err
+	}
+
+	var entity Buildpack
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &entity,
+	}
+
+	err = client.connection.Make(request, &response)
+	return entity, response.Warnings, err
+}
+
 // UpdateBuildpack updates the buildpack with the provided GUID and returns the
 // updated buildpack. Note: Stack cannot be updated without uploading a new
 // buildpack.

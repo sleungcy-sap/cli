@@ -1,13 +1,6 @@
 package ccv2_test
 
 import (
-	"errors"
-	"io"
-	"io/ioutil"
-	"mime/multipart"
-	"net/http"
-	"strings"
-
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	. "code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
@@ -15,9 +8,15 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/wrapper"
 	"code.cloudfoundry.org/cli/types"
+	"errors"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/ghttp"
+	"io"
+	"io/ioutil"
+	"mime/multipart"
+	"net/http"
+	"strings"
 )
 
 var _ = Describe("Buildpack", func() {
@@ -313,6 +312,45 @@ var _ = Describe("Buildpack", func() {
 						Description: "Whoops",
 						ErrorCode:   "CF-SomeError",
 					},
+				}))
+				Expect(warnings).To(ConsistOf(Warnings{"this is a warning"}))
+			})
+		})
+	})
+
+	Describe("GetBuildpack", func() {
+		BeforeEach(func() {
+			response := `{
+							"metadata": {
+								"guid": "some-bp-guid"
+							},
+							"entity": {
+								"name": "some-bp-name",
+								"stack": null,
+								"position": 10,
+								"enabled": true,
+								"locked": true
+							}
+						}`
+			server.AppendHandlers(
+				CombineHandlers(
+					VerifyRequest(http.MethodGet, "/v2/buildpacks/some-bp-guid"),
+					RespondWith(http.StatusOK, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
+				),
+			)
+		})
+
+		When("buildpack exist", func() {
+			It("returns the buildpack", func() {
+				bp, warnings, err := client.GetBuildpack("some-bp-guid")
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(bp).To(Equal(Buildpack{
+					Name:     "some-bp-name",
+					GUID:     "some-bp-guid",
+					Position: types.NullInt{IsSet: true, Value: 10},
+					Enabled:  types.NullBool{IsSet: true, Value: true},
+					Locked:   types.NullBool{IsSet: true, Value: true},
 				}))
 				Expect(warnings).To(ConsistOf(Warnings{"this is a warning"}))
 			})

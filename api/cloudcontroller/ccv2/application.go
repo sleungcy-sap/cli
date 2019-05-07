@@ -83,6 +83,9 @@ type Application struct {
 
 	// State is the desired state of the application.
 	State constant.ApplicationState
+
+	// EnableSSH specifies whether SSH is enabled for this app.
+	EnableSSH types.NullBool
 }
 
 // MarshalJSON converts an application into a Cloud Controller Application.
@@ -103,6 +106,7 @@ func (application Application) MarshalJSON() ([]byte, error) {
 		SpaceGUID               string                              `json:"space_guid,omitempty"`
 		StackGUID               string                              `json:"stack_guid,omitempty"`
 		State                   constant.ApplicationState           `json:"state,omitempty"`
+		EnableSSH               *bool                               `json:"enable_ssh,omitempty"`
 	}{
 		DockerImage:          application.DockerImage,
 		EnvironmentVariables: application.EnvironmentVariables,
@@ -145,6 +149,10 @@ func (application Application) MarshalJSON() ([]byte, error) {
 		ccApp.Memory = &application.Memory.Value
 	}
 
+	if application.EnableSSH.IsSet {
+		ccApp.EnableSSH = &application.EnableSSH.Value
+	}
+
 	return json.Marshal(ccApp)
 }
 
@@ -176,6 +184,7 @@ func (application *Application) UnmarshalJSON(data []byte) error {
 			StagingFailedDescription string                 `json:"staging_failed_description"`
 			StagingFailedReason      string                 `json:"staging_failed_reason"`
 			State                    string                 `json:"state"`
+			EnableSSH                *bool                  `json:"enable_ssh"`
 		} `json:"entity"`
 	}
 	err := cloudcontroller.DecodeJSON(data, &ccApp)
@@ -202,6 +211,7 @@ func (application *Application) UnmarshalJSON(data []byte) error {
 	application.StagingFailedDescription = ccApp.Entity.StagingFailedDescription
 	application.StagingFailedReason = ccApp.Entity.StagingFailedReason
 	application.State = constant.ApplicationState(ccApp.Entity.State)
+	application.EnableSSH.ParseBoolValue(ccApp.Entity.EnableSSH)
 
 	if len(ccApp.Entity.EnvironmentVariables) > 0 {
 		envVariableValues := map[string]string{}

@@ -24,6 +24,10 @@ const (
 	DeleteServicePlanVisibilityRequest                   = "DeleteServicePlanVisibility"
 	DeleteServiceRequest                                 = "DeleteService"
 	DeleteSpaceRequest                                   = "DeleteSpace"
+	DeleteAppRequest                                     = "DeleteAppSpace"
+	DeleteBuildpackRequest                               = "DeleteBuildpackSpace"
+	DeleteSharedDomainRequest                            = "DeleteSharedDomain"
+	DeletePrivateDomainRequest                           = "DeletePrivateDomain"
 	DeleteSpaceUnmappedRoutesRequest                     = "DeleteUnmappedRoutes"
 	GetAppInstancesRequest                               = "GetAppInstances"
 	GetAppRequest                                        = "GetApp"
@@ -31,6 +35,7 @@ const (
 	GetAppsRequest                                       = "GetApps"
 	GetAppStatsRequest                                   = "GetAppStats"
 	GetBuildpacksRequest                                 = "GetBuildpacks"
+	GetBuildpackRequest                                  = "GetBuildpack"
 	GetConfigFeatureFlagsRequest                         = "GetConfigFeatureFlags"
 	GetEventsRequest                                     = "GetEvents"
 	GetInfoRequest                                       = "GetInfo"
@@ -85,6 +90,7 @@ const (
 	PostAppRequest                                       = "PostApp"
 	PostAppRestageRequest                                = "PostAppRestage"
 	PostBuildpackRequest                                 = "PostBuildpack"
+	PutConfigFeatureFlagsRequest                         = "PutConfigFeatureFlags"
 	PostOrganizationRequest                              = "PostOrganization"
 	PostRouteRequest                                     = "PostRoute"
 	PostServiceBindingRequest                            = "PostServiceBinding"
@@ -122,6 +128,7 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/apps", Method: http.MethodGet, Name: GetAppsRequest},
 	{Path: "/v2/apps", Method: http.MethodPost, Name: PostAppRequest},
 	{Path: "/v2/apps/:app_guid", Method: http.MethodGet, Name: GetAppRequest},
+	{Path: "/v2/apps/:app_guid", Method: http.MethodDelete, Name: DeleteAppRequest},
 	{Path: "/v2/apps/:app_guid", Method: http.MethodPut, Name: PutAppRequest},
 	{Path: "/v2/apps/:app_guid/bits", Method: http.MethodPut, Name: PutAppBitsRequest},
 	{Path: "/v2/apps/:app_guid/droplet/upload", Method: http.MethodPut, Name: PutDropletRequest},
@@ -131,9 +138,18 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/apps/:app_guid/stats", Method: http.MethodGet, Name: GetAppStatsRequest},
 	{Path: "/v2/buildpacks", Method: http.MethodPost, Name: PostBuildpackRequest},
 	{Path: "/v2/buildpacks", Method: http.MethodGet, Name: GetBuildpacksRequest},
+	{Path: "/v2/buildpacks/:buildpack_guid", Method: http.MethodGet, Name: GetBuildpackRequest},
+	{Path: "/v2/buildpacks/:buildpack_guid", Method: http.MethodDelete, Name: DeleteBuildpackRequest},
 	{Path: "/v2/buildpacks/:buildpack_guid", Method: http.MethodPut, Name: PutBuildpackRequest},
 	{Path: "/v2/buildpacks/:buildpack_guid/bits", Method: http.MethodPut, Name: PutBuildpackBitsRequest},
 	{Path: "/v2/config/feature_flags", Method: http.MethodGet, Name: GetConfigFeatureFlagsRequest},
+	{Path: "/v2/config/feature_flags/:name", Method: http.MethodPut, Name: PutConfigFeatureFlagsRequest},
+	{Path: "/v2/config/running_security_groups", Method: http.MethodGet, Name: GetConfigRunningSecurityGroupsRequest},
+	{Path: "/v2/config/running_security_groups/:security_group_guid", Method: http.MethodPut, Name: PutConfigRunningSecurityGroupRequest},
+	{Path: "/v2/config/running_security_groups/:security_group_guid", Method: http.MethodDelete, Name: DeleteConfigRunningSecurityGroupRequest},
+	{Path: "/v2/config/staging_security_groups", Method: http.MethodGet, Name: GetConfigStagingSecurityGroupsRequest},
+	{Path: "/v2/config/staging_security_groups/:security_group_guid", Method: http.MethodPut, Name: PutConfigStagingSecurityGroupRequest},
+	{Path: "/v2/config/staging_security_groups/:security_group_guid", Method: http.MethodDelete, Name: DeleteConfigStagingSecurityGroupRequest},
 	{Path: "/v2/events", Method: http.MethodGet, Name: GetEventsRequest},
 	{Path: "/v2/info", Method: http.MethodGet, Name: GetInfoRequest},
 	{Path: "/v2/jobs/:job_guid", Method: http.MethodGet, Name: GetJobRequest},
@@ -144,19 +160,28 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/organizations/:organization_guid/managers", Method: http.MethodPut, Name: PutOrganizationManagerByUsernameRequest},
 	{Path: "/v2/organizations/:organization_guid/managers/:manager_guid", Method: http.MethodPut, Name: PutOrganizationManagerRequest},
 	{Path: "/v2/organizations/:organization_guid/private_domains", Method: http.MethodGet, Name: GetOrganizationPrivateDomainsRequest},
+	{Path: "/v2/organizations/:organization_guid/private_domains/:private_domain_guid", Method: http.MethodPut, Name: PutOrganizationPrivateDomainsRequest},
+	{Path: "/v2/organizations/:organization_guid/private_domains/:private_domain_guid", Method: http.MethodDelete, Name: DeleteOrganizationPrivateDomainsRequest},
 	{Path: "/v2/organizations/:organization_guid/users", Method: http.MethodPut, Name: PutOrganizationUserByUsernameRequest},
 	{Path: "/v2/organizations/:organization_guid/users/:user_guid", Method: http.MethodPut, Name: PutOrganizationUserRequest},
 	{Path: "/v2/private_domains", Method: http.MethodGet, Name: GetPrivateDomainsRequest},
 	{Path: "/v2/private_domains/:private_domain_guid", Method: http.MethodGet, Name: GetPrivateDomainRequest},
+	{Path: "/v2/private_domains/:private_domain_guid", Method: http.MethodDelete, Name: DeletePrivateDomainRequest},
 	{Path: "/v2/quota_definitions/:organization_quota_guid", Method: http.MethodGet, Name: GetOrganizationQuotaDefinitionRequest},
+	{Path: "/v2/quota_definitions/:organization_quota_guid", Method: http.MethodPut, Name: PutOrganizationQuotaDefinitionRequest},
+	{Path: "/v2/quota_definitions/:organization_quota_guid", Method: http.MethodDelete, Name: DeleteOrganizationQuotaDefinitionRequest},
 	{Path: "/v2/quota_definitions", Method: http.MethodGet, Name: GetOrganizationQuotaDefinitionsRequest},
+	{Path: "/v2/quota_definitions", Method: http.MethodPost, Name: GetOrganizationQuotaDefinitionsRequest},
 	{Path: "/v2/resource_match", Method: http.MethodPut, Name: PutResourceMatchRequest},
 	{Path: "/v2/route_mappings", Method: http.MethodGet, Name: GetRouteMappingsRequest},
+	{Path: "/v2/route_mappings", Method: http.MethodPost, Name: PostRouteMappingsRequest},
 	{Path: "/v2/route_mappings/:route_mapping_guid", Method: http.MethodGet, Name: GetRouteMappingRequest},
+	{Path: "/v2/route_mappings/:route_mapping_guid", Method: http.MethodDelete, Name: DeleteRouteMappingRequest},
 	{Path: "/v2/routes", Method: http.MethodGet, Name: GetRoutesRequest},
 	{Path: "/v2/routes", Method: http.MethodPost, Name: PostRouteRequest},
 	{Path: "/v2/routes/:route_guid", Method: http.MethodDelete, Name: DeleteRouteRequest},
 	{Path: "/v2/routes/:route_guid", Method: http.MethodGet, Name: GetRouteRequest},
+	{Path: "/v2/routes/:route_guid", Method: http.MethodPut, Name: PutRouteRequest},
 	{Path: "/v2/routes/:route_guid/apps", Method: http.MethodGet, Name: GetRouteAppsRequest},
 	{Path: "/v2/routes/:route_guid/apps/:app_guid", Method: http.MethodDelete, Name: DeleteRouteAppRequest},
 	{Path: "/v2/routes/:route_guid/apps/:app_guid", Method: http.MethodPut, Name: PutRouteAppRequest},
@@ -164,6 +189,10 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/routes/reserved/domain/:domain_guid", Method: http.MethodGet, Name: GetRouteReservedRequest},
 	{Path: "/v2/routes/reserved/domain/:domain_guid/host/:host", Method: http.MethodGet, Name: GetRouteReservedDeprecatedRequest},
 	{Path: "/v2/security_groups", Method: http.MethodGet, Name: GetSecurityGroupsRequest},
+	{Path: "/v2/security_groups", Method: http.MethodPost, Name: PostSecurityGroupsRequest},
+	{Path: "/v2/security_groups/:security_group_guid", Method: http.MethodPut, Name: PostSecurityGroupRequest},
+	{Path: "/v2/security_groups/:security_group_guid", Method: http.MethodGet, Name: GetSecurityGroupRequest},
+	{Path: "/v2/security_groups/:security_group_guid", Method: http.MethodDelete, Name: DeleteSecurityGroupRequest},
 	{Path: "/v2/security_groups/:security_group_guid/spaces", Method: http.MethodGet, Name: GetSecurityGroupSpacesRequest},
 	{Path: "/v2/security_groups/:security_group_guid/spaces/:space_guid", Method: http.MethodDelete, Name: DeleteSecurityGroupSpaceRequest},
 	{Path: "/v2/security_groups/:security_group_guid/spaces/:space_guid", Method: http.MethodPut, Name: PutSecurityGroupSpaceRequest},
@@ -176,9 +205,13 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/service_bindings/:service_binding_guid", Method: http.MethodGet, Name: GetServiceBindingRequest},
 	{Path: "/v2/service_brokers", Method: http.MethodGet, Name: GetServiceBrokersRequest},
 	{Path: "/v2/service_brokers", Method: http.MethodPost, Name: PostServiceBrokerRequest},
+	{Path: "/v2/service_brokers/:service_broker_guid", Method: http.MethodPut, Name: PutServiceBrokerRequest},
+	{Path: "/v2/service_brokers/:service_broker_guid", Method: http.MethodDelete, Name: DeleteServiceBrokerRequest},
+	{Path: "/v2/service_brokers/:service_broker_guid", Method: http.MethodGet, Name: GetServiceBrokerRequest},
 	{Path: "/v2/service_instances", Method: http.MethodGet, Name: GetServiceInstancesRequest},
 	{Path: "/v2/service_instances", Method: http.MethodPost, Name: PostServiceInstancesRequest},
 	{Path: "/v2/service_instances/:service_instance_guid", Method: http.MethodGet, Name: GetServiceInstanceRequest},
+	{Path: "/v2/service_instances/:service_instance_guid", Method: http.MethodDelete, Name: DeleteServiceInstanceRequest},
 	{Path: "/v2/service_instances/:service_instance_guid/service_bindings", Method: http.MethodGet, Name: GetServiceInstanceServiceBindingsRequest},
 	{Path: "/v2/service_instances/:service_instance_guid/shared_from", Method: http.MethodGet, Name: GetServiceInstanceSharedFromRequest},
 	{Path: "/v2/service_instances/:service_instance_guid/shared_to", Method: http.MethodGet, Name: GetServiceInstanceSharedToRequest},
@@ -186,18 +219,30 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/service_plan_visibilities", Method: http.MethodGet, Name: GetServicePlanVisibilitiesRequest},
 	{Path: "/v2/service_plan_visibilities", Method: http.MethodPost, Name: PostServicePlanVisibilityRequest},
 	{Path: "/v2/service_plan_visibilities/:service_plan_visibility_guid", Method: http.MethodDelete, Name: DeleteServicePlanVisibilityRequest},
+	{Path: "/v2/service_plan_visibilities/:service_plan_visibility_guid", Method: http.MethodGet, Name: GetServicePlanVisibilityRequest},
+	{Path: "/v2/service_plan_visibilities/:service_plan_visibility_guid", Method: http.MethodPut, Name: UpdateServicePlanVisibilityRequest},
 	{Path: "/v2/service_plans", Method: http.MethodGet, Name: GetServicePlansRequest},
+	{Path: "/v2/service_plans", Method: http.MethodPost, Name: PostServicePlansRequest},
 	{Path: "/v2/service_plans/:service_plan_guid", Method: http.MethodPut, Name: PutServicePlanRequest},
+	{Path: "/v2/service_plans/:service_plan_guid", Method: http.MethodDelete, Name: DeleteServicePlanRequest},
 	{Path: "/v2/service_plans/:service_plan_guid", Method: http.MethodGet, Name: GetServicePlanRequest},
 	{Path: "/v2/services", Method: http.MethodGet, Name: GetServicesRequest},
+	{Path: "/v2/services", Method: http.MethodPost, Name: PostServicesRequest},
 	{Path: "/v2/services/:service_guid", Method: http.MethodGet, Name: GetServiceRequest},
+	{Path: "/v2/services/:service_guid", Method: http.MethodPut, Name: PutServiceRequest},
 	{Path: "/v2/services/:service_guid", Method: http.MethodDelete, Name: DeleteServiceRequest},
 	{Path: "/v2/shared_domains", Method: http.MethodGet, Name: GetSharedDomainsRequest},
 	{Path: "/v2/shared_domains", Method: http.MethodPost, Name: PostSharedDomainRequest},
 	{Path: "/v2/shared_domains/:shared_domain_guid", Method: http.MethodGet, Name: GetSharedDomainRequest},
+	{Path: "/v2/shared_domains/:shared_domain_guid", Method: http.MethodDelete, Name: DeleteSharedDomainRequest},
 	{Path: "/v2/organizations/:organization_guid/space_quota_definitions", Method: http.MethodGet, Name: GetOrganizationSpaceQuotasRequest},
 	{Path: "/v2/space_quota_definitions/:space_quota_guid/spaces/:space_guid", Method: http.MethodPut, Name: PutSpaceQuotaRequest},
+	{Path: "/v2/space_quota_definitions/:space_quota_guid/spaces/:space_guid", Method: http.MethodDelete, Name: DeleteSpaceQuotaRequest},
+	{Path: "/v2/space_quota_definitions", Method: http.MethodGet, Name: GetSpaceQuotaDefinitionsRequest},
+	{Path: "/v2/space_quota_definitions", Method: http.MethodPost, Name: PostSpaceQuotaDefinitionsRequest},
 	{Path: "/v2/space_quota_definitions/:space_quota_guid", Method: http.MethodGet, Name: GetSpaceQuotaDefinitionRequest},
+	{Path: "/v2/space_quota_definitions/:space_quota_guid", Method: http.MethodDelete, Name: DeleteSpaceQuotaDefinitionRequest},
+	{Path: "/v2/space_quota_definitions/:space_quota_guid", Method: http.MethodPut, Name: PutSpaceQuotaDefinitionRequest},
 	{Path: "/v2/spaces/:space_guid/summary", Method: http.MethodGet, Name: GetSpaceSummaryRequest},
 	{Path: "/v2/spaces", Method: http.MethodGet, Name: GetSpacesRequest},
 	{Path: "/v2/spaces", Method: http.MethodPost, Name: PostSpaceRequest},
@@ -206,6 +251,8 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/spaces/:guid/service_instances", Method: http.MethodGet, Name: GetSpaceServiceInstancesRequest},
 	{Path: "/v2/spaces/:space_guid/services", Method: http.MethodGet, Name: GetSpaceServicesRequest},
 	{Path: "/v2/spaces/:space_guid", Method: http.MethodDelete, Name: DeleteSpaceRequest},
+	{Path: "/v2/spaces/:space_guid", Method: http.MethodGet, Name: GetSpaceRequest},
+	{Path: "/v2/spaces/:space_guid", Method: http.MethodPut, Name: PutSpaceRequest},
 	{Path: "/v2/spaces/:space_guid/routes", Method: http.MethodGet, Name: GetSpaceRoutesRequest},
 	{Path: "/v2/spaces/:space_guid/security_groups", Method: http.MethodGet, Name: GetSpaceSecurityGroupsRequest},
 	{Path: "/v2/spaces/:space_guid/staging_security_groups", Method: http.MethodGet, Name: GetSpaceStagingSecurityGroupsRequest},
@@ -215,6 +262,10 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/stacks", Method: http.MethodGet, Name: GetStacksRequest},
 	{Path: "/v2/stacks/:stack_guid", Method: http.MethodGet, Name: GetStackRequest},
 	{Path: "/v2/user_provided_service_instances", Method: http.MethodGet, Name: GetUserProvidedServiceInstancesRequest},
+	{Path: "/v2/user_provided_service_instances", Method: http.MethodPost, Name: PostUserProvidedServiceInstancesRequest},
+	{Path: "/v2/user_provided_service_instances/:user_provided_service_instance_guid", Method: http.MethodPut, Name: PutUserProvidedServiceInstanceRequest},
+	{Path: "/v2/user_provided_service_instances/:user_provided_service_instance_guid", Method: http.MethodGet, Name: GetUserProvidedServiceInstanceRequest},
+	{Path: "/v2/user_provided_service_instances/:user_provided_service_instance_guid", Method: http.MethodDelete, Name: DeleteUserProvidedServiceInstanceRequest},
 	{Path: "/v2/user_provided_service_instances/:user_provided_service_instance_guid/service_bindings", Method: http.MethodGet, Name: GetUserProvidedServiceInstanceServiceBindingsRequest},
 	{Path: "/v2/users", Method: http.MethodPost, Name: PostUserRequest},
 }

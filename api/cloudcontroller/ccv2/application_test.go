@@ -524,7 +524,7 @@ var _ = Describe("Application", func() {
 
 	Describe("UpdateApplication", func() {
 		When("the update is successful", func() {
-			When("updating all fields", func() { //are we encoding everything correctly?
+			When("updating all fields", func() { // are we encoding everything correctly?
 				BeforeEach(func() {
 					response1 := `{
 				"metadata": {
@@ -554,7 +554,8 @@ var _ = Describe("Application", func() {
 					"name": "app-name-1",
 					"package_updated_at": "2015-03-10T23:11:54Z",
 					"stack_guid": "some-stack-guid",
-					"state": "STARTED"
+					"state": "STARTED",
+					"enable_ssh": true
 				}
 			}`
 					expectedBody := map[string]interface{}{
@@ -578,6 +579,7 @@ var _ = Describe("Application", func() {
 						"memory":                     0,
 						"stack_guid":                 "some-stack-guid",
 						"state":                      "STARTED",
+						"enable_ssh":                 true,
 					}
 
 					server.AppendHandlers(
@@ -612,6 +614,7 @@ var _ = Describe("Application", func() {
 						Memory:                  types.NullByteSizeInMb{IsSet: true},
 						StackGUID:               "some-stack-guid",
 						State:                   constant.ApplicationStarted,
+						EnableSSH:               types.NullBool{Value: true, IsSet: true},
 					})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -643,6 +646,7 @@ var _ = Describe("Application", func() {
 						PackageUpdatedAt:        updatedAt,
 						StackGUID:               "some-stack-guid",
 						State:                   constant.ApplicationStarted,
+						EnableSSH:               types.NullBool{Value: true, IsSet: true},
 					}))
 					Expect(warnings).To(ConsistOf(Warnings{"this is a warning"}))
 				})
