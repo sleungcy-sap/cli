@@ -28,10 +28,10 @@ func (client *Client) GetSpaceQuotaDefinition(guid string) (Quota, Warnings, err
 }
 
 // GetSpaceQuotas returns all the space quotas for the org
-func (client *Client) GetSpaceQuotas(orgGUID string) ([]Quota, Warnings, error) {
+func (client *Client) GetSpaceQuotas(spaceGUID string) ([]Quota, Warnings, error) {
 	request, err := client.newHTTPRequest(requestOptions{
 		RequestName: internal.GetOrganizationSpaceQuotasRequest,
-		URIParams:   Params{"organization_guid": orgGUID},
+		URIParams:   Params{"space_guid": spaceGUID},
 	})
 
 	if err != nil {

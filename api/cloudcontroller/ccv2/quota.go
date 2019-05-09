@@ -2,16 +2,10 @@ package ccv2
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/internal"
 	"code.cloudfoundry.org/cli/types"
 	"encoding/json"
-)
-
-type QuotaType int
-
-const (
-	SpaceQuota QuotaType = iota
-	OrgQuota
 )
 
 // Quota is the generic definition of a quota.
@@ -105,17 +99,17 @@ func (q *Quota) UnmarshalJSON(data []byte) error {
 
 func (q *Quota) MarshalJSON() ([]byte, error) {
 	ccQ := struct {
-		Name                    string `json:"name"`
-		NonBasicServicesAllowed bool   `json:"non_basic_services_allowed"`
-		TotalServices           int    `json:"total_services"`
+		Name                    string `json:"name,omitempty"`
+		NonBasicServicesAllowed bool   `json:"non_basic_services_allowed,omitempty"`
+		TotalServices           int    `json:"total_services,omitempty"`
 		TotalServiceKeys        *int   `json:"total_service_keys,omitempty"`
-		TotalRoutes             int    `json:"total_routes"`
+		TotalRoutes             int    `json:"total_routes,omitempty"`
 		TotalReservedRoutePorts *int   `json:"total_reserved_route_ports,omitempty"`
 		TotalPrivateDomains     *int   `json:"total_private_domains,omitempty"`
-		MemoryLimit             int64  `json:"memory_limit"`
-		InstanceMemoryLimit     int64  `json:"instance_memory_limit"`
-		AppInstanceLimit        *int   `json:"app_instance_limit"`
-		AppTaskLimit            *int   `json:"app_task_limit"`
+		MemoryLimit             int64  `json:"memory_limit,omitempty"`
+		InstanceMemoryLimit     int64  `json:"instance_memory_limit,omitempty"`
+		AppInstanceLimit        *int   `json:"app_instance_limit,omitempty"`
+		AppTaskLimit            *int   `json:"app_task_limit,omitempty"`
 		OrganizationGUID        string `json:"organization_guid,omitempty"`
 	}{
 		Name:                    q.Name,
@@ -158,4 +152,47 @@ func (q *Quota) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(ccQ)
+}
+
+// CreateQuota returns an Quota associated with the
+// provided quota and for type either SpaceQuota or OrgQuota.
+func (client *Client) CreateQuota(quotaType constant.QuotaType, quota Quota) (Quota, Warnings, error) {
+	if quotaType == constant.SpaceQuota {
+		return client.CreateSpaceQuotaDefinition(quota)
+	}
+	return client.CreateOrganizationQuota(quota)
+}
+
+// GetQuota returns an Quota associated with the
+// provided GUID and for type either SpaceQuota or OrgQuota.
+func (client *Client) GetQuota(quotaType constant.QuotaType, guid string) (Quota, Warnings, error) {
+	if quotaType == constant.SpaceQuota {
+		return client.GetSpaceQuotaDefinition(guid)
+	}
+	return client.GetOrganizationQuota(guid)
+}
+
+// GetQuotas returns an Quota list associated with the
+// provided filters and for type either SpaceQuota or OrgQuota.
+func (client *Client) GetQuotas(quotaType constant.QuotaType, filters ...Filter) ([]Quota, Warnings, error) {
+	if quotaType == constant.SpaceQuota {
+		return client.GetSpaceQuotaDefinitions(filters...)
+	}
+	return client.GetOrganizationQuotas(filters...)
+}
+
+// UpdateQuota updates the quota with the given GUID and for type either SpaceQuota or OrgQuota.
+func (client *Client) UpdateQuota(quotaType constant.QuotaType, quota Quota) (Quota, Warnings, error) {
+	if quotaType == constant.SpaceQuota {
+		return client.UpdateSpaceQuotaDefinition(quota)
+	}
+	return client.UpdateOrganizationQuota(quota)
+}
+
+// DeleteQuota delete a quota and for type either SpaceQuota or OrgQuota
+func (client *Client) DeleteQuota(quotaType constant.QuotaType, guid string) (Warnings, error) {
+	if quotaType == constant.SpaceQuota {
+		return client.DeleteSpaceQuotaDefinition(guid)
+	}
+	return client.DeleteOrganizationQuota(guid)
 }

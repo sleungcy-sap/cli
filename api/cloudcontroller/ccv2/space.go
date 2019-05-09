@@ -2,7 +2,9 @@ package ccv2
 
 import (
 	"bytes"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"encoding/json"
+	"fmt"
 	"net/url"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
@@ -54,6 +56,21 @@ func (space *Space) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// UnmarshalJSON helps unmarshal a Cloud Controller Space response.
+func (space Space) MarshalJSON() ([]byte, error) {
+	ccObj := struct {
+		Name             string `json:"name,omitempty"`
+		OrganizationGUID string `json:"organization_guid,omitempty"`
+		AllowSSH         bool   `json:"allow_ssh,omitempty"`
+	}{
+		Name:             space.Name,
+		OrganizationGUID: space.OrganizationGUID,
+		AllowSSH:         space.AllowSSH,
+	}
+
+	return json.Marshal(ccObj)
+}
+
 type createSpaceRequestBody struct {
 	Name             string `json:"name"`
 	OrganizationGUID string `json:"organization_guid"`
@@ -86,6 +103,30 @@ func (client *Client) CreateSpace(spaceName string, orgGUID string) (Space, Warn
 	err = client.connection.Make(request, &response)
 
 	return space, response.Warnings, err
+}
+
+// CreateSpace creates a new space with the provided spaceName in the org with
+// the provided orgGUID.
+func (client *Client) CreateSpaceFromObject(space Space) (Space, Warnings, error) {
+	bodyBytes, _ := json.Marshal(space)
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PostSpaceRequest,
+		Body:        bytes.NewReader(bodyBytes),
+	})
+
+	if err != nil {
+		return Space{}, nil, err
+	}
+
+	var updateSpace Space
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updateSpace,
+	}
+
+	err = client.connection.Make(request, &response)
+
+	return updateSpace, response.Warnings, err
 }
 
 // DeleteSpace deletes the Space associated with the provided
@@ -290,8 +331,6 @@ func (client *Client) UpdateSpaceManagerByUsername(spaceGUID string, username st
 	return response.Warnings, err
 }
 
-// begin:==kil--sl---sl==
-
 // GetSpace returns back a space.
 func (client *Client) GetSpace(guid string) (Space, Warnings, error) {
 	request, err := client.newHTTPRequest(requestOptions{
@@ -338,4 +377,66 @@ func (client *Client) UpdateSpace(space Space) (Space, Warnings, error) {
 	return updatedObj, response.Warnings, err
 }
 
-// end:==kil--sl---sl==
+// UpdateSpaceUserByRole makes the user or client with the given UAA ID a
+// member of this role in the space . (Only available: SpaceManager, SpaceDeveloper and SpaceAuditor)
+func (client *Client) UpdateSpaceUserByRole(role constant.UserRole, guid string, uaaID string) (Warnings, error) {
+	paramUserKey := ""
+	requestName := ""
+	switch role {
+	case constant.SpaceManager:
+		paramUserKey = "manager_guid"
+		requestName = internal.PutSpaceManagerRequest
+	case constant.SpaceDeveloper:
+		paramUserKey = "developer_guid"
+		requestName = internal.PutSpaceDeveloperRequest
+	case constant.SpaceAuditor:
+		paramUserKey = "auditor_guid"
+		requestName = internal.PutSpaceAuditorRequest
+	default:
+		return Warnings{}, fmt.Errorf("Not a valid role, it must be one of SpaceManager, SpaceDeveloper and SpaceAuditor")
+	}
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: requestName,
+		URIParams:   Params{"space_guid": guid, paramUserKey: uaaID},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+	err = client.connection.Make(request, &response)
+
+	return response.Warnings, err
+}
+
+// UpdateSpaceUserByRole makes the user or client with the given UAA ID a
+// member of this role in the space . (Only available: SpaceManager, SpaceDeveloper and SpaceAuditor)
+func (client *Client) DeleteSpaceUserByRole(role constant.UserRole, guid string, uaaID string) (Warnings, error) {
+	paramUserKey := ""
+	requestName := ""
+	switch role {
+	case constant.SpaceManager:
+		paramUserKey = "manager_guid"
+		requestName = internal.DeleteSpaceManagerRequest
+	case constant.SpaceDeveloper:
+		paramUserKey = "developer_guid"
+		requestName = internal.DeleteSpaceAuditorRequest
+	case constant.SpaceAuditor:
+		paramUserKey = "auditor_guid"
+		requestName = internal.DeleteSpaceAuditorRequest
+	default:
+		return Warnings{}, fmt.Errorf("Not a valid role, it must be one of SpaceManager, SpaceDeveloper and SpaceAuditor")
+	}
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: requestName,
+		URIParams:   Params{"space_guid": guid, paramUserKey: uaaID},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+	err = client.connection.Make(request, &response)
+
+	return response.Warnings, err
+}

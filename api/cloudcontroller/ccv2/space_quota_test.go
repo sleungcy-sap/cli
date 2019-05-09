@@ -132,8 +132,8 @@ var _ = Describe("Space Quotas", func() {
 			It("returns all the space quotas for the org guid", func() {
 				spaceQuotas, warnings, err := client.GetSpaceQuotas("some-org-guid")
 				Expect(spaceQuotas).To(ConsistOf([]Quota{
-					Quota{GUID: "some-space-quota-guid-1", Name: "some-quota-1"},
-					Quota{GUID: "some-space-quota-guid-2", Name: "some-quota-2"},
+					Quota{GUID: "some-space-quota-guid-1", Name: "some-quota-1", OrganizationGUID: "some-org-guid"},
+					Quota{GUID: "some-space-quota-guid-2", Name: "some-quota-2", OrganizationGUID: "some-org-guid"},
 				}))
 				Expect(warnings).To(ConsistOf(Warnings{"this is a warning"}))
 				Expect(err).ToNot(HaveOccurred())

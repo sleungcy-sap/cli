@@ -116,8 +116,6 @@ func (client *Client) GetServicePlanVisibilities(filters ...Filter) ([]ServicePl
 	return fullVisibilityList, warnings, err
 }
 
-// begin:==kil--sl---sl==
-
 // GetServicePlanVisibility returns back a service plan visibility.
 func (client *Client) GetServicePlanVisibility(guid string) (ServicePlanVisibility, Warnings, error) {
 	request, err := client.newHTTPRequest(requestOptions{
@@ -140,16 +138,21 @@ func (client *Client) GetServicePlanVisibility(guid string) (ServicePlanVisibili
 }
 
 // UpdateServicePlanVisibility updates the service plan visibility with the given GUID.
-func (client *Client) UpdateServicePlanVisibility(servicePlanVisibility ServicePlanVisibility) (ServicePlanVisibility, Warnings, error) {
-	body, err := json.Marshal(servicePlanVisibility)
+func (client *Client) UpdateServicePlanVisibility(planGUID string, orgGUID string) (ServicePlanVisibility, Warnings, error) {
+	requestBody := createServicePlanRequestBody{
+		ServicePlanGUID:  planGUID,
+		OrganizationGUID: orgGUID,
+	}
+
+	bodyBytes, err := json.Marshal(requestBody)
 	if err != nil {
 		return ServicePlanVisibility{}, nil, err
 	}
 
 	request, err := client.newHTTPRequest(requestOptions{
 		RequestName: internal.PutServicePlanVisibilityRequest,
-		URIParams:   Params{"service_plan_visibility_guid": servicePlanVisibility.GUID},
-		Body:        bytes.NewReader(body),
+		URIParams:   Params{"service_plan_visibility_guid": planGUID},
+		Body:        bytes.NewReader(bodyBytes),
 	})
 	if err != nil {
 		return ServicePlanVisibility{}, nil, err
@@ -163,5 +166,3 @@ func (client *Client) UpdateServicePlanVisibility(servicePlanVisibility ServiceP
 	err = client.connection.Make(request, &response)
 	return updatedObj, response.Warnings, err
 }
-
-// end:==kil--sl---sl==

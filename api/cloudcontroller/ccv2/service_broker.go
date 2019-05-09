@@ -13,6 +13,8 @@ import (
 type ServiceBroker struct {
 	// AuthUsername is the HTTP Basic Auth username of the service broker.
 	AuthUsername string
+	// AuthPassword is the HTTP Basic Auth password of the service broker.
+	AuthPassword string
 	// BrokerURL is the URL of the service broker.
 	BrokerURL string
 	// GUID is the unique Service Broker identifier.
@@ -45,6 +47,23 @@ func (serviceBroker *ServiceBroker) UnmarshalJSON(data []byte) error {
 	serviceBroker.AuthUsername = ccServiceBroker.Entity.AuthUsername
 	serviceBroker.SpaceGUID = ccServiceBroker.Entity.SpaceGUID
 	return nil
+}
+
+// MarshalJSON helps marshal a Cloud Controller Service Broker request.
+func (serviceBroker *ServiceBroker) MarshalJSON() ([]byte, error) {
+	ccObj := struct {
+		Name         string `json:"name,omitempty"`
+		BrokerURL    string `json:"broker_url,omitempty"`
+		AuthUsername string `json:"auth_username,omitempty"`
+		AuthPassword string `json:"auth_password,omitempty"`
+	}{
+		Name:         serviceBroker.Name,
+		BrokerURL:    serviceBroker.BrokerURL,
+		AuthUsername: serviceBroker.AuthUsername,
+		AuthPassword: serviceBroker.AuthPassword,
+	}
+
+	return json.Marshal(ccObj)
 }
 
 type createServiceBrokerRequestBody struct {
@@ -118,8 +137,6 @@ func (client *Client) GetServiceBrokers(filters ...Filter) ([]ServiceBroker, War
 	return fullBrokersList, warnings, err
 }
 
-// begin:==kil--sl---sl==
-
 // UpdateServiceBroker updates the service broker with the given GUID.
 func (client *Client) UpdateServiceBroker(serviceBroker ServiceBroker) (ServiceBroker, Warnings, error) {
 	body, err := json.Marshal(serviceBroker)
@@ -183,5 +200,3 @@ func (client *Client) GetServiceBroker(guid string) (ServiceBroker, Warnings, er
 	err = client.connection.Make(request, &response)
 	return obj, response.Warnings, err
 }
-
-// end:==kil--sl---sl==

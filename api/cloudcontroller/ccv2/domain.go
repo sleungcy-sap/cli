@@ -295,3 +295,21 @@ func (client *Client) CreatePrivateDomain(domainName string, organizationGUID st
 	err = client.connection.Make(request, &response)
 	return response.Warnings, err
 }
+
+// CreateDomain creates a cloud controller domain in with the given settings.
+func (client *Client) SetOrganizationPrivateDomain(domainGUID string, organizationGUID string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PutOrganizationPrivateDomainRequest,
+		URIParams: Params{
+			"organization_guid":   organizationGUID,
+			"private_domain_guid": domainGUID,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	var response cloudcontroller.Response
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}

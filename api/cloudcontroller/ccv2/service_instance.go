@@ -48,6 +48,9 @@ type ServiceInstance struct {
 	// LastOperation is the status of the last operation requested on the service
 	// instance.
 	LastOperation LastOperation
+
+	// Arbitrary parameters to pass along to the service instance.
+	Parameters map[string]interface{}
 }
 
 // Managed returns true if the Service Instance is a managed service.
@@ -60,15 +63,16 @@ func (serviceInstance *ServiceInstance) UnmarshalJSON(data []byte) error {
 	var ccServiceInstance struct {
 		Metadata internal.Metadata
 		Entity   struct {
-			Name            string        `json:"name"`
-			SpaceGUID       string        `json:"space_guid"`
-			ServiceGUID     string        `json:"service_guid"`
-			ServicePlanGUID string        `json:"service_plan_guid"`
-			Type            string        `json:"type"`
-			Tags            []string      `json:"tags"`
-			DashboardURL    string        `json:"dashboard_url"`
-			RouteServiceURL string        `json:"route_service_url"`
-			LastOperation   LastOperation `json:"last_operation"`
+			Name            string                 `json:"name"`
+			SpaceGUID       string                 `json:"space_guid"`
+			ServiceGUID     string                 `json:"service_guid"`
+			ServicePlanGUID string                 `json:"service_plan_guid"`
+			Type            string                 `json:"type"`
+			Tags            []string               `json:"tags"`
+			DashboardURL    string                 `json:"dashboard_url"`
+			RouteServiceURL string                 `json:"route_service_url"`
+			LastOperation   LastOperation          `json:"last_operation"`
+			Parameters      map[string]interface{} `json:"parameters"`
 		}
 	}
 	err := cloudcontroller.DecodeJSON(data, &ccServiceInstance)
@@ -86,7 +90,27 @@ func (serviceInstance *ServiceInstance) UnmarshalJSON(data []byte) error {
 	serviceInstance.DashboardURL = ccServiceInstance.Entity.DashboardURL
 	serviceInstance.RouteServiceURL = ccServiceInstance.Entity.RouteServiceURL
 	serviceInstance.LastOperation = ccServiceInstance.Entity.LastOperation
+	serviceInstance.Parameters = ccServiceInstance.Entity.Parameters
 	return nil
+}
+
+// MarshalJSON converts an user provided service instance into a Cloud Controller user provided service instance.
+func (serviceInstance ServiceInstance) MarshalJSON() ([]byte, error) {
+	ccObj := struct {
+		Name            string                 `json:"name,omitempty"`
+		SpaceGUID       string                 `json:"space_guid,omitempty"`
+		ServicePlanGUID string                 `json:"service_plan_guid,omitempty"`
+		Tags            []string               `json:"tags,omitempty"`
+		Parameters      map[string]interface{} `json:"parameters,omitempty"`
+	}{
+		Name:            serviceInstance.Name,
+		SpaceGUID:       serviceInstance.SpaceGUID,
+		ServicePlanGUID: serviceInstance.ServicePlanGUID,
+		Tags:            serviceInstance.Tags,
+		Parameters:      serviceInstance.Parameters,
+	}
+
+	return json.Marshal(ccObj)
 }
 
 // UserProvided returns true if the Service Instance is a user provided
@@ -122,6 +146,32 @@ func (client *Client) CreateServiceInstance(spaceGUID, servicePlanGUID, serviceI
 	request, err := client.newHTTPRequest(requestOptions{
 		RequestName: internal.PostServiceInstancesRequest,
 		Body:        bytes.NewReader(bodyBytes),
+		Query:       url.Values{"accepts_incomplete": {"true"}},
+	})
+	if err != nil {
+		return ServiceInstance{}, nil, err
+	}
+
+	var instance ServiceInstance
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &instance,
+	}
+
+	err = client.connection.Make(request, &response)
+	return instance, response.Warnings, err
+}
+
+// CreateServiceInstance posts a service instance resource with the provided
+// attributes to the api and returns the result.
+func (client *Client) CreateServiceInstanceFromObject(serviceInstance ServiceInstance) (ServiceInstance, Warnings, error) {
+	body, err := json.Marshal(serviceInstance)
+	if err != nil {
+		return ServiceInstance{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PostServiceInstancesRequest,
+		Body:        bytes.NewReader(body),
 		Query:       url.Values{"accepts_incomplete": {"true"}},
 	})
 	if err != nil {
@@ -219,34 +269,30 @@ func (client *Client) GetSpaceServiceInstances(spaceGUID string, includeUserProv
 	return fullInstancesList, warnings, err
 }
 
-// GetUserProvidedServiceInstances returns back a list of *user provided* Service Instances based
-// off the provided queries.
-func (client *Client) GetUserProvidedServiceInstances(filters ...Filter) ([]ServiceInstance, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.GetUserProvidedServiceInstancesRequest,
-		Query:       ConvertFilterParameters(filters),
-	})
+// UpdateServiceInstance updates the service instance with the given GUID.
+func (client *Client) UpdateServiceInstance(serviceInstance ServiceInstance) (ServiceInstance, Warnings, error) {
+	body, err := json.Marshal(serviceInstance)
 	if err != nil {
-		return nil, nil, err
+		return ServiceInstance{}, nil, err
 	}
 
-	var fullInstancesList []ServiceInstance
-	warnings, err := client.paginate(request, ServiceInstance{}, func(item interface{}) error {
-		if instance, ok := item.(ServiceInstance); ok {
-			fullInstancesList = append(fullInstancesList, instance)
-		} else {
-			return ccerror.UnknownObjectInListError{
-				Expected:   ServiceInstance{},
-				Unexpected: item,
-			}
-		}
-		return nil
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PutServiceInstanceRequest,
+		URIParams:   Params{"service_instance_guid": serviceInstance.GUID},
+		Body:        bytes.NewReader(body),
 	})
+	if err != nil {
+		return ServiceInstance{}, nil, err
+	}
 
-	return fullInstancesList, warnings, err
+	var updatedObj ServiceInstance
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
 }
-
-// begin:==kil--sl---sl==
 
 // DeleteServiceInstance delete a service instance
 func (client *Client) DeleteServiceInstance(guid string) (Warnings, error) {
@@ -265,5 +311,3 @@ func (client *Client) DeleteServiceInstance(guid string) (Warnings, error) {
 	err = client.connection.Make(request, &response)
 	return response.Warnings, err
 }
-
-// end:==kil--sl---sl==

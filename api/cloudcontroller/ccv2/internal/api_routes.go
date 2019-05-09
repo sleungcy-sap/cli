@@ -17,31 +17,36 @@ import (
 const (
 	DeleteAppRequest                                     = "DeleteApp"
 	DeleteBuildpackRequest                               = "DeleteBuildpackSpace"
-	DeleteConfigRunningSecurityGroupRequest              = "DeleteConfigRunningSecurityGroup" // TODO: DeleteConfigRunningSecurityGroupRequest
-	DeleteConfigStagingSecurityGroupRequest              = "DeleteConfigStagingSecurityGroup" // TODO: DeleteConfigStagingSecurityGroupRequest
+	DeleteConfigRunningSecurityGroupRequest              = "DeleteConfigRunningSecurityGroup"
+	DeleteConfigStagingSecurityGroupRequest              = "DeleteConfigStagingSecurityGroup"
 	DeleteOrganizationRequest                            = "DeleteOrganization"
 	DeleteOrganizationPrivateDomainRequest               = "DeleteOrganizationPrivateDomain"
-	DeleteOrganizationQuotaDefinitionRequest             = "DeleteOrganizationQuotaDefinition" 
+	DeleteOrganizationQuotaDefinitionRequest             = "DeleteOrganizationQuotaDefinition"
+	DeleteOrganizationManagerRequest                     = "DeleteOrganizationManager"
+	DeleteOrganizationBillingManagerRequest              = "DeleteOrganizationBillingManager"
+	DeleteOrganizationAuditorRequest                     = "DeleteOrganizationAuditorRequest"
 	DeletePrivateDomainRequest                           = "DeletePrivateDomain"
 	DeleteRouteAppRequest                                = "DeleteRouteApp"
 	DeleteRouteRequest                                   = "DeleteRoute"
 	DeleteRouteMappingRequest                            = "DeleteRouteMapping"
-	DeleteSecurityGroupRequest                           = "DeleteSecurityGroup" // TODO: DeleteSecurityGroupRequest
+	DeleteSecurityGroupRequest                           = "DeleteSecurityGroup"
 	DeleteSecurityGroupSpaceRequest                      = "DeleteSecurityGroupSpace"
 	DeleteSecurityGroupStagingSpaceRequest               = "DeleteSecurityGroupStagingSpace"
-	DeleteServiceBrokerRequest                           = "DeleteServiceBroker" // TODO: DeleteServiceBrokerRequest
+	DeleteServiceBrokerRequest                           = "DeleteServiceBroker"
 	DeleteServiceBindingRequest                          = "DeleteServiceBinding"
-	DeleteServiceBindingRouteRequest                     = "DeleteServiceBindingRoute" // TODO: DeleteServiceBindingRouteRequest
-	DeleteServiceInstanceRequest                         = "DeleteServiceInstance"     // TODO: DeleteServiceInstanceRequest
-	DeleteServicePlanRequest                             = "DeleteServicePlan"         // TODO: DeleteServicePlanRequest
+	DeleteServiceInstanceRequest                         = "DeleteServiceInstance"
+	DeleteServicePlanRequest                             = "DeleteServicePlan"
 	DeleteServicePlanVisibilityRequest                   = "DeleteServicePlanVisibility"
 	DeleteServiceRequest                                 = "DeleteService"
 	DeleteSpaceRequest                                   = "DeleteSpace"
-	DeleteSpaceQuotaRequest                              = "DeleteSpaceQuota"           
-	DeleteSpaceQuotaDefinitionRequest                    = "DeleteSpaceQuotaDefinition" 
+	DeleteSpaceAuditorRequest                            = "DeleteSpaceAuditor"
+	DeleteSpaceDeveloperRequest                          = "DeleteSpaceDeveloper"
+	DeleteSpaceManagerRequest                            = "DeleteSpaceManager"
+	DeleteSpaceQuotaRequest                              = "DeleteSpaceQuota"
+	DeleteSpaceQuotaDefinitionRequest                    = "DeleteSpaceQuotaDefinition"
 	DeleteSharedDomainRequest                            = "DeleteSharedDomain"
 	DeleteSpaceUnmappedRoutesRequest                     = "DeleteUnmappedRoutes"
-	DeleteUserProvidedServiceInstanceRequest             = "DeleteUserProvidedServiceInstance" // TODO: DeleteUserProvidedServiceInstanceRequest
+	DeleteUserProvidedServiceInstanceRequest             = "DeleteUserProvidedServiceInstance"
 	GetAppInstancesRequest                               = "GetAppInstances"
 	GetAppRequest                                        = "GetApp"
 	GetAppRoutesRequest                                  = "GetAppRoutes"
@@ -50,8 +55,10 @@ const (
 	GetBuildpacksRequest                                 = "GetBuildpacks"
 	GetBuildpackRequest                                  = "GetBuildpack"
 	GetConfigFeatureFlagsRequest                         = "GetConfigFeatureFlags"
-	GetConfigRunningSecurityGroupsRequest                = "GetConfigRunningSecurityGroups" // TODO: GetConfigRunningSecurityGroups
-	GetConfigStagingSecurityGroupsRequest                = "GetConfigStagingSecurityGroups" // TODO: GetConfigStagingSecurityGroupsRequest
+	GetConfigEnvVarGroupRunningRequest                   = "GetConfigEnvVarGroupRunning" 
+	GetConfigEnvVarGroupStagingRequest                   = "GetConfigEnvVarGroupStaging" 
+	GetConfigRunningSecurityGroupsRequest                = "GetConfigRunningSecurityGroups"
+	GetConfigStagingSecurityGroupsRequest                = "GetConfigStagingSecurityGroups"
 	GetEventsRequest                                     = "GetEvents"
 	GetInfoRequest                                       = "GetInfo"
 	GetJobRequest                                        = "GetJob"
@@ -75,8 +82,8 @@ const (
 	GetSecurityGroupStagingSpacesRequest                 = "GetSecurityGroupStagingSpaces"
 	GetServiceBindingRequest                             = "GetServiceBinding"
 	GetServiceBindingsRequest                            = "GetServiceBindings"
-	GetServiceBindingRouteRequest                        = "GetServiceBindingRoute"  // TODO: GetServiceBindingRouteRequest
-	GetServiceBindingRoutesRequest                       = "GetServiceBindingRoutes" // TODO: GetServiceBindingRoutesRequest
+	GetServiceBindingRouteRequest                        = "GetServiceBindingRoute"
+	GetServiceBindingRoutesRequest                       = "GetServiceBindingRoutes"
 	GetServiceBrokersRequest                             = "GetServiceBrokers"
 	GetServiceInstanceRequest                            = "GetServiceInstance"
 	GetServiceInstanceServiceBindingsRequest             = "GetServiceInstanceServiceBindings"
@@ -90,12 +97,12 @@ const (
 	GetServicesRequest                                   = "GetServices"
 	GetSharedDomainRequest                               = "GetSharedDomain"
 	GetSharedDomainsRequest                              = "GetSharedDomains"
-	GetSpaceRequest                                      = "GetSpace"                 // TODO: GetSpaceRequest
-	GetSpaceQuotaDefinitionsRequest                      = "GetSpaceQuotaDefinitions" 
+	GetSpaceRequest                                      = "GetSpace"
+	GetSpaceQuotaDefinitionsRequest                      = "GetSpaceQuotaDefinitions"
 	GetOrganizationSpaceQuotasRequest                    = "GetOrganizationSpaceQuotas"
-	GetSecurityGroupRequest                              = "GetSecurityGroup"         // TODO: GetSecurityGroupRequest
-	GetServiceBrokerRequest                              = "GetServiceBroker"         // TODO: GetServiceBrokerRequest
-	GetServicePlanVisibilityRequest                      = "GetServicePlanVisibility" // TODO: GetServicePlanVisibilityRequest
+	GetSecurityGroupRequest                              = "GetSecurityGroup"
+	GetServiceBrokerRequest                              = "GetServiceBroker"
+	GetServicePlanVisibilityRequest                      = "GetServicePlanVisibility"
 	GetSpaceQuotaDefinitionRequest                       = "GetSpaceQuotaDefinition"
 	GetSpaceRoutesRequest                                = "GetSpaceRoutes"
 	GetSpaceSecurityGroupsRequest                        = "GetSpaceSecurityGroups"
@@ -104,65 +111,72 @@ const (
 	GetSpaceSummaryRequest                               = "GetSpaceSummary"
 	GetSpacesRequest                                     = "GetSpaces"
 	GetSpaceStagingSecurityGroupsRequest                 = "GetSpaceStagingSecurityGroups"
-	PostSpaceQuotaDefinitionsRequest                     = "PostSpaceQuotaDefinitions" 
+	PostSpaceQuotaDefinitionsRequest                     = "PostSpaceQuotaDefinitions"
 	GetStackRequest                                      = "GetStack"
 	GetStacksRequest                                     = "GetStacks"
 	GetUserProvidedServiceInstanceServiceBindingsRequest = "GetUserProvidedServiceInstanceServiceBindings"
-	GetUserProvidedServiceInstanceRequest                = "GetUserProvidedServiceInstance" // TODO: GetUserProvidedServiceInstanceRequest
+	GetUserProvidedServiceInstanceRequest                = "GetUserProvidedServiceInstance"
 	GetUserProvidedServiceInstancesRequest               = "GetUserProvidedServiceInstances"
 	GetUsersRequest                                      = "GetUsers"
 	PostAppRequest                                       = "PostApp"
 	PostAppRestageRequest                                = "PostAppRestage"
 	PostBuildpackRequest                                 = "PostBuildpack"
+	PostConfigEnvVarGroupRunningRequest                  = "PostConfigEnvVarGroupRunning" 
+	PostConfigEnvVarGroupStagingRequest                  = "PostConfigEnvVarGroupStaging" 
 	PutConfigFeatureFlagsRequest                         = "PutConfigFeatureFlags"
 	PostOrganizationRequest                              = "PostOrganization"
+	PostOrganizationQuotaDefinitionsRequest              = "PostOrganizationQuotaDefinitions"
 	PostPrivateDomainRequest                             = "PostPrivateDomain"
 	PostRouteRequest                                     = "PostRoute"
-	PostRouteMappingsRequest                             = "PostRouteMappings"  // TODO: PostRouteMappingsRequest
-	PostSecurityGroupsRequest                            = "PostSecurityGroups" // TODO: PostSecurityGroupsRequest
-	PostSecurityGroupRequest                             = "PostSecurityGroup"  // TODO: PostSecurityGroupRequest
+	PostRouteMappingsRequest                             = "PostRouteMappings"
+	PostSecurityGroupsRequest                            = "PostSecurityGroups"
+	PostSecurityGroupRequest                             = "PostSecurityGroup"
 	PostServiceBindingRequest                            = "PostServiceBinding"
-	PostServiceBindingRoutesRequest                      = "PostServiceBindingRoutes" // TODO: PostServiceBindingRoutesRequest
+	PostServiceBindingRoutesRequest                      = "PostServiceBindingRoutes"
 	PostServiceInstancesRequest                          = "PostServiceInstance"
-	PostServicePlansRequest                              = "PostServicePlans" // TODO: PostServicePlansRequest
 	PostSharedDomainRequest                              = "PostSharedDomain"
-	PostServicesRequest                                  = "PostServicesRequest" // TODO: PostServicesRequest
+	PostServicesRequest                                  = "PostServicesRequest"
 	PostServiceBrokerRequest                             = "PostServiceBroker"
 	PostServiceKeyRequest                                = "PostServiceKey"
 	PostServicePlanVisibilityRequest                     = "PostServicePlanVisibility"
 	PostSpaceRequest                                     = "PostSpace"
 	PostUserRequest                                      = "PostUser"
-	PostUserProvidedServiceInstancesRequest              = "PostUserProvidedServiceInstances" // TODO: PostUserProvidedServiceInstancesRequest
+	PostUserProvidedServiceInstancesRequest              = "PostUserProvidedServiceInstances"
 	PutAppBitsRequest                                    = "PutAppBits"
 	PutAppRequest                                        = "PutApp"
 	PutBuildpackRequest                                  = "PutBuildpack"
 	PutBuildpackBitsRequest                              = "PutBuildpackBits"
-	PutConfigRunningSecurityGroupRequest                 = "PutConfigRunningSecurityGroup" // TODO: PutConfigRunningSecurityGroupRequest
-	PutConfigStagingSecurityGroupRequest                 = "PutConfigStagingSecurityGroup" // TODO: PutConfigStagingSecurityGroupRequest
+	PutConfigRunningSecurityGroupRequest                 = "PutConfigRunningSecurityGroup"
+	PutConfigStagingSecurityGroupRequest                 = "PutConfigStagingSecurityGroup"
 	PutDropletRequest                                    = "PutDroplet"
 	PutOrganizationManagerByUsernameRequest              = "PutOrganizationManagerByUsername"
 	PutOrganizationManagerRequest                        = "PutOrganizationManager"
 	PutOrganizationUserRequest                           = "PutOrganizationUser"
+	PutOrganizationAuditorRequest                        = "PutOrganizationAuditorRequest"
+	PutOrganizationBillingManagerRequest                 = "PutOrganizationBillingManager"
+	PutOrganizationRequest                               = "PutOrganizationRequest"
 	PutOrganizationUserByUsernameRequest                 = "PutOrganizationUserByUsername"
-	PutOrganizationPrivateDomainRequest                  = "PutOrganizationPrivateDomain"   // TODO: PutOrganizationPrivateDomainRequest
-	PutOrganizationQuotaDefinitionRequest                = "PutOrganizationQuotaDefinition" 
+	PutOrganizationPrivateDomainRequest                  = "PutOrganizationPrivateDomain"
+	PutOrganizationQuotaDefinitionRequest                = "PutOrganizationQuotaDefinition"
 	PutResourceMatchRequest                              = "PutResourceMatch"
 	PutRouteAppRequest                                   = "PutRouteApp"
-	PutRouteRequest                                      = "PutRoute"          
-	PutServiceRequest                                    = "PutServiceRequest" // TODO: PutServiceRequest
-	PutServiceBrokerRequest                              = "PutServiceBroker"  // TODO: PutServiceBrokerRequest
+	PutRouteRequest                                      = "PutRoute"
+	PutServiceRequest                                    = "PutServiceRequest"
+	PutServiceBrokerRequest                              = "PutServiceBroker"
+	PutServiceInstanceRequest                            = "PutServiceInstance"
 	PutServicePlanRequest                                = "PutServicePlan"
-	PutServicePlanVisibilityRequest                      = "PutServicePlanVisibility" // TODO: PutServicePlanVisibilityRequest
-	PutSpaceRequest                                      = "PutSpace"                 // TODO: PutSpaceRequest
+	PutServicePlanVisibilityRequest                      = "PutServicePlanVisibility"
+	PutSpaceRequest                                      = "PutSpace"
 	PutSpaceQuotaRequest                                 = "PutSpaceQuotaRequest"
 	PutSpaceDeveloperRequest                             = "PutSpaceDeveloper"
 	PutSpaceDeveloperByUsernameRequest                   = "PutSpaceDeveloperByUsername"
 	PutSpaceManagerRequest                               = "PutSpaceManager"
+	PutSpaceAuditorRequest                               = "PutSpaceAuditor"
 	PutSpaceManagerByUsernameRequest                     = "PutSpaceManagerByUsername"
-	PutSpaceQuotaDefinitionRequest                       = "PutSpaceQuotaDefinition" 
+	PutSpaceQuotaDefinitionRequest                       = "PutSpaceQuotaDefinition"
 	PutSecurityGroupSpaceRequest                         = "PutSecurityGroupSpace"
 	PutSecurityGroupStagingSpaceRequest                  = "PutSecurityGroupStagingSpace"
-	PutUserProvidedServiceInstanceRequest                = "PutUserProvidedServiceInstance" // TODO: PutUserProvidedServiceInstanceRequest
+	PutUserProvidedServiceInstanceRequest                = "PutUserProvidedServiceInstance"
 )
 
 // APIRoutes is a list of routes used by the rata library to construct request
@@ -193,6 +207,10 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/config/staging_security_groups", Method: http.MethodGet, Name: GetConfigStagingSecurityGroupsRequest},
 	{Path: "/v2/config/staging_security_groups/:security_group_guid", Method: http.MethodPut, Name: PutConfigStagingSecurityGroupRequest},
 	{Path: "/v2/config/staging_security_groups/:security_group_guid", Method: http.MethodDelete, Name: DeleteConfigStagingSecurityGroupRequest},
+	{Path: "/v2/config/environment_variable_groups/running", Method: http.MethodGet, Name: GetConfigEnvVarGroupRunningRequest},
+	{Path: "/v2/config/environment_variable_groups/running", Method: http.MethodPost, Name: PostConfigEnvVarGroupRunningRequest},
+	{Path: "/v2/config/environment_variable_groups/staging", Method: http.MethodGet, Name: GetConfigEnvVarGroupStagingRequest},
+	{Path: "/v2/config/environment_variable_groups/staging", Method: http.MethodPost, Name: PostConfigEnvVarGroupStagingRequest},
 	{Path: "/v2/events", Method: http.MethodGet, Name: GetEventsRequest},
 	{Path: "/v2/info", Method: http.MethodGet, Name: GetInfoRequest},
 	{Path: "/v2/jobs/:job_guid", Method: http.MethodGet, Name: GetJobRequest},
@@ -200,8 +218,14 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/organizations", Method: http.MethodPost, Name: PostOrganizationRequest},
 	{Path: "/v2/organizations/:organization_guid", Method: http.MethodDelete, Name: DeleteOrganizationRequest},
 	{Path: "/v2/organizations/:organization_guid", Method: http.MethodGet, Name: GetOrganizationRequest},
+	{Path: "/v2/organizations/:organization_guid", Method: http.MethodPut, Name: PutOrganizationRequest},
 	{Path: "/v2/organizations/:organization_guid/managers", Method: http.MethodPut, Name: PutOrganizationManagerByUsernameRequest},
 	{Path: "/v2/organizations/:organization_guid/managers/:manager_guid", Method: http.MethodPut, Name: PutOrganizationManagerRequest},
+	{Path: "/v2/organizations/:organization_guid/billing_managers/:billing_manager_guid", Method: http.MethodPut, Name: PutOrganizationBillingManagerRequest},
+	{Path: "/v2/organizations/:organization_guid/auditors/:auditor_guid", Method: http.MethodPut, Name: PutOrganizationAuditorRequest},
+	{Path: "/v2/organizations/:organization_guid/managers/:manager_guid", Method: http.MethodDelete, Name: DeleteOrganizationManagerRequest},
+	{Path: "/v2/organizations/:organization_guid/billing_managers/:billing_manager_guid", Method: http.MethodDelete, Name: DeleteOrganizationBillingManagerRequest},
+	{Path: "/v2/organizations/:organization_guid/auditors/:auditor_guid", Method: http.MethodDelete, Name: DeleteOrganizationAuditorRequest},
 	{Path: "/v2/organizations/:organization_guid/private_domains", Method: http.MethodGet, Name: GetOrganizationPrivateDomainsRequest},
 	{Path: "/v2/organizations/:organization_guid/private_domains/:private_domain_guid", Method: http.MethodPut, Name: PutOrganizationPrivateDomainRequest},
 	{Path: "/v2/organizations/:organization_guid/private_domains/:private_domain_guid", Method: http.MethodDelete, Name: DeleteOrganizationPrivateDomainRequest},
@@ -215,7 +239,7 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/quota_definitions/:organization_quota_guid", Method: http.MethodPut, Name: PutOrganizationQuotaDefinitionRequest},
 	{Path: "/v2/quota_definitions/:organization_quota_guid", Method: http.MethodDelete, Name: DeleteOrganizationQuotaDefinitionRequest},
 	{Path: "/v2/quota_definitions", Method: http.MethodGet, Name: GetOrganizationQuotaDefinitionsRequest},
-	{Path: "/v2/quota_definitions", Method: http.MethodPost, Name: GetOrganizationQuotaDefinitionsRequest},
+	{Path: "/v2/quota_definitions", Method: http.MethodPost, Name: PostOrganizationQuotaDefinitionsRequest},
 	{Path: "/v2/resource_match", Method: http.MethodPut, Name: PutResourceMatchRequest},
 	{Path: "/v2/route_mappings", Method: http.MethodGet, Name: GetRouteMappingsRequest},
 	{Path: "/v2/route_mappings", Method: http.MethodPost, Name: PostRouteMappingsRequest},
@@ -249,7 +273,6 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/service_bindings/:service_binding_guid", Method: http.MethodGet, Name: GetServiceBindingRequest},
 	{Path: "/v2/service_bindings/:service_binding_guid/routes", Method: http.MethodGet, Name: GetServiceBindingRoutesRequest},
 	{Path: "/v2/service_bindings/:service_binding_guid/routes", Method: http.MethodPost, Name: PostServiceBindingRoutesRequest},
-	{Path: "/v2/service_bindings/:service_binding_guid/routes/:route_guid", Method: http.MethodDelete, Name: DeleteServiceBindingRouteRequest},
 	{Path: "/v2/service_bindings/:service_binding_guid/routes/:route_guid", Method: http.MethodGet, Name: GetServiceBindingRouteRequest},
 	{Path: "/v2/service_brokers", Method: http.MethodGet, Name: GetServiceBrokersRequest},
 	{Path: "/v2/service_brokers", Method: http.MethodPost, Name: PostServiceBrokerRequest},
@@ -259,6 +282,7 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/service_instances", Method: http.MethodGet, Name: GetServiceInstancesRequest},
 	{Path: "/v2/service_instances", Method: http.MethodPost, Name: PostServiceInstancesRequest},
 	{Path: "/v2/service_instances/:service_instance_guid", Method: http.MethodGet, Name: GetServiceInstanceRequest},
+	{Path: "/v2/service_instances/:service_instance_guid", Method: http.MethodPut, Name: PutServiceInstanceRequest},
 	{Path: "/v2/service_instances/:service_instance_guid", Method: http.MethodDelete, Name: DeleteServiceInstanceRequest},
 	{Path: "/v2/service_instances/:service_instance_guid/service_bindings", Method: http.MethodGet, Name: GetServiceInstanceServiceBindingsRequest},
 	{Path: "/v2/service_instances/:service_instance_guid/shared_from", Method: http.MethodGet, Name: GetServiceInstanceSharedFromRequest},
@@ -270,7 +294,6 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/service_plan_visibilities/:service_plan_visibility_guid", Method: http.MethodGet, Name: GetServicePlanVisibilityRequest},
 	{Path: "/v2/service_plan_visibilities/:service_plan_visibility_guid", Method: http.MethodPut, Name: PutServicePlanVisibilityRequest},
 	{Path: "/v2/service_plans", Method: http.MethodGet, Name: GetServicePlansRequest},
-	{Path: "/v2/service_plans", Method: http.MethodPost, Name: PostServicePlansRequest},
 	{Path: "/v2/service_plans/:service_plan_guid", Method: http.MethodPut, Name: PutServicePlanRequest},
 	{Path: "/v2/service_plans/:service_plan_guid", Method: http.MethodDelete, Name: DeleteServicePlanRequest},
 	{Path: "/v2/service_plans/:service_plan_guid", Method: http.MethodGet, Name: GetServicePlanRequest},
@@ -283,7 +306,7 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/shared_domains", Method: http.MethodPost, Name: PostSharedDomainRequest},
 	{Path: "/v2/shared_domains/:shared_domain_guid", Method: http.MethodGet, Name: GetSharedDomainRequest},
 	{Path: "/v2/shared_domains/:shared_domain_guid", Method: http.MethodDelete, Name: DeleteSharedDomainRequest},
-	{Path: "/v2/organizations/:organization_guid/space_quota_definitions", Method: http.MethodGet, Name: GetOrganizationSpaceQuotasRequest},
+	{Path: "/v2/organizations/:space_guid/space_quota_definitions", Method: http.MethodGet, Name: GetOrganizationSpaceQuotasRequest},
 	{Path: "/v2/space_quota_definitions/:space_quota_guid/spaces/:space_guid", Method: http.MethodPut, Name: PutSpaceQuotaRequest},
 	{Path: "/v2/space_quota_definitions/:space_quota_guid/spaces/:space_guid", Method: http.MethodDelete, Name: DeleteSpaceQuotaRequest},
 	{Path: "/v2/space_quota_definitions", Method: http.MethodGet, Name: GetSpaceQuotaDefinitionsRequest},
@@ -296,6 +319,9 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/spaces", Method: http.MethodPost, Name: PostSpaceRequest},
 	{Path: "/v2/spaces/:space_guid/developers", Method: http.MethodPut, Name: PutSpaceDeveloperByUsernameRequest},
 	{Path: "/v2/spaces/:space_guid/developers/:developer_guid", Method: http.MethodPut, Name: PutSpaceDeveloperRequest},
+	{Path: "/v2/spaces/:space_guid/auditors/:auditor_guid", Method: http.MethodPut, Name: PutSpaceAuditorRequest},
+	{Path: "/v2/spaces/:space_guid/developers/:developer_guid", Method: http.MethodDelete, Name: DeleteSpaceDeveloperRequest},
+	{Path: "/v2/spaces/:space_guid/auditors/:auditor_guid", Method: http.MethodDelete, Name: DeleteSpaceAuditorRequest},
 	{Path: "/v2/spaces/:guid/service_instances", Method: http.MethodGet, Name: GetSpaceServiceInstancesRequest},
 	{Path: "/v2/spaces/:space_guid/services", Method: http.MethodGet, Name: GetSpaceServicesRequest},
 	{Path: "/v2/spaces/:space_guid", Method: http.MethodDelete, Name: DeleteSpaceRequest},
@@ -306,6 +332,7 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/spaces/:space_guid/staging_security_groups", Method: http.MethodGet, Name: GetSpaceStagingSecurityGroupsRequest},
 	{Path: "/v2/spaces/:space_guid/managers", Method: http.MethodPut, Name: PutSpaceManagerByUsernameRequest},
 	{Path: "/v2/spaces/:space_guid/managers/:manager_guid", Method: http.MethodPut, Name: PutSpaceManagerRequest},
+	{Path: "/v2/spaces/:space_guid/managers/:manager_guid", Method: http.MethodDelete, Name: DeleteSpaceManagerRequest},
 	{Path: "/v2/spaces/:space_guid/unmapped_routes", Method: http.MethodDelete, Name: DeleteSpaceUnmappedRoutesRequest},
 	{Path: "/v2/stacks", Method: http.MethodGet, Name: GetStacksRequest},
 	{Path: "/v2/stacks/:stack_guid", Method: http.MethodGet, Name: GetStackRequest},

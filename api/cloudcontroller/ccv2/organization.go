@@ -2,7 +2,9 @@ package ccv2
 
 import (
 	"bytes"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"encoding/json"
+	"fmt"
 	"net/url"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
@@ -12,7 +14,6 @@ import (
 
 // Organization represents a Cloud Controller Organization.
 type Organization struct {
-
 	// GUID is the unique Organization identifier.
 	GUID string
 
@@ -51,7 +52,7 @@ func (org *Organization) UnmarshalJSON(data []byte) error {
 }
 
 type createOrganizationRequestBody struct {
-	Name                string `json:"name"`
+	Name                string `json:"name,omitempty"`
 	QuotaDefinitionGUID string `json:"quota_definition_guid,omitempty"`
 }
 
@@ -244,6 +245,100 @@ func (client Client) UpdateOrganizationUserByUsername(orgGUID string, username s
 	})
 	if err != nil {
 		return Warnings{}, err
+	}
+
+	response := cloudcontroller.Response{}
+	err = client.connection.Make(request, &response)
+
+	return response.Warnings, err
+}
+
+// UpdateOrganization updates the organization with the given GUID.
+func (client *Client) UpdateOrganization(orgGuid, orgName, quotaGUID string) (Organization, Warnings, error) {
+	requestBody := createOrganizationRequestBody{
+		Name:                orgName,
+		QuotaDefinitionGUID: quotaGUID,
+	}
+
+	bodyBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return Organization{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PutOrganizationRequest,
+		URIParams:   Params{"organization_guid": orgGuid},
+		Body:        bytes.NewReader(bodyBytes),
+	})
+	if err != nil {
+		return Organization{}, nil, err
+	}
+
+	var updatedObj Organization
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
+}
+
+// UpdateOrganizationUserByRole makes the user or client with the given UAA ID a
+// member of this role in the org . (Only available: OrgManager, BillingManager and OrgAuditor)
+func (client *Client) UpdateOrganizationUserByRole(role constant.UserRole, guid string, uaaID string) (Warnings, error) {
+	paramUserKey := ""
+	requestName := ""
+	switch role {
+	case constant.OrgManager:
+		paramUserKey = "manager_guid"
+		requestName = internal.PutOrganizationManagerRequest
+	case constant.BillingManager:
+		paramUserKey = "billing_manager_guid"
+		requestName = internal.PutOrganizationBillingManagerRequest
+	case constant.OrgAuditor:
+		paramUserKey = "auditor_guid"
+		requestName = internal.PutOrganizationBillingManagerRequest
+	default:
+		return Warnings{}, fmt.Errorf("Not a valid role, it must be one of OrgManager, BillingManager and OrgAuditor")
+	}
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: requestName,
+		URIParams:   Params{"organization_guid": guid, paramUserKey: uaaID},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+	err = client.connection.Make(request, &response)
+
+	return response.Warnings, err
+}
+
+// DeleteOrganizationUserByRole remove the user or client with the given UAA ID a
+// member of this role in the org . (Only available: OrgManager, BillingManager and OrgAuditor)
+func (client *Client) DeleteOrganizationUserByRole(role constant.UserRole, guid string, uaaID string) (Warnings, error) {
+	paramUserKey := ""
+	requestName := ""
+	switch role {
+	case constant.OrgManager:
+		paramUserKey = "manager_guid"
+		requestName = internal.DeleteOrganizationManagerRequest
+	case constant.BillingManager:
+		paramUserKey = "billing_manager_guid"
+		requestName = internal.DeleteOrganizationBillingManagerRequest
+	case constant.OrgAuditor:
+		paramUserKey = "auditor_guid"
+		requestName = internal.DeleteOrganizationBillingManagerRequest
+	default:
+		return Warnings{}, fmt.Errorf("Not a valid role, it must be one of OrgManager, BillingManager and OrgAuditor")
+	}
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: requestName,
+		URIParams:   Params{"organization_guid": guid, paramUserKey: uaaID},
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	response := cloudcontroller.Response{}

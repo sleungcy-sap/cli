@@ -1,5 +1,9 @@
 package ccv2
 
+import (
+	"code.cloudfoundry.org/cli/types"
+)
+
 // SecurityGroupRule represents a Cloud Controller Security Group Role.
 type SecurityGroupRule struct {
 	// Description is a short message discribing the rule.
@@ -13,4 +17,7 @@ type SecurityGroupRule struct {
 
 	// Protocol can be tcp, icmp, udp, all.
 	Protocol string
+
+	// enables logging for the egress rule, only valid for tcp rules
+	Log types.NullBool
 }

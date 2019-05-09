@@ -25,7 +25,7 @@ func (buildpack Buildpack) MarshalJSON() ([]byte, error) {
 	ccBuildpack := struct {
 		Locked   *bool  `json:"locked,omitempty"`
 		Enabled  *bool  `json:"enabled,omitempty"`
-		Name     string `json:"name"`
+		Name     string `json:"name,omitempty"`
 		Position *int   `json:"position,omitempty"`
 		Stack    string `json:"stack,omitempty"`
 	}{

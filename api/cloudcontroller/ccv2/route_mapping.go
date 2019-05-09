@@ -1,6 +1,7 @@
 package ccv2
 
 import (
+	"bytes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/internal"
@@ -101,18 +102,26 @@ func (client *Client) GetRouteMappings(filters ...Filter) ([]RouteMapping, Warni
 	return fullRouteMappingsList, warnings, err
 }
 
-// begin:==kil--sl---sl==
+type createRouteMappingRequestBody struct {
+	AppGUID   string `json:"app_guid"`
+	RouteGUID string `json:"route_guid"`
+}
 
 // CreateRouteMapping creates a cloud controller route mapping in with the given settings.
-func (client *Client) CreateRouteMapping(routeMapping RouteMapping) (RouteMapping, Warnings, error) {
-	body, err := json.Marshal(routeMapping)
+func (client *Client) CreateRouteMapping(appGuid, routeGuid string) (RouteMapping, Warnings, error) {
+	requestBody := createRouteMappingRequestBody{
+		AppGUID:   appGuid,
+		RouteGUID: routeGuid,
+	}
+
+	bodyBytes, err := json.Marshal(requestBody)
 	if err != nil {
 		return RouteMapping{}, nil, err
 	}
 
 	request, err := client.newHTTPRequest(requestOptions{
 		RequestName: internal.PostRouteMappingsRequest,
-		Body:        bytes.NewReader(body),
+		Body:        bytes.NewReader(bodyBytes),
 	})
 	if err != nil {
 		return RouteMapping{}, nil, err
@@ -127,4 +136,3 @@ func (client *Client) CreateRouteMapping(routeMapping RouteMapping) (RouteMappin
 	return updatedObj, response.Warnings, err
 }
 
-// end:==kil--sl---sl==

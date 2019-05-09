@@ -59,7 +59,7 @@ func (client *Client) GetOrganizationQuotas(filters ...Filter) ([]Quota, Warning
 }
 
 // UpdateQuota updates the quota with the given GUID.
-func (client *Client) UpdateOrganizationQuotaDefinition(quota Quota) (Quota, Warnings, error) {
+func (client *Client) UpdateOrganizationQuota(quota Quota) (Quota, Warnings, error) {
 	body, err := json.Marshal(quota)
 	if err != nil {
 		return Quota{}, nil, err
@@ -84,7 +84,7 @@ func (client *Client) UpdateOrganizationQuotaDefinition(quota Quota) (Quota, War
 }
 
 // DeleteQuota delete a quota
-func (client *Client) DeleteOrganizationQuotaDefinition(guid string) (Warnings, error) {
+func (client *Client) DeleteOrganizationQuota(guid string) (Warnings, error) {
 	request, err := client.newHTTPRequest(requestOptions{
 		RequestName: internal.DeleteOrganizationQuotaDefinitionRequest,
 		URIParams: Params{
@@ -99,4 +99,28 @@ func (client *Client) DeleteOrganizationQuotaDefinition(guid string) (Warnings, 
 
 	err = client.connection.Make(request, &response)
 	return response.Warnings, err
+}
+
+// CreateQuota creates a cloud controller quota in with the given settings.
+func (client *Client) CreateOrganizationQuota(quota Quota) (Quota, Warnings, error) {
+	body, err := json.Marshal(quota)
+	if err != nil {
+		return Quota{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PostOrganizationQuotaDefinitionsRequest,
+		Body:        bytes.NewReader(body),
+	})
+	if err != nil {
+		return Quota{}, nil, err
+	}
+
+	var updatedObj Quota
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
 }
