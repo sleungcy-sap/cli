@@ -42,7 +42,7 @@ var _ = Describe("OrganizationQuota", func() {
 				orgQuota, warnings, err := client.GetOrganizationQuota("some-org-quota-guid")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(warnings).To(ConsistOf("warning-1"))
-				Expect(orgQuota).To(Equal(OrganizationQuota{
+				Expect(orgQuota).To(Equal(Quota{
 					GUID: "some-org-quota-guid",
 					Name: "some-org-quota",
 				}))
@@ -77,7 +77,7 @@ var _ = Describe("OrganizationQuota", func() {
 
 	Describe("GetOrganizationQuotas", func() {
 		var (
-			quotas     []OrganizationQuota
+			quotas     []Quota
 			warnings   Warnings
 			executeErr error
 		)
@@ -152,7 +152,7 @@ var _ = Describe("OrganizationQuota", func() {
 			It("returns paginated results and all warnings", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 				Expect(warnings).To(ConsistOf(Warnings{"warning-1", "warning-2"}))
-				Expect(quotas).To(Equal([]OrganizationQuota{
+				Expect(quotas).To(Equal([]Quota{
 					{
 						GUID: "some-org-quota-guid-1",
 						Name: "some-quota-name-1",

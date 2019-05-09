@@ -15,7 +15,6 @@ import (
 
 // Route represents a Cloud Controller Route.
 type Route struct {
-
 	// GUID is the unique Route identifier.
 	GUID string `json:"-"`
 
@@ -321,4 +320,29 @@ func (client *Client) checkRouteDeprecated(domainGUID string, host string, path 
 	}
 
 	return response.HTTPResponse.StatusCode == http.StatusNoContent, response.Warnings, err
+}
+
+// UpdateRoute updates the route with the given GUID.
+func (client *Client) UpdateRoute(route Route) (Route, Warnings, error) {
+	body, err := json.Marshal(route)
+	if err != nil {
+		return Route{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PutRouteRequest,
+		URIParams:   Params{"route_guid": route.GUID},
+		Body:        bytes.NewReader(body),
+	})
+	if err != nil {
+		return Route{}, nil, err
+	}
+
+	var updatedObj Route
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
 }

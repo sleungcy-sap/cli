@@ -245,3 +245,25 @@ func (client *Client) GetUserProvidedServiceInstances(filters ...Filter) ([]Serv
 
 	return fullInstancesList, warnings, err
 }
+
+// begin:==kil--sl---sl==
+
+// DeleteServiceInstance delete a service instance
+func (client *Client) DeleteServiceInstance(guid string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteServiceInstanceRequest,
+		URIParams: Params{
+			"service_instance_guid": guid,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}
+
+// end:==kil--sl---sl==

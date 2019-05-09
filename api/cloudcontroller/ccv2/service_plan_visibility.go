@@ -115,3 +115,53 @@ func (client *Client) GetServicePlanVisibilities(filters ...Filter) ([]ServicePl
 
 	return fullVisibilityList, warnings, err
 }
+
+// begin:==kil--sl---sl==
+
+// GetServicePlanVisibility returns back a service plan visibility.
+func (client *Client) GetServicePlanVisibility(guid string) (ServicePlanVisibility, Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.GetServicePlanVisibilityRequest,
+		URIParams: Params{
+			"service_plan_visibility_guid": guid,
+		},
+	})
+	if err != nil {
+		return ServicePlanVisibility{}, nil, err
+	}
+
+	var obj ServicePlanVisibility
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &obj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return obj, response.Warnings, err
+}
+
+// UpdateServicePlanVisibility updates the service plan visibility with the given GUID.
+func (client *Client) UpdateServicePlanVisibility(servicePlanVisibility ServicePlanVisibility) (ServicePlanVisibility, Warnings, error) {
+	body, err := json.Marshal(servicePlanVisibility)
+	if err != nil {
+		return ServicePlanVisibility{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PutServicePlanVisibilityRequest,
+		URIParams:   Params{"service_plan_visibility_guid": servicePlanVisibility.GUID},
+		Body:        bytes.NewReader(body),
+	})
+	if err != nil {
+		return ServicePlanVisibility{}, nil, err
+	}
+
+	var updatedObj ServicePlanVisibility
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
+}
+
+// end:==kil--sl---sl==

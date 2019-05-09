@@ -64,6 +64,11 @@ type createSharedDomainBody struct {
 	Internal        bool   `json:"internal"`
 }
 
+type createPrivateDomainBody struct {
+	Name                   string `json:"name"`
+	OwningOrganizationGuid string `json:"owning_organization_guid"`
+}
+
 func (client *Client) CreateSharedDomain(domainName string, routerGroupdGUID string, isInternal bool) (Warnings, error) {
 	body := createSharedDomainBody{
 		Name:            domainName,
@@ -166,6 +171,22 @@ func (client *Client) GetPrivateDomains(filters ...Filter) ([]Domain, Warnings, 
 	return fullDomainsList, warnings, err
 }
 
+// DeletePrivateDomain delete a private domain
+func (client *Client) DeletePrivateDomain(guid string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeletePrivateDomainRequest,
+		URIParams:   map[string]string{"private_domain_guid": guid},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}
+
 // GetSharedDomain returns the Shared Domain associated with the provided
 // Domain GUID.
 func (client *Client) GetSharedDomain(domainGUID string) (Domain, Warnings, error) {
@@ -189,6 +210,22 @@ func (client *Client) GetSharedDomain(domainGUID string) (Domain, Warnings, erro
 
 	domain.Type = constant.SharedDomain
 	return domain, response.Warnings, nil
+}
+
+// DeleteSharedDomain delete a shared domain
+func (client *Client) DeleteSharedDomain(guid string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteSharedDomainRequest,
+		URIParams:   map[string]string{"shared_domain_guid": guid},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
 }
 
 // GetSharedDomains returns the global shared domains.
@@ -216,4 +253,45 @@ func (client *Client) GetSharedDomains(filters ...Filter) ([]Domain, Warnings, e
 	})
 
 	return fullDomainsList, warnings, err
+}
+
+// DeleteOrganizationPrivateDomain delete a organization private domain
+func (client *Client) DeleteOrganizationPrivateDomain(organizationGuid, privateDomainGuid string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteOrganizationPrivateDomainRequest,
+		URIParams: Params{
+			"organization_guid":   organizationGuid,
+			"private_domain_guid": privateDomainGuid,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}
+
+// CreateDomain creates a cloud controller domain in with the given settings.
+func (client *Client) CreatePrivateDomain(domainName string, organizationGUID string) (Warnings, error) {
+	body := createPrivateDomainBody{
+		Name:                   domainName,
+		OwningOrganizationGuid: organizationGUID,
+	}
+	bodyBytes, err := json.Marshal(body)
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PostPrivateDomainRequest,
+		Body:        bytes.NewReader(bodyBytes),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var response cloudcontroller.Response
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
 }

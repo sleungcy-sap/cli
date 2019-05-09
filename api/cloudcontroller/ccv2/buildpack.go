@@ -142,6 +142,23 @@ func (client *Client) GetBuildpack(guid string) (Buildpack, Warnings, error) {
 	return entity, response.Warnings, err
 }
 
+// DeleteBuildpack delete an buildpack
+func (client *Client) DeleteBuildpack(guid string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteBuildpackRequest,
+		URIParams:   Params{"buildpack_guid": guid},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{
+	}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}
+
 // UpdateBuildpack updates the buildpack with the provided GUID and returns the
 // updated buildpack. Note: Stack cannot be updated without uploading a new
 // buildpack.

@@ -4,6 +4,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/internal"
+	"encoding/json"
 )
 
 // RouteMapping represents a Cloud Controller map between an application and route.
@@ -58,6 +59,22 @@ func (client *Client) GetRouteMapping(guid string) (RouteMapping, Warnings, erro
 	return routeMapping, response.Warnings, err
 }
 
+// DeleteRouteMapping delete a route mapping
+func (client *Client) DeleteRouteMapping(guid string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteRouteMappingRequest,
+		URIParams:   map[string]string{"route_mapping_guid": guid},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}
+
 // GetRouteMappings returns a list of RouteMappings based off of the provided queries.
 func (client *Client) GetRouteMappings(filters ...Filter) ([]RouteMapping, Warnings, error) {
 	request, err := client.newHTTPRequest(requestOptions{
@@ -83,3 +100,31 @@ func (client *Client) GetRouteMappings(filters ...Filter) ([]RouteMapping, Warni
 
 	return fullRouteMappingsList, warnings, err
 }
+
+// begin:==kil--sl---sl==
+
+// CreateRouteMapping creates a cloud controller route mapping in with the given settings.
+func (client *Client) CreateRouteMapping(routeMapping RouteMapping) (RouteMapping, Warnings, error) {
+	body, err := json.Marshal(routeMapping)
+	if err != nil {
+		return RouteMapping{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PostRouteMappingsRequest,
+		Body:        bytes.NewReader(body),
+	})
+	if err != nil {
+		return RouteMapping{}, nil, err
+	}
+
+	var updatedObj RouteMapping
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
+}
+
+// end:==kil--sl---sl==

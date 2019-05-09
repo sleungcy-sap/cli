@@ -131,3 +131,49 @@ func (client *Client) UpdateServicePlan(guid string, public bool) (Warnings, err
 
 	return response.Warnings, err
 }
+
+// begin:==kil--sl---sl==
+
+// CreateServicePlan creates a cloud controller service plan in with the given settings.
+func (client *Client) CreateServicePlan(servicePlan ServicePlan) (ServicePlan, Warnings, error) {
+	body, err := json.Marshal(servicePlan)
+	if err != nil {
+		return ServicePlan{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PostServicePlansRequest,
+		Body:        bytes.NewReader(body),
+	})
+	if err != nil {
+		return ServicePlan{}, nil, err
+	}
+
+	var updatedObj ServicePlan
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
+}
+
+// DeleteServicePlan delete a service plan
+func (client *Client) DeleteServicePlan(guid string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteServicePlanRequest,
+		URIParams: Params{
+			"service_plan_guid": guid,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}
+
+// end:==kil--sl---sl==

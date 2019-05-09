@@ -289,3 +289,53 @@ func (client *Client) UpdateSpaceManagerByUsername(spaceGUID string, username st
 
 	return response.Warnings, err
 }
+
+// begin:==kil--sl---sl==
+
+// GetSpace returns back a space.
+func (client *Client) GetSpace(guid string) (Space, Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.GetSpaceRequest,
+		URIParams: Params{
+			"space_guid": guid,
+		},
+	})
+	if err != nil {
+		return Space{}, nil, err
+	}
+
+	var obj Space
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &obj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return obj, response.Warnings, err
+}
+
+// UpdateSpace updates the space with the given GUID.
+func (client *Client) UpdateSpace(space Space) (Space, Warnings, error) {
+	body, err := json.Marshal(space)
+	if err != nil {
+		return Space{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PutSpaceRequest,
+		URIParams:   Params{"space_guid": space.GUID},
+		Body:        bytes.NewReader(body),
+	})
+	if err != nil {
+		return Space{}, nil, err
+	}
+
+	var updatedObj Space
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
+}
+
+// end:==kil--sl---sl==

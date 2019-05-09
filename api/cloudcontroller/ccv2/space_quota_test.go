@@ -43,7 +43,7 @@ var _ = Describe("Space Quotas", func() {
 				spaceQuota, warnings, err := client.GetSpaceQuotaDefinition("space-quota-guid")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(warnings).To(ConsistOf(Warnings{"this is a warning"}))
-				Expect(spaceQuota).To(Equal(SpaceQuota{
+				Expect(spaceQuota).To(Equal(Quota{
 					Name: "space-quota",
 					GUID: "space-quota-guid",
 				}))
@@ -131,9 +131,9 @@ var _ = Describe("Space Quotas", func() {
 
 			It("returns all the space quotas for the org guid", func() {
 				spaceQuotas, warnings, err := client.GetSpaceQuotas("some-org-guid")
-				Expect(spaceQuotas).To(ConsistOf([]SpaceQuota{
-					SpaceQuota{GUID: "some-space-quota-guid-1", Name: "some-quota-1"},
-					SpaceQuota{GUID: "some-space-quota-guid-2", Name: "some-quota-2"},
+				Expect(spaceQuotas).To(ConsistOf([]Quota{
+					Quota{GUID: "some-space-quota-guid-1", Name: "some-quota-1"},
+					Quota{GUID: "some-space-quota-guid-2", Name: "some-quota-2"},
 				}))
 				Expect(warnings).To(ConsistOf(Warnings{"this is a warning"}))
 				Expect(err).ToNot(HaveOccurred())

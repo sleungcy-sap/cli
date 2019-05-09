@@ -117,3 +117,71 @@ func (client *Client) GetServiceBrokers(filters ...Filter) ([]ServiceBroker, War
 
 	return fullBrokersList, warnings, err
 }
+
+// begin:==kil--sl---sl==
+
+// UpdateServiceBroker updates the service broker with the given GUID.
+func (client *Client) UpdateServiceBroker(serviceBroker ServiceBroker) (ServiceBroker, Warnings, error) {
+	body, err := json.Marshal(serviceBroker)
+	if err != nil {
+		return ServiceBroker{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PutServiceBrokerRequest,
+		URIParams:   Params{"service_broker_guid": serviceBroker.GUID},
+		Body:        bytes.NewReader(body),
+	})
+	if err != nil {
+		return ServiceBroker{}, nil, err
+	}
+
+	var updatedObj ServiceBroker
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
+}
+
+// DeleteServiceBroker delete a service broker
+func (client *Client) DeleteServiceBroker(guid string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteServiceBrokerRequest,
+		URIParams: Params{
+			"service_broker_guid": guid,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}
+
+// GetServiceBroker returns back a service broker.
+func (client *Client) GetServiceBroker(guid string) (ServiceBroker, Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.GetServiceBrokerRequest,
+		URIParams: Params{
+			"service_broker_guid": guid,
+		},
+	})
+	if err != nil {
+		return ServiceBroker{}, nil, err
+	}
+
+	var obj ServiceBroker
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &obj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return obj, response.Warnings, err
+}
+
+// end:==kil--sl---sl==

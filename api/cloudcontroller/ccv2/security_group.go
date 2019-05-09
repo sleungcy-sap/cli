@@ -1,9 +1,11 @@
 package ccv2
 
 import (
+	"bytes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/internal"
+	"encoding/json"
 )
 
 // SecurityGroup represents a Cloud Controller Security Group.
@@ -211,3 +213,208 @@ func (client *Client) getSpaceSecurityGroupsBySpaceAndLifecycle(spaceGUID string
 
 	return securityGroupsList, warnings, err
 }
+
+// begin:==kil--sl---sl==
+
+// UpdateSecurityGroup updates the security group with the given GUID.
+func (client *Client) UpdateRunningSecurityGroup(securityGroup SecurityGroup) (SecurityGroup, Warnings, error) {
+	body, err := json.Marshal(securityGroup)
+	if err != nil {
+		return SecurityGroup{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PutConfigRunningSecurityGroupRequest,
+		URIParams:   Params{"security_group_guid": securityGroup.GUID},
+		Body:        bytes.NewReader(body),
+	})
+	if err != nil {
+		return SecurityGroup{}, nil, err
+	}
+
+	var updatedObj SecurityGroup
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
+}
+
+// DeleteSecurityGroup delete a security group
+func (client *Client) DeleteRunningSecurityGroup(guid string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteConfigRunningSecurityGroupRequest,
+		URIParams: Params{
+			"security_group_guid": guid,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}
+
+// GetSecurityGroups returns back a list of security groups based off of the
+// provided filters.
+func (client *Client) GetStagingSecurityGroups(filters ...Filter) ([]SecurityGroup, Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.GetConfigStagingSecurityGroupsRequest,
+		Query:       ConvertFilterParameters(filters),
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var fullObjList []SecurityGroup
+	warnings, err := client.paginate(request, SecurityGroup{}, func(item interface{}) error {
+		if app, ok := item.(SecurityGroup); ok {
+			fullObjList = append(fullObjList, app)
+		} else {
+			return ccerror.UnknownObjectInListError{
+				Expected:   SecurityGroup{},
+				Unexpected: item,
+			}
+		}
+		return nil
+	})
+
+	return fullObjList, warnings, err
+}
+
+// UpdateSecurityGroup updates the security group with the given GUID.
+func (client *Client) UpdateStagingSecurityGroup(securityGroup SecurityGroup) (SecurityGroup, Warnings, error) {
+	body, err := json.Marshal(securityGroup)
+	if err != nil {
+		return SecurityGroup{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PutConfigStagingSecurityGroupRequest,
+		URIParams:   Params{"security_group_guid": securityGroup.GUID},
+		Body:        bytes.NewReader(body),
+	})
+	if err != nil {
+		return SecurityGroup{}, nil, err
+	}
+
+	var updatedObj SecurityGroup
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
+}
+
+// DeleteSecurityGroup delete a security group
+func (client *Client) DeleteStagingSecurityGroup(guid string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteConfigStagingSecurityGroupRequest,
+		URIParams: Params{
+			"security_group_guid": guid,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}
+
+// CreateSecurityGroup creates a cloud controller security group in with the given settings.
+func (client *Client) CreateSecurityGroup(securityGroup SecurityGroup) (SecurityGroup, Warnings, error) {
+	body, err := json.Marshal(securityGroup)
+	if err != nil {
+		return SecurityGroup{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PostSecurityGroupsRequest,
+		Body:        bytes.NewReader(body),
+	})
+	if err != nil {
+		return SecurityGroup{}, nil, err
+	}
+
+	var updatedObj SecurityGroup
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
+}
+
+// UpdateSecurityGroup updates the security group with the given GUID.
+func (client *Client) UpdateSecurityGroup(securityGroup SecurityGroup) (SecurityGroup, Warnings, error) {
+	body, err := json.Marshal(securityGroup)
+	if err != nil {
+		return SecurityGroup{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PostSecurityGroupRequest,
+		URIParams:   Params{"security_group_guid": securityGroup.GUID},
+		Body:        bytes.NewReader(body),
+	})
+	if err != nil {
+		return SecurityGroup{}, nil, err
+	}
+
+	var updatedObj SecurityGroup
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
+}
+
+// GetSecurityGroup returns back a security group.
+func (client *Client) GetSecurityGroup(guid string) (SecurityGroup, Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.GetSecurityGroupRequest,
+		URIParams: Params{
+			"security_group_guid": guid,
+		},
+	})
+	if err != nil {
+		return SecurityGroup{}, nil, err
+	}
+
+	var obj SecurityGroup
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &obj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return obj, response.Warnings, err
+}
+
+// DeleteSecurityGroup delete a security group
+func (client *Client) DeleteSecurityGroup(guid string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteSecurityGroupRequest,
+		URIParams: Params{
+			"security_group_guid": guid,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}
+
+// end:==kil--sl---sl==

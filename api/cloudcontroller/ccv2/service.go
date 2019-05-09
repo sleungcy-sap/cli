@@ -1,6 +1,7 @@
 package ccv2
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/url"
 	"strconv"
@@ -152,3 +153,56 @@ func (client *Client) makeServicesRequest(opts requestOptions) ([]Service, Warni
 	})
 	return fullServicesList, warnings, err
 }
+
+// begin:==kil--sl---sl==
+
+// CreateService creates a cloud controller service in with the given settings.
+func (client *Client) CreateService(service Service) (Service, Warnings, error) {
+	body, err := json.Marshal(service)
+	if err != nil {
+		return Service{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PostServicesRequest,
+		Body:        bytes.NewReader(body),
+	})
+	if err != nil {
+		return Service{}, nil, err
+	}
+
+	var updatedObj Service
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
+}
+
+// UpdateService updates the service with the given GUID.
+func (client *Client) UpdateService(service Service) (Service, Warnings, error) {
+	body, err := json.Marshal(service)
+	if err != nil {
+		return Service{}, nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PutServiceRequest,
+		URIParams:   Params{"service_guid": service.GUID},
+		Body:        bytes.NewReader(body),
+	})
+	if err != nil {
+		return Service{}, nil, err
+	}
+
+	var updatedObj Service
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return updatedObj, response.Warnings, err
+}
+
+// end:==kil--sl---sl==

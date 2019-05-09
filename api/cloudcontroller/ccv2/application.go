@@ -276,6 +276,23 @@ func (client *Client) GetApplication(guid string) (Application, Warnings, error)
 	return app, response.Warnings, err
 }
 
+// DeleteApplication delete an application
+func (client *Client) DeleteApplication(guid string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteAppRequest,
+		URIParams:   Params{"app_guid": guid},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{
+	}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}
+
 // GetApplications returns back a list of Applications based off of the
 // provided filters.
 func (client *Client) GetApplications(filters ...Filter) ([]Application, Warnings, error) {
