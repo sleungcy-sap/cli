@@ -56,7 +56,7 @@ var _ = Describe("Domain", func() {
 			})
 
 			It("should call the API and return all warnings", func() {
-				warnings, err := client.CreateSharedDomain(domain, routerGroupGUID, isInternal)
+				_, warnings, err := client.CreateSharedDomain(domain, routerGroupGUID, isInternal)
 				Expect(warnings).To(ConsistOf("warning-1", "warning-2"))
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -81,7 +81,7 @@ var _ = Describe("Domain", func() {
 			})
 
 			It("should return the error and all warnings", func() {
-				warnings, err := client.CreateSharedDomain(domain, "", isInternal)
+				_, warnings, err := client.CreateSharedDomain(domain, "", isInternal)
 				Expect(warnings).To(ConsistOf("this is your final warning"))
 				Expect(err).To(MatchError(ccerror.ForbiddenError{Message: "You are not authorized to perform the requested action"}))
 			})
@@ -114,7 +114,7 @@ var _ = Describe("Domain", func() {
 			})
 
 			It("should call the API and return all warnings", func() {
-				warnings, err := client.CreateSharedDomain(domain, "", isInternal)
+				_, warnings, err := client.CreateSharedDomain(domain, "", isInternal)
 				Expect(warnings).To(ConsistOf("warning-1", "warning-2"))
 				Expect(err).ToNot(HaveOccurred())
 			})

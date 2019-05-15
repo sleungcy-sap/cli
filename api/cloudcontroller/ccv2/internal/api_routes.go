@@ -55,8 +55,8 @@ const (
 	GetBuildpacksRequest                                 = "GetBuildpacks"
 	GetBuildpackRequest                                  = "GetBuildpack"
 	GetConfigFeatureFlagsRequest                         = "GetConfigFeatureFlags"
-	GetConfigEnvVarGroupRunningRequest                   = "GetConfigEnvVarGroupRunning" 
-	GetConfigEnvVarGroupStagingRequest                   = "GetConfigEnvVarGroupStaging" 
+	GetConfigEnvVarGroupRunningRequest                   = "GetConfigEnvVarGroupRunning"
+	GetConfigEnvVarGroupStagingRequest                   = "GetConfigEnvVarGroupStaging"
 	GetConfigRunningSecurityGroupsRequest                = "GetConfigRunningSecurityGroups"
 	GetConfigStagingSecurityGroupsRequest                = "GetConfigStagingSecurityGroups"
 	GetEventsRequest                                     = "GetEvents"
@@ -65,6 +65,10 @@ const (
 	GetOrganizationPrivateDomainsRequest                 = "GetOrganizationPrivateDomains"
 	GetOrganizationQuotaDefinitionsRequest               = "GetOrganizationQuotaDefinitions"
 	GetOrganizationQuotaDefinitionRequest                = "GetOrganizationQuotaDefinition"
+	GetOrganizationAuditorsRequest                       = "GetOrganizationAuditors"
+	GetOrganizationManagersRequest                       = "GetOrganizationManagers"
+	GetOrganizationBillingManagersRequest                = "GetOrganizationBillingManagers"
+	GetOrganizationUsersRequest                          = "GetOrganizationUsers"
 	GetOrganizationRequest                               = "GetOrganization"
 	GetOrganizationsRequest                              = "GetOrganizations"
 	GetPrivateDomainRequest                              = "GetPrivateDomain"
@@ -103,6 +107,9 @@ const (
 	GetSecurityGroupRequest                              = "GetSecurityGroup"
 	GetServiceBrokerRequest                              = "GetServiceBroker"
 	GetServicePlanVisibilityRequest                      = "GetServicePlanVisibility"
+	GetSpaceAuditorsRequest                              = "GetSpaceAuditors"
+	GetSpaceManagersRequest                              = "GetSpaceManagers"
+	GetSpaceDevelopersRequest                            = "GetSpaceDevelopers"
 	GetSpaceQuotaDefinitionRequest                       = "GetSpaceQuotaDefinition"
 	GetSpaceRoutesRequest                                = "GetSpaceRoutes"
 	GetSpaceSecurityGroupsRequest                        = "GetSpaceSecurityGroups"
@@ -121,8 +128,6 @@ const (
 	PostAppRequest                                       = "PostApp"
 	PostAppRestageRequest                                = "PostAppRestage"
 	PostBuildpackRequest                                 = "PostBuildpack"
-	PostConfigEnvVarGroupRunningRequest                  = "PostConfigEnvVarGroupRunning" 
-	PostConfigEnvVarGroupStagingRequest                  = "PostConfigEnvVarGroupStaging" 
 	PutConfigFeatureFlagsRequest                         = "PutConfigFeatureFlags"
 	PostOrganizationRequest                              = "PostOrganization"
 	PostOrganizationQuotaDefinitionsRequest              = "PostOrganizationQuotaDefinitions"
@@ -147,6 +152,8 @@ const (
 	PutBuildpackRequest                                  = "PutBuildpack"
 	PutBuildpackBitsRequest                              = "PutBuildpackBits"
 	PutConfigRunningSecurityGroupRequest                 = "PutConfigRunningSecurityGroup"
+	PutConfigEnvVarGroupRunningRequest                   = "PutConfigEnvVarGroupRunning"
+	PutConfigEnvVarGroupStagingRequest                   = "PutConfigEnvVarGroupStaging"
 	PutConfigStagingSecurityGroupRequest                 = "PutConfigStagingSecurityGroup"
 	PutDropletRequest                                    = "PutDroplet"
 	PutOrganizationManagerByUsernameRequest              = "PutOrganizationManagerByUsername"
@@ -208,9 +215,9 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/config/staging_security_groups/:security_group_guid", Method: http.MethodPut, Name: PutConfigStagingSecurityGroupRequest},
 	{Path: "/v2/config/staging_security_groups/:security_group_guid", Method: http.MethodDelete, Name: DeleteConfigStagingSecurityGroupRequest},
 	{Path: "/v2/config/environment_variable_groups/running", Method: http.MethodGet, Name: GetConfigEnvVarGroupRunningRequest},
-	{Path: "/v2/config/environment_variable_groups/running", Method: http.MethodPost, Name: PostConfigEnvVarGroupRunningRequest},
+	{Path: "/v2/config/environment_variable_groups/running", Method: http.MethodPut, Name: PutConfigEnvVarGroupRunningRequest},
 	{Path: "/v2/config/environment_variable_groups/staging", Method: http.MethodGet, Name: GetConfigEnvVarGroupStagingRequest},
-	{Path: "/v2/config/environment_variable_groups/staging", Method: http.MethodPost, Name: PostConfigEnvVarGroupStagingRequest},
+	{Path: "/v2/config/environment_variable_groups/staging", Method: http.MethodPut, Name: PutConfigEnvVarGroupStagingRequest},
 	{Path: "/v2/events", Method: http.MethodGet, Name: GetEventsRequest},
 	{Path: "/v2/info", Method: http.MethodGet, Name: GetInfoRequest},
 	{Path: "/v2/jobs/:job_guid", Method: http.MethodGet, Name: GetJobRequest},
@@ -220,6 +227,10 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/organizations/:organization_guid", Method: http.MethodGet, Name: GetOrganizationRequest},
 	{Path: "/v2/organizations/:organization_guid", Method: http.MethodPut, Name: PutOrganizationRequest},
 	{Path: "/v2/organizations/:organization_guid/managers", Method: http.MethodPut, Name: PutOrganizationManagerByUsernameRequest},
+	{Path: "/v2/organizations/:organization_guid/managers", Method: http.MethodGet, Name: GetOrganizationManagersRequest},
+	{Path: "/v2/organizations/:organization_guid/users", Method: http.MethodGet, Name: GetOrganizationUsersRequest},
+	{Path: "/v2/organizations/:organization_guid/auditors", Method: http.MethodGet, Name: GetOrganizationAuditorsRequest},
+	{Path: "/v2/organizations/:organization_guid/billing_managers", Method: http.MethodGet, Name: GetOrganizationBillingManagersRequest},
 	{Path: "/v2/organizations/:organization_guid/managers/:manager_guid", Method: http.MethodPut, Name: PutOrganizationManagerRequest},
 	{Path: "/v2/organizations/:organization_guid/billing_managers/:billing_manager_guid", Method: http.MethodPut, Name: PutOrganizationBillingManagerRequest},
 	{Path: "/v2/organizations/:organization_guid/auditors/:auditor_guid", Method: http.MethodPut, Name: PutOrganizationAuditorRequest},
@@ -232,8 +243,8 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/organizations/:organization_guid/users", Method: http.MethodPut, Name: PutOrganizationUserByUsernameRequest},
 	{Path: "/v2/organizations/:organization_guid/users/:user_guid", Method: http.MethodPut, Name: PutOrganizationUserRequest},
 	{Path: "/v2/private_domains", Method: http.MethodGet, Name: GetPrivateDomainsRequest},
+	{Path: "/v2/private_domains", Method: http.MethodPost, Name: PostPrivateDomainRequest},
 	{Path: "/v2/private_domains/:private_domain_guid", Method: http.MethodGet, Name: GetPrivateDomainRequest},
-	{Path: "/v2/private_domains/:private_domain_guid", Method: http.MethodPost, Name: PostPrivateDomainRequest},
 	{Path: "/v2/private_domains/:private_domain_guid", Method: http.MethodDelete, Name: DeletePrivateDomainRequest},
 	{Path: "/v2/quota_definitions/:organization_quota_guid", Method: http.MethodGet, Name: GetOrganizationQuotaDefinitionRequest},
 	{Path: "/v2/quota_definitions/:organization_quota_guid", Method: http.MethodPut, Name: PutOrganizationQuotaDefinitionRequest},
@@ -318,6 +329,9 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/spaces", Method: http.MethodGet, Name: GetSpacesRequest},
 	{Path: "/v2/spaces", Method: http.MethodPost, Name: PostSpaceRequest},
 	{Path: "/v2/spaces/:space_guid/developers", Method: http.MethodPut, Name: PutSpaceDeveloperByUsernameRequest},
+	{Path: "/v2/spaces/:space_guid/developers", Method: http.MethodGet, Name: GetSpaceDevelopersRequest},
+	{Path: "/v2/spaces/:space_guid/auditors", Method: http.MethodGet, Name: GetSpaceAuditorsRequest},
+	{Path: "/v2/spaces/:space_guid/managers", Method: http.MethodGet, Name: GetSpaceManagersRequest},
 	{Path: "/v2/spaces/:space_guid/developers/:developer_guid", Method: http.MethodPut, Name: PutSpaceDeveloperRequest},
 	{Path: "/v2/spaces/:space_guid/auditors/:auditor_guid", Method: http.MethodPut, Name: PutSpaceAuditorRequest},
 	{Path: "/v2/spaces/:space_guid/developers/:developer_guid", Method: http.MethodDelete, Name: DeleteSpaceDeveloperRequest},

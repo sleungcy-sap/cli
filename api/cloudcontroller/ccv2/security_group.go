@@ -37,6 +37,8 @@ func (securityGroup *SecurityGroup) UnmarshalJSON(data []byte) error {
 				Ports       string `json:"ports"`
 				Protocol    string `json:"protocol"`
 				Log         *bool  `json:"log"`
+				Code        *int   `json:"code"`
+				Type        *int   `json:"type"`
 			} `json:"rules"`
 			RunningDefault bool `json:"running_default"`
 			StagingDefault bool `json:"staging_default"`
@@ -56,6 +58,8 @@ func (securityGroup *SecurityGroup) UnmarshalJSON(data []byte) error {
 		securityGroup.Rules[i].Ports = ccRule.Ports
 		securityGroup.Rules[i].Protocol = ccRule.Protocol
 		securityGroup.Rules[i].Log.ParseBoolValue(ccRule.Log)
+		securityGroup.Rules[i].Type.ParseIntValue(ccRule.Type)
+		securityGroup.Rules[i].Code.ParseIntValue(ccRule.Code)
 	}
 	securityGroup.RunningDefault = ccSecurityGroup.Entity.RunningDefault
 	securityGroup.StagingDefault = ccSecurityGroup.Entity.StagingDefault
@@ -63,13 +67,15 @@ func (securityGroup *SecurityGroup) UnmarshalJSON(data []byte) error {
 }
 
 // MarshalJSON helps marshal a Cloud Controller Security Group request
-func (securityGroup *SecurityGroup) MarshalJSON() ([]byte, error) {
+func (securityGroup SecurityGroup) MarshalJSON() ([]byte, error) {
 	type rule struct {
 		Description string `json:"description,omitempty"`
 		Destination string `json:"destination"`
-		Ports       string `json:"ports"`
+		Ports       string `json:"ports,omitempty"`
 		Protocol    string `json:"protocol"`
-		Log         *bool  `json:"log,omitempty"`
+		Log         bool   `json:"log"`
+		Code        *int   `json:"code,omitempty"`
+		Type        *int   `json:"type,omitempty"`
 	}
 	ccObj := struct {
 		Name  string `json:"name,omitempty"`
@@ -86,7 +92,13 @@ func (securityGroup *SecurityGroup) MarshalJSON() ([]byte, error) {
 			Ports:       ccRule.Ports,
 		}
 		if ccRule.Log.IsSet {
-			r.Log = &ccRule.Log.Value
+			r.Log = ccRule.Log.Value
+		}
+		if ccRule.Code.IsSet {
+			r.Code = &ccRule.Code.Value
+		}
+		if ccRule.Type.IsSet {
+			r.Type = &ccRule.Type.Value
 		}
 		ccObj.Rules = append(ccObj.Rules, r)
 	}

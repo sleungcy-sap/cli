@@ -35,7 +35,7 @@ func (org *Organization) UnmarshalJSON(data []byte) error {
 		Metadata internal.Metadata `json:"metadata"`
 		Entity   struct {
 			Name                        string `json:"name"`
-			QuotaDefinitionGUID         string `json:"quota_definition_guid"`
+			QuotaDefinitionGUID         string `json:"quota_definition_guid,omitempty"`
 			DefaultIsolationSegmentGUID string `json:"default_isolation_segment_guid"`
 		} `json:"entity"`
 	}
@@ -283,6 +283,70 @@ func (client *Client) UpdateOrganization(orgGuid, orgName, quotaGUID string) (Or
 	return updatedObj, response.Warnings, err
 }
 
+// GetOrganizationUsersByRole find all users for an org by role .
+// (Only available roles: OrgManager, BillingManager and OrgAuditor)
+func (client *Client) GetOrganizationUsersByRole(role constant.UserRole, guid string) ([]User, Warnings, error) {
+	requestName := ""
+	switch role {
+	case constant.OrgManager:
+		requestName = internal.GetOrganizationManagersRequest
+	case constant.BillingManager:
+		requestName = internal.GetOrganizationBillingManagersRequest
+	case constant.OrgAuditor:
+		requestName = internal.GetOrganizationAuditorsRequest
+	default:
+		return []User{}, Warnings{}, fmt.Errorf("Not a valid role, it must be one of OrgManager, BillingManager and OrgAuditor")
+	}
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: requestName,
+		URIParams:   Params{"organization_guid": guid},
+	})
+	if err != nil {
+		return []User{}, nil, err
+	}
+
+	var fullUsersList []User
+	warnings, err := client.paginate(request, User{}, func(item interface{}) error {
+		if user, ok := item.(User); ok {
+			fullUsersList = append(fullUsersList, user)
+		} else {
+			return ccerror.UnknownObjectInListError{
+				Expected:   User{},
+				Unexpected: item,
+			}
+		}
+		return nil
+	})
+
+	return fullUsersList, warnings, err
+}
+
+// GetOrganizationUsers find all users for an org .
+func (client *Client) GetOrganizationUsers(guid string) ([]User, Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.GetOrganizationUsersRequest,
+		URIParams:   Params{"organization_guid": guid},
+	})
+	if err != nil {
+		return []User{}, nil, err
+	}
+
+	var fullUsersList []User
+	warnings, err := client.paginate(request, User{}, func(item interface{}) error {
+		if user, ok := item.(User); ok {
+			fullUsersList = append(fullUsersList, user)
+		} else {
+			return ccerror.UnknownObjectInListError{
+				Expected:   User{},
+				Unexpected: item,
+			}
+		}
+		return nil
+	})
+
+	return fullUsersList, warnings, err
+}
+
 // UpdateOrganizationUserByRole makes the user or client with the given UAA ID a
 // member of this role in the org . (Only available: OrgManager, BillingManager and OrgAuditor)
 func (client *Client) UpdateOrganizationUserByRole(role constant.UserRole, guid string, uaaID string) (Warnings, error) {
@@ -297,7 +361,7 @@ func (client *Client) UpdateOrganizationUserByRole(role constant.UserRole, guid 
 		requestName = internal.PutOrganizationBillingManagerRequest
 	case constant.OrgAuditor:
 		paramUserKey = "auditor_guid"
-		requestName = internal.PutOrganizationBillingManagerRequest
+		requestName = internal.PutOrganizationAuditorRequest
 	default:
 		return Warnings{}, fmt.Errorf("Not a valid role, it must be one of OrgManager, BillingManager and OrgAuditor")
 	}
@@ -329,7 +393,7 @@ func (client *Client) DeleteOrganizationUserByRole(role constant.UserRole, guid 
 		requestName = internal.DeleteOrganizationBillingManagerRequest
 	case constant.OrgAuditor:
 		paramUserKey = "auditor_guid"
-		requestName = internal.DeleteOrganizationBillingManagerRequest
+		requestName = internal.DeleteOrganizationAuditorRequest
 	default:
 		return Warnings{}, fmt.Errorf("Not a valid role, it must be one of OrgManager, BillingManager and OrgAuditor")
 	}

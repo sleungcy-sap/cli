@@ -32,6 +32,9 @@ type Domain struct {
 	// DomainType is the access type of the domain. It can be either a domain
 	// private to a single org or it can be a domain shared to all orgs.
 	Type constant.DomainType
+
+	// Organization owning the domain
+	OwningOrganizationGUID string
 }
 
 // UnmarshalJSON helps unmarshal a Cloud Controller Domain response.
@@ -39,10 +42,11 @@ func (domain *Domain) UnmarshalJSON(data []byte) error {
 	var ccDomain struct {
 		Metadata internal.Metadata `json:"metadata"`
 		Entity   struct {
-			Name            string `json:"name"`
-			RouterGroupGUID string `json:"router_group_guid"`
-			RouterGroupType string `json:"router_group_type"`
-			Internal        bool   `json:"internal"`
+			Name                   string `json:"name"`
+			RouterGroupGUID        string `json:"router_group_guid"`
+			RouterGroupType        string `json:"router_group_type"`
+			Internal               bool   `json:"internal"`
+			OwningOrganizationGUID string `json:"owning_organization_guid"`
 		} `json:"entity"`
 	}
 	err := cloudcontroller.DecodeJSON(data, &ccDomain)
@@ -55,6 +59,7 @@ func (domain *Domain) UnmarshalJSON(data []byte) error {
 	domain.RouterGroupGUID = ccDomain.Entity.RouterGroupGUID
 	domain.RouterGroupType = constant.RouterGroupType(ccDomain.Entity.RouterGroupType)
 	domain.Internal = ccDomain.Entity.Internal
+	domain.OwningOrganizationGUID = ccDomain.Entity.OwningOrganizationGUID
 	return nil
 }
 
@@ -69,7 +74,7 @@ type createPrivateDomainBody struct {
 	OwningOrganizationGuid string `json:"owning_organization_guid"`
 }
 
-func (client *Client) CreateSharedDomain(domainName string, routerGroupdGUID string, isInternal bool) (Warnings, error) {
+func (client *Client) CreateSharedDomain(domainName string, routerGroupdGUID string, isInternal bool) (Domain, Warnings, error) {
 	body := createSharedDomainBody{
 		Name:            domainName,
 		RouterGroupGUID: routerGroupdGUID,
@@ -82,13 +87,15 @@ func (client *Client) CreateSharedDomain(domainName string, routerGroupdGUID str
 	})
 
 	if err != nil {
-		return nil, err
+		return Domain{}, nil, err
+	}
+	var updatedObj Domain
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
 	}
 
-	var response cloudcontroller.Response
-
 	err = client.connection.Make(request, &response)
-	return response.Warnings, err
+	return updatedObj, response.Warnings, err
 }
 
 // GetOrganizationPrivateDomains returns the private domains associated with an organization.
@@ -275,7 +282,7 @@ func (client *Client) DeleteOrganizationPrivateDomain(organizationGuid, privateD
 }
 
 // CreateDomain creates a cloud controller domain in with the given settings.
-func (client *Client) CreatePrivateDomain(domainName string, organizationGUID string) (Warnings, error) {
+func (client *Client) CreatePrivateDomain(domainName string, organizationGUID string) (Domain, Warnings, error) {
 	body := createPrivateDomainBody{
 		Name:                   domainName,
 		OwningOrganizationGuid: organizationGUID,
@@ -287,13 +294,15 @@ func (client *Client) CreatePrivateDomain(domainName string, organizationGUID st
 	})
 
 	if err != nil {
-		return nil, err
+		return Domain{}, nil, err
+	}
+	var updatedObj Domain
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &updatedObj,
 	}
 
-	var response cloudcontroller.Response
-
 	err = client.connection.Make(request, &response)
-	return response.Warnings, err
+	return updatedObj, response.Warnings, err
 }
 
 // CreateDomain creates a cloud controller domain in with the given settings.

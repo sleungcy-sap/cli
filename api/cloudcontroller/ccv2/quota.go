@@ -97,10 +97,10 @@ func (q *Quota) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (q *Quota) MarshalJSON() ([]byte, error) {
+func (q Quota) MarshalJSON() ([]byte, error) {
 	ccQ := struct {
 		Name                    string `json:"name,omitempty"`
-		NonBasicServicesAllowed bool   `json:"non_basic_services_allowed,omitempty"`
+		NonBasicServicesAllowed bool   `json:"non_basic_services_allowed"`
 		TotalServices           int    `json:"total_services,omitempty"`
 		TotalServiceKeys        *int   `json:"total_service_keys,omitempty"`
 		TotalRoutes             int    `json:"total_routes,omitempty"`

@@ -37,7 +37,7 @@ func (client *Client) SetEnvVarGroupRunning(envVarGroup EnvVarGroup) (Warnings, 
 	}
 
 	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.PostConfigEnvVarGroupRunningRequest,
+		RequestName: internal.PutConfigEnvVarGroupRunningRequest,
 		Body:        bytes.NewReader(body),
 	})
 	if err != nil {
@@ -91,7 +91,7 @@ func (client *Client) SetEnvVarGroupStaging(envVarGroup EnvVarGroup) (Warnings, 
 	}
 
 	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.PostConfigEnvVarGroupStagingRequest,
+		RequestName: internal.PutConfigEnvVarGroupStagingRequest,
 		Body:        bytes.NewReader(body),
 	})
 	if err != nil {

@@ -47,3 +47,11 @@ func FilterEqual(filterType constant.FilterType, value ...string) Filter {
 func FilterByName(value ...string) Filter {
 	return FilterEqual(constant.NameFilter, value...)
 }
+
+func FilterByOrg(value ...string) Filter {
+	return FilterEqual(constant.OrganizationGUIDFilter, value...)
+}
+
+func FilterBySpace(value ...string) Filter {
+	return FilterEqual(constant.SpaceGUIDFilter, value...)
+}

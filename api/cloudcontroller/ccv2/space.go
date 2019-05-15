@@ -420,7 +420,7 @@ func (client *Client) DeleteSpaceUserByRole(role constant.UserRole, guid string,
 		requestName = internal.DeleteSpaceManagerRequest
 	case constant.SpaceDeveloper:
 		paramUserKey = "developer_guid"
-		requestName = internal.DeleteSpaceAuditorRequest
+		requestName = internal.DeleteSpaceDeveloperRequest
 	case constant.SpaceAuditor:
 		paramUserKey = "auditor_guid"
 		requestName = internal.DeleteSpaceAuditorRequest
@@ -439,4 +439,42 @@ func (client *Client) DeleteSpaceUserByRole(role constant.UserRole, guid string,
 	err = client.connection.Make(request, &response)
 
 	return response.Warnings, err
+}
+
+// GetSpaceUsersByRole find all users for a space by role .
+// (Only available: SpaceManager, SpaceDeveloper and SpaceAuditor)
+func (client *Client) GetSpaceUsersByRole(role constant.UserRole, guid string) ([]User, Warnings, error) {
+	requestName := ""
+	switch role {
+	case constant.SpaceManager:
+		requestName = internal.GetSpaceManagersRequest
+	case constant.SpaceDeveloper:
+		requestName = internal.GetSpaceDevelopersRequest
+	case constant.SpaceAuditor:
+		requestName = internal.GetSpaceAuditorsRequest
+	default:
+		return []User{}, Warnings{}, fmt.Errorf("Not a valid role, it must be one of SpaceManager, SpaceDeveloper and SpaceAuditor")
+	}
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: requestName,
+		URIParams:   Params{"space_guid": guid},
+	})
+	if err != nil {
+		return []User{}, nil, err
+	}
+
+	var fullUsersList []User
+	warnings, err := client.paginate(request, User{}, func(item interface{}) error {
+		if user, ok := item.(User); ok {
+			fullUsersList = append(fullUsersList, user)
+		} else {
+			return ccerror.UnknownObjectInListError{
+				Expected:   User{},
+				Unexpected: item,
+			}
+		}
+		return nil
+	})
+
+	return fullUsersList, warnings, err
 }

@@ -18,6 +18,12 @@ type SecurityGroupRule struct {
 	// Protocol can be tcp, icmp, udp, all.
 	Protocol string
 
+	// control signal for icmp, where -1 allows all
+	Type types.NullInt
+
+	// control signal for icmp, where -1 allows all
+	Code types.NullInt
+
 	// enables logging for the egress rule, only valid for tcp rules
 	Log types.NullBool
 }
