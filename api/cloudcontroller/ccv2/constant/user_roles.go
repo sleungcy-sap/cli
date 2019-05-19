@@ -6,6 +6,7 @@ const (
 	OrgManager UserRole = iota
 	BillingManager
 	OrgAuditor
+	OrgUser
 	SpaceManager
 	SpaceDeveloper
 	SpaceAuditor

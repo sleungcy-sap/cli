@@ -6,7 +6,6 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/internal"
 	"encoding/json"
-	"net/url"
 )
 
 // ServiceBindingRoute represents a Cloud Controller service binding route.
@@ -69,78 +68,78 @@ func (o *ServiceBindingRoute) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// GetServiceBindingRoutes returns back a list of service binding routes based off of the
-// provided filters.
-func (client *Client) GetServiceBindingRoutes(filters ...Filter) ([]ServiceBindingRoute, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.GetServiceBindingRoutesRequest,
-		Query:       ConvertFilterParameters(filters),
-	})
+// CreateServiceBindingRoute creates a cloud controller service binding route in with the given settings.
+func (client *Client) CreateServiceBindingRoute(serviceID, routeID string, params interface{}) (Warnings, error) {
+	body, err := json.Marshal(struct {
+		Parameters interface{} `json:"parameters"`
+	}{params})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	var fullObjList []ServiceBindingRoute
-	warnings, err := client.paginate(request, ServiceBindingRoute{}, func(item interface{}) error {
-		if app, ok := item.(ServiceBindingRoute); ok {
-			fullObjList = append(fullObjList, app)
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PostServiceBindingRoutesRequest,
+		Body:        bytes.NewReader(body),
+		URIParams: Params{
+			"service_guid": serviceID,
+			"route_guid":   routeID,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{
+	}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}
+
+// DeleteServiceBindingRoute delete a cloud controller service binding route in with the given settings.
+func (client *Client) DeleteServiceBindingRoute(serviceID, routeID string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteServiceBindingRouteRequest,
+		URIParams: Params{
+			"service_guid": serviceID,
+			"route_guid":   routeID,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{
+	}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
+}
+
+// GetServiceBindingRoute returns back a service binding route.
+func (client *Client) GetServiceBindingRoutes(serviceID string) ([]Route, Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.GetServiceBindingRoutesRequest,
+		URIParams: Params{
+			"service_guid": serviceID,
+		},
+	})
+	if err != nil {
+		return []Route{}, nil, err
+	}
+
+	var fullRoutesList []Route
+	warnings, err := client.paginate(request, Route{}, func(item interface{}) error {
+		if i, ok := item.(Route); ok {
+			fullRoutesList = append(fullRoutesList, i)
 		} else {
 			return ccerror.UnknownObjectInListError{
-				Expected:   ServiceBindingRoute{},
+				Expected:   Route{},
 				Unexpected: item,
 			}
 		}
 		return nil
 	})
 
-	return fullObjList, warnings, err
-}
-
-// CreateServiceBindingRoute creates a cloud controller service binding route in with the given settings.
-func (client *Client) CreateServiceBindingRoute(serviceBindingRoute ServiceBindingRoute) (ServiceBindingRoute, Warnings, error) {
-	body, err := json.Marshal(serviceBindingRoute)
-	if err != nil {
-		return ServiceBindingRoute{}, nil, err
-	}
-
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.PostServiceBindingRoutesRequest,
-		Body:        bytes.NewReader(body),
-		Query: url.Values{
-			"accepts_incomplete": []string{"true"},
-		},
-	})
-	if err != nil {
-		return ServiceBindingRoute{}, nil, err
-	}
-
-	var updatedObj ServiceBindingRoute
-	response := cloudcontroller.Response{
-		DecodeJSONResponseInto: &updatedObj,
-	}
-
-	err = client.connection.Make(request, &response)
-	return updatedObj, response.Warnings, err
-}
-
-// GetServiceBindingRoute returns back a service binding route.
-func (client *Client) GetServiceBindingRoute(serviceBindingGuid, routeGuid string) (ServiceBindingRoute, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.GetServiceBindingRouteRequest,
-		URIParams: Params{
-			"service_binding_guid": serviceBindingGuid,
-			"route_guid":           routeGuid,
-		},
-	})
-	if err != nil {
-		return ServiceBindingRoute{}, nil, err
-	}
-
-	var obj ServiceBindingRoute
-	response := cloudcontroller.Response{
-		DecodeJSONResponseInto: &obj,
-	}
-
-	err = client.connection.Make(request, &response)
-	return obj, response.Warnings, err
+	return fullRoutesList, warnings, err
 }

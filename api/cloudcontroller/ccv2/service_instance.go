@@ -3,6 +3,7 @@ package ccv2
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/url"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
@@ -280,6 +281,7 @@ func (client *Client) UpdateServiceInstance(serviceInstance ServiceInstance) (Se
 		RequestName: internal.PutServiceInstanceRequest,
 		URIParams:   Params{"service_instance_guid": serviceInstance.GUID},
 		Body:        bytes.NewReader(body),
+		Query:       url.Values{"accepts_incomplete": {"true"}},
 	})
 	if err != nil {
 		return ServiceInstance{}, nil, err
@@ -295,11 +297,16 @@ func (client *Client) UpdateServiceInstance(serviceInstance ServiceInstance) (Se
 }
 
 // DeleteServiceInstance delete a service instance
-func (client *Client) DeleteServiceInstance(guid string) (Warnings, error) {
+func (client *Client) DeleteServiceInstance(guid string, recursive bool, purge bool) (Warnings, error) {
 	request, err := client.newHTTPRequest(requestOptions{
 		RequestName: internal.DeleteServiceInstanceRequest,
 		URIParams: Params{
 			"service_instance_guid": guid,
+		},
+		Query: url.Values{
+			"accepts_incomplete": {"true"},
+			"recursive":          {fmt.Sprintf("%t", recursive)},
+			"purge":              {fmt.Sprintf("%t", purge)},
 		},
 	})
 	if err != nil {

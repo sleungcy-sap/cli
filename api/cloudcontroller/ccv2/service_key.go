@@ -2,6 +2,7 @@ package ccv2
 
 import (
 	"bytes"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"encoding/json"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
@@ -80,4 +81,69 @@ func (client *Client) CreateServiceKey(serviceInstanceGUID string, keyName strin
 	err = client.connection.Make(request, &response)
 
 	return serviceKey, response.Warnings, err
+}
+
+// GetServiceKey returns back a service key.
+func (client *Client) GetServiceKey(guid string) (ServiceKey, Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.GetServiceKeyRequest,
+		URIParams: Params{
+			"service_key_guid": guid,
+		},
+	})
+	if err != nil {
+		return ServiceKey{}, nil, err
+	}
+
+	var obj ServiceKey
+	response := cloudcontroller.Response{
+		DecodeJSONResponseInto: &obj,
+	}
+
+	err = client.connection.Make(request, &response)
+	return obj, response.Warnings, err
+}
+
+// GetServiceKeys returns a list of Service Key based off of the provided filters.
+func (client *Client) GetServiceKeys(filters ...Filter) ([]ServiceKey, Warnings, error) {
+	params := ConvertFilterParameters(filters)
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.GetServiceKeysRequest,
+		Query:       params,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var fullServiceKeysList []ServiceKey
+	warnings, err := client.paginate(request, Space{}, func(item interface{}) error {
+		if i, ok := item.(ServiceKey); ok {
+			fullServiceKeysList = append(fullServiceKeysList, i)
+		} else {
+			return ccerror.UnknownObjectInListError{
+				Expected:   ServiceKey{},
+				Unexpected: item,
+			}
+		}
+		return nil
+	})
+
+	return fullServiceKeysList, warnings, err
+}
+
+// DeleteServiceKey delete a service key.
+func (client *Client) DeleteServiceKey(guid string) (Warnings, error) {
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteServiceKeyRequest,
+		URIParams: Params{
+			"service_key_guid": guid,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+	return response.Warnings, err
 }

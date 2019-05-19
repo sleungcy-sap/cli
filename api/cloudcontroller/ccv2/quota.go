@@ -105,7 +105,7 @@ func (q Quota) MarshalJSON() ([]byte, error) {
 		TotalServiceKeys        *int   `json:"total_service_keys,omitempty"`
 		TotalRoutes             int    `json:"total_routes,omitempty"`
 		TotalReservedRoutePorts *int   `json:"total_reserved_route_ports,omitempty"`
-		TotalPrivateDomains     *int   `json:"total_private_domains,omitempty"`
+		TotalPrivateDomains     int    `json:"total_private_domains,omitempty"`
 		MemoryLimit             int64  `json:"memory_limit,omitempty"`
 		InstanceMemoryLimit     int64  `json:"instance_memory_limit,omitempty"`
 		AppInstanceLimit        *int   `json:"app_instance_limit,omitempty"`
@@ -139,8 +139,10 @@ func (q Quota) MarshalJSON() ([]byte, error) {
 		ccQ.TotalReservedRoutePorts = &q.TotalReservedRoutePorts.Value
 	}
 
-	if q.TotalPrivateDomains.IsSet {
-		ccQ.TotalPrivateDomains = &q.TotalPrivateDomains.Value
+	if !q.TotalPrivateDomains.IsSet {
+		ccQ.TotalPrivateDomains = -1
+	} else {
+		ccQ.TotalPrivateDomains = q.TotalPrivateDomains.Value
 	}
 
 	if q.AppInstanceLimit.IsSet {

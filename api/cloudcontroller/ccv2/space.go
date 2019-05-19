@@ -59,13 +59,15 @@ func (space *Space) UnmarshalJSON(data []byte) error {
 // UnmarshalJSON helps unmarshal a Cloud Controller Space response.
 func (space Space) MarshalJSON() ([]byte, error) {
 	ccObj := struct {
-		Name             string `json:"name,omitempty"`
-		OrganizationGUID string `json:"organization_guid,omitempty"`
-		AllowSSH         bool   `json:"allow_ssh,omitempty"`
+		Name                     string `json:"name,omitempty"`
+		OrganizationGUID         string `json:"organization_guid,omitempty"`
+		AllowSSH                 bool   `json:"allow_ssh"`
+		SpaceQuotaDefinitionGUID string `json:"space_quota_definition_guid,omitempty"`
 	}{
-		Name:             space.Name,
-		OrganizationGUID: space.OrganizationGUID,
-		AllowSSH:         space.AllowSSH,
+		Name:                     space.Name,
+		OrganizationGUID:         space.OrganizationGUID,
+		AllowSSH:                 space.AllowSSH,
+		SpaceQuotaDefinitionGUID: space.SpaceQuotaDefinitionGUID,
 	}
 
 	return json.Marshal(ccObj)

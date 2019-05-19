@@ -19,6 +19,7 @@ type Buildpack struct {
 	Name     string
 	Position types.NullInt
 	Stack    string
+	Filename string
 }
 
 func (buildpack Buildpack) MarshalJSON() ([]byte, error) {
@@ -55,6 +56,7 @@ func (buildpack *Buildpack) UnmarshalJSON(data []byte) error {
 			Name     string         `json:"name"`
 			Position types.NullInt  `json:"position"`
 			Stack    string         `json:"stack"`
+			Filename string         `json:"filename"`
 		} `json:"entity"`
 	}
 
@@ -69,6 +71,7 @@ func (buildpack *Buildpack) UnmarshalJSON(data []byte) error {
 	buildpack.Name = alias.Entity.Name
 	buildpack.Position = alias.Entity.Position
 	buildpack.Stack = alias.Entity.Stack
+	buildpack.Filename = alias.Entity.Filename
 	return nil
 }
 

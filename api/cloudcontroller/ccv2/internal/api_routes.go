@@ -25,6 +25,7 @@ const (
 	DeleteOrganizationManagerRequest                     = "DeleteOrganizationManager"
 	DeleteOrganizationBillingManagerRequest              = "DeleteOrganizationBillingManager"
 	DeleteOrganizationAuditorRequest                     = "DeleteOrganizationAuditorRequest"
+	DeleteOrganizationUserRequest                        = "DeleteOrganizationUser"
 	DeletePrivateDomainRequest                           = "DeletePrivateDomain"
 	DeleteRouteAppRequest                                = "DeleteRouteApp"
 	DeleteRouteRequest                                   = "DeleteRoute"
@@ -38,6 +39,8 @@ const (
 	DeleteServicePlanRequest                             = "DeleteServicePlan"
 	DeleteServicePlanVisibilityRequest                   = "DeleteServicePlanVisibility"
 	DeleteServiceRequest                                 = "DeleteService"
+	DeleteServiceBindingRouteRequest                     = "DeleteServiceBindingRoute"
+	DeleteServiceKeyRequest                              = "DeleteServiceKey"
 	DeleteSpaceRequest                                   = "DeleteSpace"
 	DeleteSpaceAuditorRequest                            = "DeleteSpaceAuditor"
 	DeleteSpaceDeveloperRequest                          = "DeleteSpaceDeveloper"
@@ -99,6 +102,7 @@ const (
 	GetServicePlanVisibilitiesRequest                    = "GetServicePlanVisibilities"
 	GetServiceRequest                                    = "GetService"
 	GetServicesRequest                                   = "GetServices"
+	GetServiceKeyRequest                                 = "GetServiceKey"
 	GetSharedDomainRequest                               = "GetSharedDomain"
 	GetSharedDomainsRequest                              = "GetSharedDomains"
 	GetSpaceRequest                                      = "GetSpace"
@@ -125,6 +129,8 @@ const (
 	GetUserProvidedServiceInstanceRequest                = "GetUserProvidedServiceInstance"
 	GetUserProvidedServiceInstancesRequest               = "GetUserProvidedServiceInstances"
 	GetUsersRequest                                      = "GetUsers"
+	GetUserOrganizationsRequest                          = "GetUserOrganizations"
+	GetUserSpacesRequest                                 = "GetUserSpaces"
 	PostAppRequest                                       = "PostApp"
 	PostAppRestageRequest                                = "PostAppRestage"
 	PostBuildpackRequest                                 = "PostBuildpack"
@@ -143,6 +149,7 @@ const (
 	PostServicesRequest                                  = "PostServicesRequest"
 	PostServiceBrokerRequest                             = "PostServiceBroker"
 	PostServiceKeyRequest                                = "PostServiceKey"
+	GetServiceKeysRequest                                = "GetServiceKeys"
 	PostServicePlanVisibilityRequest                     = "PostServicePlanVisibility"
 	PostSpaceRequest                                     = "PostSpace"
 	PostUserRequest                                      = "PostUser"
@@ -242,6 +249,7 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/organizations/:organization_guid/private_domains/:private_domain_guid", Method: http.MethodDelete, Name: DeleteOrganizationPrivateDomainRequest},
 	{Path: "/v2/organizations/:organization_guid/users", Method: http.MethodPut, Name: PutOrganizationUserByUsernameRequest},
 	{Path: "/v2/organizations/:organization_guid/users/:user_guid", Method: http.MethodPut, Name: PutOrganizationUserRequest},
+	{Path: "/v2/organizations/:organization_guid/users/:user_guid", Method: http.MethodDelete, Name: DeleteOrganizationUserRequest},
 	{Path: "/v2/private_domains", Method: http.MethodGet, Name: GetPrivateDomainsRequest},
 	{Path: "/v2/private_domains", Method: http.MethodPost, Name: PostPrivateDomainRequest},
 	{Path: "/v2/private_domains/:private_domain_guid", Method: http.MethodGet, Name: GetPrivateDomainRequest},
@@ -282,9 +290,10 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/service_bindings", Method: http.MethodPost, Name: PostServiceBindingRequest},
 	{Path: "/v2/service_bindings/:service_binding_guid", Method: http.MethodDelete, Name: DeleteServiceBindingRequest},
 	{Path: "/v2/service_bindings/:service_binding_guid", Method: http.MethodGet, Name: GetServiceBindingRequest},
-	{Path: "/v2/service_bindings/:service_binding_guid/routes", Method: http.MethodGet, Name: GetServiceBindingRoutesRequest},
-	{Path: "/v2/service_bindings/:service_binding_guid/routes", Method: http.MethodPost, Name: PostServiceBindingRoutesRequest},
-	{Path: "/v2/service_bindings/:service_binding_guid/routes/:route_guid", Method: http.MethodGet, Name: GetServiceBindingRouteRequest},
+	{Path: "/v2/service_instances/:service_guid/routes", Method: http.MethodGet, Name: GetServiceBindingRoutesRequest},
+	{Path: "/v2/service_instances/:service_guid/routes/:route_guid", Method: http.MethodPost, Name: PostServiceBindingRoutesRequest},
+	{Path: "/v2/service_instances/:service_guid/routes/:route_guid", Method: http.MethodGet, Name: GetServiceBindingRouteRequest},
+	{Path: "/v2/service_instances/:service_guid/routes/:route_guid", Method: http.MethodDelete, Name: DeleteServiceBindingRouteRequest},
 	{Path: "/v2/service_brokers", Method: http.MethodGet, Name: GetServiceBrokersRequest},
 	{Path: "/v2/service_brokers", Method: http.MethodPost, Name: PostServiceBrokerRequest},
 	{Path: "/v2/service_brokers/:service_broker_guid", Method: http.MethodPut, Name: PutServiceBrokerRequest},
@@ -299,6 +308,9 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/service_instances/:service_instance_guid/shared_from", Method: http.MethodGet, Name: GetServiceInstanceSharedFromRequest},
 	{Path: "/v2/service_instances/:service_instance_guid/shared_to", Method: http.MethodGet, Name: GetServiceInstanceSharedToRequest},
 	{Path: "/v2/service_keys", Method: http.MethodPost, Name: PostServiceKeyRequest},
+	{Path: "/v2/service_keys", Method: http.MethodGet, Name: GetServiceKeysRequest},
+	{Path: "/v2/service_keys/:service_key_guid", Method: http.MethodGet, Name: GetServiceKeyRequest},
+	{Path: "/v2/service_keys/:service_key_guid", Method: http.MethodDelete, Name: DeleteServiceKeyRequest},
 	{Path: "/v2/service_plan_visibilities", Method: http.MethodGet, Name: GetServicePlanVisibilitiesRequest},
 	{Path: "/v2/service_plan_visibilities", Method: http.MethodPost, Name: PostServicePlanVisibilityRequest},
 	{Path: "/v2/service_plan_visibilities/:service_plan_visibility_guid", Method: http.MethodDelete, Name: DeleteServicePlanVisibilityRequest},
@@ -357,4 +369,6 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/user_provided_service_instances/:user_provided_service_instance_guid", Method: http.MethodDelete, Name: DeleteUserProvidedServiceInstanceRequest},
 	{Path: "/v2/user_provided_service_instances/:user_provided_service_instance_guid/service_bindings", Method: http.MethodGet, Name: GetUserProvidedServiceInstanceServiceBindingsRequest},
 	{Path: "/v2/users", Method: http.MethodPost, Name: PostUserRequest},
+	{Path: "/v2/users/:user_guid/organizations", Method: http.MethodGet, Name: GetUserOrganizationsRequest},
+	{Path: "/v2/users/:user_guid/spaces", Method: http.MethodGet, Name: GetUserSpacesRequest},
 }

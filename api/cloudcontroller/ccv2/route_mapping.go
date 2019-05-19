@@ -18,6 +18,9 @@ type RouteMapping struct {
 
 	// RouteGUID is the unique route identifier.
 	RouteGUID string
+
+	// Port on which the application should listen, and to which requests for the mapped route will be routed
+	AppPort int
 }
 
 // UnmarshalJSON helps unmarshal a Cloud Controller Route Mapping
@@ -27,6 +30,7 @@ func (routeMapping *RouteMapping) UnmarshalJSON(data []byte) error {
 		Entity   struct {
 			AppGUID   string `json:"app_guid"`
 			RouteGUID string `json:"route_guid"`
+			AppPort   int    `json:"app_port"`
 		} `json:"entity"`
 	}
 
@@ -38,6 +42,7 @@ func (routeMapping *RouteMapping) UnmarshalJSON(data []byte) error {
 	routeMapping.GUID = ccRouteMapping.Metadata.GUID
 	routeMapping.AppGUID = ccRouteMapping.Entity.AppGUID
 	routeMapping.RouteGUID = ccRouteMapping.Entity.RouteGUID
+	routeMapping.AppPort = ccRouteMapping.Entity.AppPort
 	return nil
 }
 
@@ -105,13 +110,15 @@ func (client *Client) GetRouteMappings(filters ...Filter) ([]RouteMapping, Warni
 type createRouteMappingRequestBody struct {
 	AppGUID   string `json:"app_guid"`
 	RouteGUID string `json:"route_guid"`
+	AppPort   int    `json:"app_port"`
 }
 
 // CreateRouteMapping creates a cloud controller route mapping in with the given settings.
-func (client *Client) CreateRouteMapping(appGuid, routeGuid string) (RouteMapping, Warnings, error) {
+func (client *Client) CreateRouteMapping(appGuid, routeGuid string, appPort int) (RouteMapping, Warnings, error) {
 	requestBody := createRouteMappingRequestBody{
 		AppGUID:   appGuid,
 		RouteGUID: routeGuid,
+		AppPort:   appPort,
 	}
 
 	bodyBytes, err := json.Marshal(requestBody)
@@ -135,4 +142,3 @@ func (client *Client) CreateRouteMapping(appGuid, routeGuid string) (RouteMappin
 	err = client.connection.Make(request, &response)
 	return updatedObj, response.Warnings, err
 }
-

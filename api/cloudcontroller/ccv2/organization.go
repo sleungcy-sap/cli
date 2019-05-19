@@ -294,6 +294,8 @@ func (client *Client) GetOrganizationUsersByRole(role constant.UserRole, guid st
 		requestName = internal.GetOrganizationBillingManagersRequest
 	case constant.OrgAuditor:
 		requestName = internal.GetOrganizationAuditorsRequest
+	case constant.OrgUser:
+		requestName = internal.GetOrganizationUsersRequest
 	default:
 		return []User{}, Warnings{}, fmt.Errorf("Not a valid role, it must be one of OrgManager, BillingManager and OrgAuditor")
 	}
@@ -362,8 +364,11 @@ func (client *Client) UpdateOrganizationUserByRole(role constant.UserRole, guid 
 	case constant.OrgAuditor:
 		paramUserKey = "auditor_guid"
 		requestName = internal.PutOrganizationAuditorRequest
+	case constant.OrgUser:
+		paramUserKey = "user_guid"
+		requestName = internal.PutOrganizationUserRequest
 	default:
-		return Warnings{}, fmt.Errorf("Not a valid role, it must be one of OrgManager, BillingManager and OrgAuditor")
+		return Warnings{}, fmt.Errorf("Not a valid role, it must be one of OrgManager, BillingManager, OrgAuditor and OrgUser")
 	}
 	request, err := client.newHTTPRequest(requestOptions{
 		RequestName: requestName,
@@ -394,6 +399,9 @@ func (client *Client) DeleteOrganizationUserByRole(role constant.UserRole, guid 
 	case constant.OrgAuditor:
 		paramUserKey = "auditor_guid"
 		requestName = internal.DeleteOrganizationAuditorRequest
+	case constant.OrgUser:
+		paramUserKey = "user_guid"
+		requestName = internal.DeleteOrganizationUserRequest
 	default:
 		return Warnings{}, fmt.Errorf("Not a valid role, it must be one of OrgManager, BillingManager and OrgAuditor")
 	}
