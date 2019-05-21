@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
@@ -86,6 +87,9 @@ type Application struct {
 
 	// EnableSSH specifies whether SSH is enabled for this app.
 	EnableSSH types.NullBool
+
+	// Ports on which application may listen.
+	Ports []int
 }
 
 // MarshalJSON converts an application into a Cloud Controller Application.
@@ -107,6 +111,7 @@ func (application Application) MarshalJSON() ([]byte, error) {
 		StackGUID               string                              `json:"stack_guid,omitempty"`
 		State                   constant.ApplicationState           `json:"state,omitempty"`
 		EnableSSH               *bool                               `json:"enable_ssh,omitempty"`
+		Ports                   []int                               `json:"ports,omitempty"`
 	}{
 		DockerImage:          application.DockerImage,
 		EnvironmentVariables: application.EnvironmentVariables,
@@ -116,6 +121,7 @@ func (application Application) MarshalJSON() ([]byte, error) {
 		SpaceGUID:            application.SpaceGUID,
 		StackGUID:            application.StackGUID,
 		State:                application.State,
+		Ports:                application.Ports,
 	}
 
 	if application.Buildpack.IsSet {
@@ -185,6 +191,7 @@ func (application *Application) UnmarshalJSON(data []byte) error {
 			StagingFailedReason      string                 `json:"staging_failed_reason"`
 			State                    string                 `json:"state"`
 			EnableSSH                *bool                  `json:"enable_ssh"`
+			Ports                    []int                  `json:"ports"`
 		} `json:"entity"`
 	}
 	err := cloudcontroller.DecodeJSON(data, &ccApp)
@@ -192,6 +199,7 @@ func (application *Application) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	application.Ports = ccApp.Entity.Ports
 	application.Buildpack.ParseValue(ccApp.Entity.Buildpack)
 	application.Command.ParseValue(ccApp.Entity.Command)
 	application.DetectedBuildpack.ParseValue(ccApp.Entity.DetectedBuildpack)
@@ -281,6 +289,10 @@ func (client *Client) DeleteApplication(guid string) (Warnings, error) {
 	request, err := client.newHTTPRequest(requestOptions{
 		RequestName: internal.DeleteAppRequest,
 		URIParams:   Params{"app_guid": guid},
+		Query: url.Values{
+			"recursive": {"true"},
+			"async":     {"true"},
+		},
 	})
 	if err != nil {
 		return nil, err

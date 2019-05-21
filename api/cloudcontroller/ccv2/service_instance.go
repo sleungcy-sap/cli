@@ -297,7 +297,7 @@ func (client *Client) UpdateServiceInstance(serviceInstance ServiceInstance) (Se
 }
 
 // DeleteServiceInstance delete a service instance
-func (client *Client) DeleteServiceInstance(guid string, recursive bool, purge bool) (Warnings, error) {
+func (client *Client) DeleteServiceInstance(guid string, recursive bool, purge bool) (async bool, warn Warnings, err error) {
 	request, err := client.newHTTPRequest(requestOptions{
 		RequestName: internal.DeleteServiceInstanceRequest,
 		URIParams: Params{
@@ -310,11 +310,11 @@ func (client *Client) DeleteServiceInstance(guid string, recursive bool, purge b
 		},
 	})
 	if err != nil {
-		return nil, err
+		return false, nil, err
 	}
 
 	response := cloudcontroller.Response{}
 
 	err = client.connection.Make(request, &response)
-	return response.Warnings, err
+	return response.HTTPResponse.StatusCode == 202, response.Warnings, err
 }

@@ -23,6 +23,9 @@ type ServiceBinding struct {
 	Name string
 	// ServiceInstanceGUID is the associated service GUID.
 	ServiceInstanceGUID string
+
+	// Parameters of the service binding
+	Parameters map[string]interface{}
 }
 
 // UnmarshalJSON helps unmarshal a Cloud Controller Service Binding response.
@@ -30,10 +33,11 @@ func (serviceBinding *ServiceBinding) UnmarshalJSON(data []byte) error {
 	var ccServiceBinding struct {
 		Metadata internal.Metadata
 		Entity   struct {
-			AppGUID             string        `json:"app_guid"`
-			ServiceInstanceGUID string        `json:"service_instance_guid"`
-			Name                string        `json:"name"`
-			LastOperation       LastOperation `json:"last_operation"`
+			AppGUID             string                 `json:"app_guid"`
+			ServiceInstanceGUID string                 `json:"service_instance_guid"`
+			Name                string                 `json:"name"`
+			LastOperation       LastOperation          `json:"last_operation"`
+			Parameters          map[string]interface{} `json:"parameters"`
 		} `json:"entity"`
 	}
 	err := cloudcontroller.DecodeJSON(data, &ccServiceBinding)
@@ -46,6 +50,7 @@ func (serviceBinding *ServiceBinding) UnmarshalJSON(data []byte) error {
 	serviceBinding.ServiceInstanceGUID = ccServiceBinding.Entity.ServiceInstanceGUID
 	serviceBinding.Name = ccServiceBinding.Entity.Name
 	serviceBinding.LastOperation = ccServiceBinding.Entity.LastOperation
+	serviceBinding.Parameters = ccServiceBinding.Entity.Parameters
 	return nil
 }
 
