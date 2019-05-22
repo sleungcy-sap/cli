@@ -78,7 +78,7 @@ func (client *Client) CreateServiceBindingRoute(serviceID, routeID string, param
 	}
 
 	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.PostServiceBindingRoutesRequest,
+		RequestName: internal.PutServiceBindingRoutesRequest,
 		Body:        bytes.NewReader(body),
 		URIParams: Params{
 			"service_guid": serviceID,

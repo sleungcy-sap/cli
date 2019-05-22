@@ -143,7 +143,6 @@ const (
 	PostSecurityGroupsRequest                            = "PostSecurityGroups"
 	PostSecurityGroupRequest                             = "PostSecurityGroup"
 	PostServiceBindingRequest                            = "PostServiceBinding"
-	PostServiceBindingRoutesRequest                      = "PostServiceBindingRoutes"
 	PostServiceInstancesRequest                          = "PostServiceInstance"
 	PostSharedDomainRequest                              = "PostSharedDomain"
 	PostServicesRequest                                  = "PostServicesRequest"
@@ -177,6 +176,7 @@ const (
 	PutRouteRequest                                      = "PutRoute"
 	PutServiceRequest                                    = "PutServiceRequest"
 	PutServiceBrokerRequest                              = "PutServiceBroker"
+	PutServiceBindingRoutesRequest                       = "PutServiceBindingRoutes"
 	PutServiceInstanceRequest                            = "PutServiceInstance"
 	PutServicePlanRequest                                = "PutServicePlan"
 	PutServicePlanVisibilityRequest                      = "PutServicePlanVisibility"
@@ -291,7 +291,7 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/service_bindings/:service_binding_guid", Method: http.MethodDelete, Name: DeleteServiceBindingRequest},
 	{Path: "/v2/service_bindings/:service_binding_guid", Method: http.MethodGet, Name: GetServiceBindingRequest},
 	{Path: "/v2/service_instances/:service_guid/routes", Method: http.MethodGet, Name: GetServiceBindingRoutesRequest},
-	{Path: "/v2/service_instances/:service_guid/routes/:route_guid", Method: http.MethodPost, Name: PostServiceBindingRoutesRequest},
+	{Path: "/v2/service_instances/:service_guid/routes/:route_guid", Method: http.MethodPut, Name: PutServiceBindingRoutesRequest},
 	{Path: "/v2/service_instances/:service_guid/routes/:route_guid", Method: http.MethodGet, Name: GetServiceBindingRouteRequest},
 	{Path: "/v2/service_instances/:service_guid/routes/:route_guid", Method: http.MethodDelete, Name: DeleteServiceBindingRouteRequest},
 	{Path: "/v2/service_brokers", Method: http.MethodGet, Name: GetServiceBrokersRequest},
