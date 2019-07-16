@@ -369,6 +369,7 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/user_provided_service_instances/:user_provided_service_instance_guid", Method: http.MethodDelete, Name: DeleteUserProvidedServiceInstanceRequest},
 	{Path: "/v2/user_provided_service_instances/:user_provided_service_instance_guid/service_bindings", Method: http.MethodGet, Name: GetUserProvidedServiceInstanceServiceBindingsRequest},
 	{Path: "/v2/users", Method: http.MethodPost, Name: PostUserRequest},
+	{Path: "/v2/users", Method: http.MethodGet, Name: GetUsersRequest},
 	{Path: "/v2/users/:user_guid/organizations", Method: http.MethodGet, Name: GetUserOrganizationsRequest},
 	{Path: "/v2/users/:user_guid/spaces", Method: http.MethodGet, Name: GetUserSpacesRequest},
 }

@@ -128,3 +128,32 @@ func (client *Client) GetUserSpaces(uaaUserID string, filters ...Filter) ([]Spac
 
 	return fullSpacesList, warnings, err
 }
+
+// GetUsers returns back a list of User based off of the
+// provided filters.
+func (client *Client) GetUsers(filters ...Filter) ([]User, Warnings, error) {
+	allQueries := ConvertFilterParameters(filters)
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.GetUsersRequest,
+		Query:       allQueries,
+	})
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var fullUsersList []User
+	warnings, err := client.paginate(request, User{}, func(item interface{}) error {
+		if user, ok := item.(User); ok {
+			fullUsersList = append(fullUsersList, user)
+		} else {
+			return ccerror.UnknownObjectInListError{
+				Expected:   User{},
+				Unexpected: item,
+			}
+		}
+		return nil
+	})
+
+	return fullUsersList, warnings, err
+}
