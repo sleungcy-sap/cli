@@ -116,7 +116,7 @@ func (client *Client) GetServiceKeys(filters ...Filter) ([]ServiceKey, Warnings,
 	}
 
 	var fullServiceKeysList []ServiceKey
-	warnings, err := client.paginate(request, Space{}, func(item interface{}) error {
+	warnings, err := client.paginate(request, ServiceKey{}, func(item interface{}) error {
 		if i, ok := item.(ServiceKey); ok {
 			fullServiceKeysList = append(fullServiceKeysList, i)
 		} else {
