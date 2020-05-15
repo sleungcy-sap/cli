@@ -98,8 +98,19 @@ func (client *Client) CreateServiceBindingRoute(serviceID, routeID string, param
 
 // DeleteServiceBindingRoute delete a cloud controller service binding route in with the given settings.
 func (client *Client) DeleteServiceBindingRoute(serviceID, routeID string) (Warnings, error) {
+	warn, err := client.deleteServiceBindingRouteRequest(internal.DeleteServiceBindingRouteRequest, serviceID, routeID)
+	if err != nil {
+		if _, ok := err.(ccerror.ResourceNotFoundError); ok {
+			return client.deleteServiceBindingRouteRequest(internal.DeleteUserProvidedServiceInstanceRoutesRequest, serviceID, routeID)
+		}
+		return warn, err
+	}
+	return warn, err
+}
+
+func (client *Client) deleteServiceBindingRouteRequest(requestName string, serviceID, routeID string) (Warnings, error) {
 	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.DeleteServiceBindingRouteRequest,
+		RequestName: requestName,
 		URIParams: Params{
 			"service_guid": serviceID,
 			"route_guid":   routeID,
@@ -118,8 +129,19 @@ func (client *Client) DeleteServiceBindingRoute(serviceID, routeID string) (Warn
 
 // GetServiceBindingRoute returns back a service binding route.
 func (client *Client) GetServiceBindingRoutes(serviceID string) ([]Route, Warnings, error) {
+	routes, warn, err := client.getServiceBindingRoutesRequest(internal.GetServiceBindingRoutesRequest, serviceID)
+	if err != nil {
+		if _, ok := err.(ccerror.ResourceNotFoundError); ok {
+			return client.getServiceBindingRoutesRequest(internal.GetUserProvidedServiceInstanceRoutesRequest, serviceID)
+		}
+		return routes, warn, err
+	}
+	return routes, warn, err
+}
+
+func (client *Client) getServiceBindingRoutesRequest(requestName string, serviceID string) ([]Route, Warnings, error) {
 	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.GetServiceBindingRoutesRequest,
+		RequestName: requestName,
 		URIParams: Params{
 			"service_guid": serviceID,
 		},

@@ -50,6 +50,7 @@ const (
 	DeleteSharedDomainRequest                            = "DeleteSharedDomain"
 	DeleteSpaceUnmappedRoutesRequest                     = "DeleteUnmappedRoutes"
 	DeleteUserProvidedServiceInstanceRequest             = "DeleteUserProvidedServiceInstance"
+	DeleteUserProvidedServiceInstanceRoutesRequest       = "DeleteUserProvidedServiceInstanceRoutes"
 	GetAppInstancesRequest                               = "GetAppInstances"
 	GetAppRequest                                        = "GetApp"
 	GetAppRoutesRequest                                  = "GetAppRoutes"
@@ -130,6 +131,7 @@ const (
 	GetUserProvidedServiceInstancesRequest               = "GetUserProvidedServiceInstances"
 	GetUsersRequest                                      = "GetUsers"
 	GetUserOrganizationsRequest                          = "GetUserOrganizations"
+	GetUserProvidedServiceInstanceRoutesRequest          = "GetUserProvidedServiceInstanceRoutes"
 	GetUserSpacesRequest                                 = "GetUserSpaces"
 	PostAppRequest                                       = "PostApp"
 	PostAppRestageRequest                                = "PostAppRestage"
@@ -368,6 +370,8 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/user_provided_service_instances/:user_provided_service_instance_guid", Method: http.MethodGet, Name: GetUserProvidedServiceInstanceRequest},
 	{Path: "/v2/user_provided_service_instances/:user_provided_service_instance_guid", Method: http.MethodDelete, Name: DeleteUserProvidedServiceInstanceRequest},
 	{Path: "/v2/user_provided_service_instances/:user_provided_service_instance_guid/service_bindings", Method: http.MethodGet, Name: GetUserProvidedServiceInstanceServiceBindingsRequest},
+	{Path: "/v2/user_provided_service_instances/:service_guid/routes", Method: http.MethodGet, Name: GetUserProvidedServiceInstanceRoutesRequest},
+	{Path: "/v2/user_provided_service_instances/:service_guid/routes/:route_guid", Method: http.MethodDelete, Name: DeleteUserProvidedServiceInstanceRoutesRequest},
 	{Path: "/v2/users", Method: http.MethodPost, Name: PostUserRequest},
 	{Path: "/v2/users", Method: http.MethodGet, Name: GetUsersRequest},
 	{Path: "/v2/users/:user_guid/organizations", Method: http.MethodGet, Name: GetUserOrganizationsRequest},
