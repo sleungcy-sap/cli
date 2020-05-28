@@ -2,10 +2,11 @@ package ccv2
 
 import (
 	"bytes"
+	"encoding/json"
+
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/internal"
-	"encoding/json"
 )
 
 // RouteMapping represents a Cloud Controller map between an application and route.
@@ -20,7 +21,7 @@ type RouteMapping struct {
 	RouteGUID string
 
 	// Port on which the application should listen, and to which requests for the mapped route will be routed
-	AppPort *int
+	AppPort int
 }
 
 // UnmarshalJSON helps unmarshal a Cloud Controller Route Mapping
@@ -30,7 +31,7 @@ func (routeMapping *RouteMapping) UnmarshalJSON(data []byte) error {
 		Entity   struct {
 			AppGUID   string `json:"app_guid"`
 			RouteGUID string `json:"route_guid"`
-			AppPort   *int    `json:"app_port"`
+			AppPort   int    `json:"app_port"`
 		} `json:"entity"`
 	}
 
@@ -110,7 +111,7 @@ func (client *Client) GetRouteMappings(filters ...Filter) ([]RouteMapping, Warni
 type createRouteMappingRequestBody struct {
 	AppGUID   string `json:"app_guid"`
 	RouteGUID string `json:"route_guid"`
-	AppPort   *int    `json:"app_port,omitempty"`
+	AppPort   *int   `json:"app_port,omitempty"`
 }
 
 // CreateRouteMapping creates a cloud controller route mapping in with the given settings.
