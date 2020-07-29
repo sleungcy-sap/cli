@@ -171,7 +171,7 @@ func (client *Client) UpdateUser(user User) (User, error) {
 		RequestName: internal.PutUserRequest,
 		Header: http.Header{
 			"Content-Type": {"application/json"},
-			"If-Match":     {"0"},
+			"If-Match":     {"*"},
 		},
 		Body:      bytes.NewBuffer(bodyBytes),
 		URIParams: internal.Params{"user_guid": user.ID},
