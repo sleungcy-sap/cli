@@ -164,6 +164,8 @@ const (
 	PutConfigEnvVarGroupStagingRequest                   = "PutConfigEnvVarGroupStaging"
 	PutConfigStagingSecurityGroupRequest                 = "PutConfigStagingSecurityGroup"
 	PutDropletRequest                                    = "PutDroplet"
+	PutOrganizationBillingManagerByUsernameRequest       = "PutOrganizationBillingManagerByUsername"
+	PutOrganizationAuditorByUsernameRequest              = "PutOrganizationAuditorByUsername"
 	PutOrganizationManagerByUsernameRequest              = "PutOrganizationManagerByUsername"
 	PutOrganizationManagerRequest                        = "PutOrganizationManager"
 	PutOrganizationUserRequest                           = "PutOrganizationUser"
@@ -184,6 +186,7 @@ const (
 	PutServicePlanVisibilityRequest                      = "PutServicePlanVisibility"
 	PutSpaceRequest                                      = "PutSpace"
 	PutSpaceQuotaRequest                                 = "PutSpaceQuotaRequest"
+	PutSpaceAuditorByUsernameRequest                     = "PutSpaceAuditorByUsername"
 	PutSpaceDeveloperRequest                             = "PutSpaceDeveloper"
 	PutSpaceDeveloperByUsernameRequest                   = "PutSpaceDeveloperByUsername"
 	PutSpaceManagerRequest                               = "PutSpaceManager"
@@ -235,6 +238,8 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/organizations/:organization_guid", Method: http.MethodDelete, Name: DeleteOrganizationRequest},
 	{Path: "/v2/organizations/:organization_guid", Method: http.MethodGet, Name: GetOrganizationRequest},
 	{Path: "/v2/organizations/:organization_guid", Method: http.MethodPut, Name: PutOrganizationRequest},
+	{Path: "/v2/organizations/:organization_guid/billing_managers", Method: http.MethodPut, Name: PutOrganizationBillingManagerByUsernameRequest},
+	{Path: "/v2/organizations/:organization_guid/auditors", Method: http.MethodPut, Name: PutOrganizationAuditorByUsernameRequest},
 	{Path: "/v2/organizations/:organization_guid/managers", Method: http.MethodPut, Name: PutOrganizationManagerByUsernameRequest},
 	{Path: "/v2/organizations/:organization_guid/managers", Method: http.MethodGet, Name: GetOrganizationManagersRequest},
 	{Path: "/v2/organizations/:organization_guid/users", Method: http.MethodGet, Name: GetOrganizationUsersRequest},
@@ -344,6 +349,7 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/spaces", Method: http.MethodPost, Name: PostSpaceRequest},
 	{Path: "/v2/spaces/:space_guid/developers", Method: http.MethodPut, Name: PutSpaceDeveloperByUsernameRequest},
 	{Path: "/v2/spaces/:space_guid/developers", Method: http.MethodGet, Name: GetSpaceDevelopersRequest},
+	{Path: "/v2/spaces/:space_guid/auditors", Method: http.MethodPut, Name: PutSpaceAuditorByUsernameRequest},
 	{Path: "/v2/spaces/:space_guid/auditors", Method: http.MethodGet, Name: GetSpaceAuditorsRequest},
 	{Path: "/v2/spaces/:space_guid/managers", Method: http.MethodGet, Name: GetSpaceManagersRequest},
 	{Path: "/v2/spaces/:space_guid/developers/:developer_guid", Method: http.MethodPut, Name: PutSpaceDeveloperRequest},

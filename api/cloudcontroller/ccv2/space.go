@@ -287,6 +287,32 @@ func (client *Client) UpdateSpaceDeveloperByUsername(spaceGUID string, username 
 	return Warnings(response.Warnings), err
 }
 
+// UpdateSpaceAuditorByUsername grants the given username the space developer role.
+func (client *Client) UpdateSpaceAuditorByUsername(spaceGUID string, username string) (Warnings, error) {
+	requestBody := updateRoleRequestBody{
+		Username: username,
+	}
+
+	bodyBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return Warnings{}, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PutSpaceAuditorByUsernameRequest,
+		URIParams:   map[string]string{"space_guid": spaceGUID},
+		Body:        bytes.NewReader(bodyBytes),
+	})
+	if err != nil {
+		return Warnings{}, err
+	}
+
+	response := cloudcontroller.Response{}
+	err = client.connection.Make(request, &response)
+
+	return Warnings(response.Warnings), err
+}
+
 // UpdateSpaceManager grants the space manager role to the user or client
 // associated with the given UAA ID.
 func (client *Client) UpdateSpaceManager(spaceGUID string, uaaID string) (Warnings, error) {

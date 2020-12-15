@@ -205,6 +205,58 @@ func (client *Client) UpdateOrganizationManagerByUsername(guid string, username 
 	return response.Warnings, err
 }
 
+// UpdateOrganizationBillingManagerByUsername assigns the org manager role to the user with the provided name.
+func (client *Client) UpdateOrganizationBillingManagerByUsername(guid string, username string) (Warnings, error) {
+	requestBody := updateOrgManagerByUsernameRequestBody{
+		Username: username,
+	}
+
+	body, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PutOrganizationBillingManagerByUsernameRequest,
+		Body:        bytes.NewReader(body),
+		URIParams:   Params{"organization_guid": guid},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+	err = client.connection.Make(request, &response)
+
+	return response.Warnings, err
+}
+
+// UpdateOrganizationAuditorByUsername assigns the org manager role to the user with the provided name.
+func (client *Client) UpdateOrganizationAuditorByUsername(guid string, username string) (Warnings, error) {
+	requestBody := updateOrgManagerByUsernameRequestBody{
+		Username: username,
+	}
+
+	body, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.PutOrganizationAuditorByUsernameRequest,
+		Body:        bytes.NewReader(body),
+		URIParams:   Params{"organization_guid": guid},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+	err = client.connection.Make(request, &response)
+
+	return response.Warnings, err
+}
+
 // UpdateOrganizationUser makes the user or client with the given UAA ID a
 // member of the org.
 func (client *Client) UpdateOrganizationUser(guid string, uaaID string) (Warnings, error) {
