@@ -165,14 +165,18 @@ const (
 	PutConfigStagingSecurityGroupRequest                 = "PutConfigStagingSecurityGroup"
 	PutDropletRequest                                    = "PutDroplet"
 	PutOrganizationBillingManagerByUsernameRequest       = "PutOrganizationBillingManagerByUsername"
+	DeleteOrganizationBillingManagerByUsernameRequest    = "DeleteOrganizationBillingManagerByUsername"
 	PutOrganizationAuditorByUsernameRequest              = "PutOrganizationAuditorByUsername"
+	DeleteOrganizationAuditorByUsernameRequest           = "DeleteOrganizationAuditorByUsername"
 	PutOrganizationManagerByUsernameRequest              = "PutOrganizationManagerByUsername"
+	DeleteOrganizationManagerByUsernameRequest           = "DeleteOrganizationManagerByUsername"
 	PutOrganizationManagerRequest                        = "PutOrganizationManager"
 	PutOrganizationUserRequest                           = "PutOrganizationUser"
 	PutOrganizationAuditorRequest                        = "PutOrganizationAuditorRequest"
 	PutOrganizationBillingManagerRequest                 = "PutOrganizationBillingManager"
 	PutOrganizationRequest                               = "PutOrganizationRequest"
 	PutOrganizationUserByUsernameRequest                 = "PutOrganizationUserByUsername"
+	DeleteOrganizationUserByUsernameRequest              = "DeleteOrganizationUserByUsername"
 	PutOrganizationPrivateDomainRequest                  = "PutOrganizationPrivateDomain"
 	PutOrganizationQuotaDefinitionRequest                = "PutOrganizationQuotaDefinition"
 	PutResourceMatchRequest                              = "PutResourceMatch"
@@ -187,11 +191,14 @@ const (
 	PutSpaceRequest                                      = "PutSpace"
 	PutSpaceQuotaRequest                                 = "PutSpaceQuotaRequest"
 	PutSpaceAuditorByUsernameRequest                     = "PutSpaceAuditorByUsername"
+	DeleteSpaceAuditorByUsernameRequest                  = "DeleteSpaceAuditorByUsername"
 	PutSpaceDeveloperRequest                             = "PutSpaceDeveloper"
 	PutSpaceDeveloperByUsernameRequest                   = "PutSpaceDeveloperByUsername"
+	DeleteSpaceDeveloperByUsernameRequest                = "DeleteSpaceDeveloperByUsername"
 	PutSpaceManagerRequest                               = "PutSpaceManager"
 	PutSpaceAuditorRequest                               = "PutSpaceAuditor"
 	PutSpaceManagerByUsernameRequest                     = "PutSpaceManagerByUsername"
+	DeleteSpaceManagerByUsernameRequest                  = "DeleteSpaceManagerByUsername"
 	PutSpaceQuotaDefinitionRequest                       = "PutSpaceQuotaDefinition"
 	PutSecurityGroupSpaceRequest                         = "PutSecurityGroupSpace"
 	PutSecurityGroupStagingSpaceRequest                  = "PutSecurityGroupStagingSpace"
@@ -239,8 +246,11 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/organizations/:organization_guid", Method: http.MethodGet, Name: GetOrganizationRequest},
 	{Path: "/v2/organizations/:organization_guid", Method: http.MethodPut, Name: PutOrganizationRequest},
 	{Path: "/v2/organizations/:organization_guid/billing_managers", Method: http.MethodPut, Name: PutOrganizationBillingManagerByUsernameRequest},
+	{Path: "/v2/organizations/:organization_guid/billing_managers/remove", Method: http.MethodPost, Name: DeleteOrganizationBillingManagerByUsernameRequest},
 	{Path: "/v2/organizations/:organization_guid/auditors", Method: http.MethodPut, Name: PutOrganizationAuditorByUsernameRequest},
+	{Path: "/v2/organizations/:organization_guid/auditors/remove", Method: http.MethodPost, Name: DeleteOrganizationAuditorByUsernameRequest},
 	{Path: "/v2/organizations/:organization_guid/managers", Method: http.MethodPut, Name: PutOrganizationManagerByUsernameRequest},
+	{Path: "/v2/organizations/:organization_guid/managers/remove", Method: http.MethodPost, Name: DeleteOrganizationManagerByUsernameRequest},
 	{Path: "/v2/organizations/:organization_guid/managers", Method: http.MethodGet, Name: GetOrganizationManagersRequest},
 	{Path: "/v2/organizations/:organization_guid/users", Method: http.MethodGet, Name: GetOrganizationUsersRequest},
 	{Path: "/v2/organizations/:organization_guid/auditors", Method: http.MethodGet, Name: GetOrganizationAuditorsRequest},
@@ -255,6 +265,7 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/organizations/:organization_guid/private_domains/:private_domain_guid", Method: http.MethodPut, Name: PutOrganizationPrivateDomainRequest},
 	{Path: "/v2/organizations/:organization_guid/private_domains/:private_domain_guid", Method: http.MethodDelete, Name: DeleteOrganizationPrivateDomainRequest},
 	{Path: "/v2/organizations/:organization_guid/users", Method: http.MethodPut, Name: PutOrganizationUserByUsernameRequest},
+	{Path: "/v2/organizations/:organization_guid/users/remove", Method: http.MethodPost, Name: DeleteOrganizationUserByUsernameRequest},
 	{Path: "/v2/organizations/:organization_guid/users/:user_guid", Method: http.MethodPut, Name: PutOrganizationUserRequest},
 	{Path: "/v2/organizations/:organization_guid/users/:user_guid", Method: http.MethodDelete, Name: DeleteOrganizationUserRequest},
 	{Path: "/v2/private_domains", Method: http.MethodGet, Name: GetPrivateDomainsRequest},
@@ -348,8 +359,10 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/spaces", Method: http.MethodGet, Name: GetSpacesRequest},
 	{Path: "/v2/spaces", Method: http.MethodPost, Name: PostSpaceRequest},
 	{Path: "/v2/spaces/:space_guid/developers", Method: http.MethodPut, Name: PutSpaceDeveloperByUsernameRequest},
+	{Path: "/v2/spaces/:space_guid/developers/remove", Method: http.MethodPost, Name: DeleteSpaceDeveloperByUsernameRequest},
 	{Path: "/v2/spaces/:space_guid/developers", Method: http.MethodGet, Name: GetSpaceDevelopersRequest},
 	{Path: "/v2/spaces/:space_guid/auditors", Method: http.MethodPut, Name: PutSpaceAuditorByUsernameRequest},
+	{Path: "/v2/spaces/:space_guid/auditors/remove", Method: http.MethodPost, Name: DeleteSpaceAuditorByUsernameRequest},
 	{Path: "/v2/spaces/:space_guid/auditors", Method: http.MethodGet, Name: GetSpaceAuditorsRequest},
 	{Path: "/v2/spaces/:space_guid/managers", Method: http.MethodGet, Name: GetSpaceManagersRequest},
 	{Path: "/v2/spaces/:space_guid/developers/:developer_guid", Method: http.MethodPut, Name: PutSpaceDeveloperRequest},
@@ -365,6 +378,7 @@ var APIRoutes = rata.Routes{
 	{Path: "/v2/spaces/:space_guid/security_groups", Method: http.MethodGet, Name: GetSpaceSecurityGroupsRequest},
 	{Path: "/v2/spaces/:space_guid/staging_security_groups", Method: http.MethodGet, Name: GetSpaceStagingSecurityGroupsRequest},
 	{Path: "/v2/spaces/:space_guid/managers", Method: http.MethodPut, Name: PutSpaceManagerByUsernameRequest},
+	{Path: "/v2/spaces/:space_guid/managers/remove", Method: http.MethodPost, Name: DeleteSpaceManagerByUsernameRequest},
 	{Path: "/v2/spaces/:space_guid/managers/:manager_guid", Method: http.MethodPut, Name: PutSpaceManagerRequest},
 	{Path: "/v2/spaces/:space_guid/managers/:manager_guid", Method: http.MethodDelete, Name: DeleteSpaceManagerRequest},
 	{Path: "/v2/spaces/:space_guid/unmapped_routes", Method: http.MethodDelete, Name: DeleteSpaceUnmappedRoutesRequest},

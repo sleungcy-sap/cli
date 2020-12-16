@@ -470,3 +470,111 @@ func (client *Client) DeleteOrganizationUserByRole(role constant.UserRole, guid 
 
 	return response.Warnings, err
 }
+
+// DeleteOrganizationUserByUsername revoke the user with the given username a member of
+// the org.
+func (client Client) DeleteOrganizationUserByUsername(orgGUID string, username string) (Warnings, error) {
+	requestBody := updateOrgUserByUsernameRequestBody{
+		Username: username,
+	}
+
+	body, err := json.Marshal(requestBody)
+	if err != nil {
+		return Warnings{}, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteOrganizationUserByUsernameRequest,
+		Body:        bytes.NewReader(body),
+		URIParams:   Params{"organization_guid": orgGUID},
+	})
+	if err != nil {
+		return Warnings{}, err
+	}
+
+	response := cloudcontroller.Response{}
+	err = client.connection.Make(request, &response)
+
+	return response.Warnings, err
+}
+
+// DeleteOrganizationBillingManagerByUsername revoke the user with the given username a member of
+// the org.
+func (client Client) DeleteOrganizationBillingManagerByUsername(orgGUID string, username string) (Warnings, error) {
+	requestBody := updateOrgUserByUsernameRequestBody{
+		Username: username,
+	}
+
+	body, err := json.Marshal(requestBody)
+	if err != nil {
+		return Warnings{}, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteOrganizationBillingManagerByUsernameRequest,
+		Body:        bytes.NewReader(body),
+		URIParams:   Params{"organization_guid": orgGUID},
+	})
+	if err != nil {
+		return Warnings{}, err
+	}
+
+	response := cloudcontroller.Response{}
+	err = client.connection.Make(request, &response)
+
+	return response.Warnings, err
+}
+
+// DeleteOrganizationAuditorByUsername revoke the user with the given username a member of
+// the org.
+func (client Client) DeleteOrganizationAuditorByUsername(orgGUID string, username string) (Warnings, error) {
+	requestBody := updateOrgUserByUsernameRequestBody{
+		Username: username,
+	}
+
+	body, err := json.Marshal(requestBody)
+	if err != nil {
+		return Warnings{}, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteOrganizationAuditorByUsernameRequest,
+		Body:        bytes.NewReader(body),
+		URIParams:   Params{"organization_guid": orgGUID},
+	})
+	if err != nil {
+		return Warnings{}, err
+	}
+
+	response := cloudcontroller.Response{}
+	err = client.connection.Make(request, &response)
+
+	return response.Warnings, err
+}
+
+// DeleteOrganizationManagerByUsername revoke the user with the given username a member of
+// the org.
+func (client Client) DeleteOrganizationManagerByUsername(orgGUID string, username string) (Warnings, error) {
+	requestBody := updateOrgUserByUsernameRequestBody{
+		Username: username,
+	}
+
+	body, err := json.Marshal(requestBody)
+	if err != nil {
+		return Warnings{}, err
+	}
+
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteOrganizationManagerByUsernameRequest,
+		Body:        bytes.NewReader(body),
+		URIParams:   Params{"organization_guid": orgGUID},
+	})
+	if err != nil {
+		return Warnings{}, err
+	}
+
+	response := cloudcontroller.Response{}
+	err = client.connection.Make(request, &response)
+
+	return response.Warnings, err
+}

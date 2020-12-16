@@ -506,3 +506,84 @@ func (client *Client) GetSpaceUsersByRole(role constant.UserRole, guid string) (
 
 	return fullUsersList, warnings, err
 }
+
+// DeleteSpaceManagerByUsername revoke the given username the space manager role.
+func (client *Client) DeleteSpaceManagerByUsername(spaceGUID string, username string) (Warnings, error) {
+	requestBody := updateRoleRequestBody{
+		Username: username,
+	}
+
+	bodyBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return Warnings{}, err
+	}
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteSpaceManagerByUsernameRequest,
+		URIParams:   map[string]string{"space_guid": spaceGUID},
+		Body:        bytes.NewReader(bodyBytes),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+
+	return response.Warnings, err
+}
+
+// DeleteSpaceAuditorByUsername revoke the given username the space manager role.
+func (client *Client) DeleteSpaceAuditorByUsername(spaceGUID string, username string) (Warnings, error) {
+	requestBody := updateRoleRequestBody{
+		Username: username,
+	}
+
+	bodyBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return Warnings{}, err
+	}
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteSpaceAuditorByUsernameRequest,
+		URIParams:   map[string]string{"space_guid": spaceGUID},
+		Body:        bytes.NewReader(bodyBytes),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+
+	return response.Warnings, err
+}
+
+// DeleteSpaceDeveloperByUsername revoke the given username the space manager role.
+func (client *Client) DeleteSpaceDeveloperByUsername(spaceGUID string, username string) (Warnings, error) {
+	requestBody := updateRoleRequestBody{
+		Username: username,
+	}
+
+	bodyBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return Warnings{}, err
+	}
+	request, err := client.newHTTPRequest(requestOptions{
+		RequestName: internal.DeleteSpaceDeveloperByUsernameRequest,
+		URIParams:   map[string]string{"space_guid": spaceGUID},
+		Body:        bytes.NewReader(bodyBytes),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	response := cloudcontroller.Response{}
+
+	err = client.connection.Make(request, &response)
+
+	return response.Warnings, err
+}
