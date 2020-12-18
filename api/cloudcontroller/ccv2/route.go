@@ -19,10 +19,10 @@ type Route struct {
 	GUID string `json:"-"`
 
 	// Host is the hostname of the route.
-	Host string `json:"host,omitempty"`
+	Host string `json:"host"`
 
 	// Path is the path of the route.
-	Path string `json:"path,omitempty"`
+	Path string `json:"path"`
 
 	// Port is the port number of the route.
 	Port types.NullInt `json:"port,omitempty"`
