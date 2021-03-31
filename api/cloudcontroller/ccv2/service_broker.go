@@ -139,7 +139,7 @@ func (client *Client) GetServiceBrokers(filters ...Filter) ([]ServiceBroker, War
 
 // UpdateServiceBroker updates the service broker with the given GUID.
 func (client *Client) UpdateServiceBroker(serviceBroker ServiceBroker) (ServiceBroker, Warnings, error) {
-	body, err := json.Marshal(serviceBroker)
+	body, err := json.Marshal(&serviceBroker)
 	if err != nil {
 		return ServiceBroker{}, nil, err
 	}
