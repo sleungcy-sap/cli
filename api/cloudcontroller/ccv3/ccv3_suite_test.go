@@ -43,7 +43,7 @@ func NewTestClient(config ...Config) (*Client, *ccv3fakes.FakeClock) {
 	} else {
 		client = TestClient(Config{AppName: "CF CLI API V3 Test", AppVersion: "Unknown"}, fakeClock)
 	}
-	warnings, err := client.TargetCF(TargetSettings{
+	_, warnings, err := client.TargetCF(TargetSettings{
 		SkipSSLValidation: true,
 		URL:               server.URL(),
 	})

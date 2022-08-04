@@ -89,11 +89,14 @@ type Warnings []string
 type Client struct {
 	Info
 	cloudControllerURL string
+	CloudControllerURL string
 
 	connection cloudcontroller.Connection
 	router     *internal.Router
 	userAgent  string
 	wrappers   []ConnectionWrapper
+
+	Requester
 
 	jobPollingInterval time.Duration
 	jobPollingTimeout  time.Duration

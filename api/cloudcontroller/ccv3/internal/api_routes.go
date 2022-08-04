@@ -76,10 +76,20 @@ const (
 	PostSpaceActionApplyManifestRequest                         = "PostSpaceActionApplyManifest"
 	PutTaskCancelRequest                                        = "PutTaskCancel"
 	SharePrivateDomainRequest                                   = "SharePrivateDomainRequest"
+
+	GetOrganizationRequest    = "GetOrganization"
+	DeleteOrganizationRequest = "DeleteOrganization"
+	PostOrganizationRequest   = "PostOrganization"
+	GetDefaultDomainRequest   = "GetDefaultDomain"
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
 var APIRoutes = []Route{
+	{Resource: OrgsResource, Path: "/", Method: http.MethodGet, Name: GetOrganizationsRequest},
+	{Resource: OrgsResource, Path: "/:organization_guid/", Method: http.MethodDelete, Name: DeleteOrganizationRequest},
+	{Resource: OrgsResource, Path: "/", Method: http.MethodPost, Name: PostOrganizationRequest},
+	{Resource: OrgsResource, Path: "/:organization_guid/domains/default", Method: http.MethodGet, Name: GetDefaultDomainRequest},
+
 	{Resource: AppsResource, Path: "/", Method: http.MethodGet, Name: GetApplicationsRequest},
 	{Resource: AppsResource, Path: "/", Method: http.MethodPost, Name: PostApplicationRequest},
 	{Resource: AppsResource, Path: "/:app_guid", Method: http.MethodDelete, Name: DeleteApplicationRequest},

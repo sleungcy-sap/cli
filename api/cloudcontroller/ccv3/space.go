@@ -13,6 +13,8 @@ type Space struct {
 	Name string `json:"name"`
 	// Relationships list the relationships to the space.
 	Relationships Relationships `json:"relationships"`
+	// Metadata is used for custom tagging of API resources
+	Metadata *Metadata `json:"metadata,omitempty"`
 }
 
 // GetSpaces lists spaces with optional filters.

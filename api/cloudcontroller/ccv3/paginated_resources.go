@@ -25,8 +25,9 @@ type PaginatedResources struct {
 		} `json:"next"`
 	} `json:"pagination"`
 	// ResourceBytes is the list of resources for the current page.
-	ResourcesBytes json.RawMessage `json:"resources"`
-	resourceType   reflect.Type
+	ResourcesBytes    json.RawMessage `json:"resources"`
+	resourceType      reflect.Type
+	IncludedResources IncludedResources `json:"included"`
 }
 
 // NextPage returns the HREF of the next page of results.
