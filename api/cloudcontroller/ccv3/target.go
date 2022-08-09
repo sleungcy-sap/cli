@@ -28,6 +28,8 @@ type TargetSettings struct {
 // configuration. Any other configuration is also applied to the client.
 func (client *Client) TargetCF(settings TargetSettings) (Info, Warnings, error) {
 	client.CloudControllerURL = settings.URL
+	client.cloudControllerURL = settings.URL
+
 	client.InitializeConnection(settings)
 
 	rootInfo, resourceLinks, warnings, err := client.GetInfo()
