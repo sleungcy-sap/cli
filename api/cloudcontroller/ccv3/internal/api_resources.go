@@ -18,4 +18,6 @@ const (
 	SpacesResource            = "spaces"
 	StacksResource            = "stacks"
 	TasksResource             = "tasks"
+
+	ServiceOfferingsResource = "service_offerings"
 )

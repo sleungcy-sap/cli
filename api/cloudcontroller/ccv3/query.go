@@ -25,7 +25,10 @@ const (
 	SpaceGUIDFilter QueryKey = "space_guids"
 	// StackFilter is a query parameter for listing objects by stack name
 	StackFilter QueryKey = "stacks"
-
+	// ServiceBrokerNamesFilter is a query parameter when getting plans or offerings according to the Service Brokers that it relates to
+	ServiceBrokerNamesFilter QueryKey = "service_broker_names"
+	// FieldsServiceBroker is a query parameter to include specific fields from a service broker in an offering response
+	FieldsServiceBroker QueryKey = "fields[service_broker]"
 	// OrderBy is a query parameter to specify how to order objects.
 	OrderBy QueryKey = "order_by"
 	// PerPage is a query parameter for specifying the number of results per page.
@@ -38,6 +41,9 @@ const (
 	// PositionOrder is a query value for ordering by position. This value is
 	// used in conjunction with the OrderBy QueryKey.
 	PositionOrder = "position"
+
+	// Purge is a query parameter used on a Delete request to indicate that dependent resources should also be deleted
+	Purge = "purge"
 )
 
 // Query is additional settings that can be passed to some requests that can
