@@ -20,4 +20,6 @@ const (
 	TasksResource             = "tasks"
 
 	ServiceOfferingsResource = "service_offerings"
+
+	ServicePlansResource = "service_plans"
 )

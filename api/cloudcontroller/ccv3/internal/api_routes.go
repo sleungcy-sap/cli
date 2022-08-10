@@ -84,10 +84,14 @@ const (
 
 	GetServiceOfferingsRequest   = "GetServiceOfferings"
 	DeleteServiceOfferingRequest = "DeleteServiceOffering"
+
+	GetServicePlansRequest = "GetServicePlans"
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
 var APIRoutes = []Route{
+	{Resource: ServicePlansResource, Path: "/", Method: http.MethodGet, Name: GetServicePlansRequest},
+
 	{Resource: ServiceOfferingsResource, Path: "/", Method: http.MethodGet, Name: GetServiceOfferingsRequest},
 	{Resource: ServiceOfferingsResource, Path: "/:service_offering_guid", Method: http.MethodDelete, Name: DeleteServiceOfferingRequest},
 

@@ -29,10 +29,16 @@ const (
 	ServiceBrokerNamesFilter QueryKey = "service_broker_names"
 	// FieldsServiceBroker is a query parameter to include specific fields from a service broker in an offering response
 	FieldsServiceBroker QueryKey = "fields[service_broker]"
+	// FieldsServiceOfferingServiceBroker is a query parameter to include specific fields from a service broker in a plan response
+	FieldsServiceOfferingServiceBroker QueryKey = "fields[service_offering.service_broker]"
+
 	// OrderBy is a query parameter to specify how to order objects.
 	OrderBy QueryKey = "order_by"
 	// PerPage is a query parameter for specifying the number of results per page.
 	PerPage QueryKey = "per_page"
+	// Include is a query parameter for specifying other resources associated with the
+	// resource returned by the endpoint
+	Include QueryKey = "include"
 
 	// NameOrder is a query value for ordering by name. This value is used in
 	// conjunction with the OrderBy QueryKey.
