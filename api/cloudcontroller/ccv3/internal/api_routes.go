@@ -86,10 +86,31 @@ const (
 	DeleteServiceOfferingRequest = "DeleteServiceOffering"
 
 	GetServicePlansRequest = "GetServicePlans"
+
+	PostRouteRequest   = "PostRoute"
+	DeleteRouteRequest = "DeleteRouteRequest"
+	PatchRouteRequest  = "PatchRoute"
+
+	DeleteOrphanedRoutesRequest = "DeleteOrphanedRoutes"
+	GetApplicationRoutesRequest = "GetApplicationRoutes"
+	GetRouteDestinationsRequest = "GetRouteDestinations"
+	GetRoutesRequest            = "GetRoutes"
+	MapRouteRequest             = "MapRoute"
+	UnmapRouteRequest           = "UnmapRoute"
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
 var APIRoutes = []Route{
+	{Resource: RoutesResource, Path: "/:route_guid/destinations/:destination_guid", Method: http.MethodDelete, Name: UnmapRouteRequest},
+	{Resource: RoutesResource, Path: "/:route_guid/destinations", Method: http.MethodPost, Name: MapRouteRequest},
+	{Resource: RoutesResource, Path: "/", Method: http.MethodGet, Name: GetRoutesRequest},
+	{Resource: RoutesResource, Path: "/:route_guid/destinations", Method: http.MethodGet, Name: GetRouteDestinationsRequest},
+	{Resource: AppsResource, Path: "/:app_guid/routes", Method: http.MethodGet, Name: GetApplicationRoutesRequest},
+	{Resource: SpacesResource, Path: "/:space_guid/routes", Method: http.MethodDelete, Name: DeleteOrphanedRoutesRequest},
+	{Resource: RoutesResource, Path: "/", Method: http.MethodPost, Name: PostRouteRequest},
+	{Resource: RoutesResource, Path: "/:route_guid", Method: http.MethodDelete, Name: DeleteRouteRequest},
+	{Resource: RoutesResource, Path: "/:route_guid", Method: http.MethodPatch, Name: PatchRouteRequest},
+
 	{Resource: ServicePlansResource, Path: "/", Method: http.MethodGet, Name: GetServicePlansRequest},
 
 	{Resource: ServiceOfferingsResource, Path: "/", Method: http.MethodGet, Name: GetServiceOfferingsRequest},

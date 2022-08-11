@@ -22,4 +22,6 @@ const (
 	ServiceOfferingsResource = "service_offerings"
 
 	ServicePlansResource = "service_plans"
+
+	RoutesResource = "routes"
 )

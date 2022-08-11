@@ -32,6 +32,8 @@ const (
 	// FieldsServiceOfferingServiceBroker is a query parameter to include specific fields from a service broker in a plan response
 	FieldsServiceOfferingServiceBroker QueryKey = "fields[service_offering.service_broker]"
 
+	// UnmappedFilter is a query parameter specifying unmapped routes
+	UnmappedFilter QueryKey = "unmapped"
 	// OrderBy is a query parameter to specify how to order objects.
 	OrderBy QueryKey = "order_by"
 	// PerPage is a query parameter for specifying the number of results per page.
