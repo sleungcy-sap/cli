@@ -103,6 +103,9 @@ const (
 	GetPackageDropletsRequest = "GetPackageDroplets"
 	PostDropletBitsRequest    = "PostDropletBits"
 	GetDropletBitsRequest     = "GetDropletBits"
+
+	// v3 package
+	PostPackageBitsRequest = "PostPackageBits"
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
@@ -112,6 +115,8 @@ var APIRoutes = []Route{
 	{Resource: PackagesResource, Path: "/:package_guid/droplets", Method: http.MethodGet, Name: GetPackageDropletsRequest},
 	{Resource: DropletsResource, Path: "/:droplet_guid/upload", Method: http.MethodPost, Name: PostDropletBitsRequest},
 	{Resource: DropletsResource, Path: "/:droplet_guid/download", Method: http.MethodGet, Name: GetDropletBitsRequest},
+	// v3 package
+	{Resource: PackagesResource, Path: "/:package_guid/upload", Method: http.MethodPost, Name: PostPackageBitsRequest},
 
 	{Resource: RoutesResource, Path: "/:route_guid/destinations/:destination_guid", Method: http.MethodDelete, Name: UnmapRouteRequest},
 	{Resource: RoutesResource, Path: "/:route_guid/destinations", Method: http.MethodPost, Name: MapRouteRequest},
