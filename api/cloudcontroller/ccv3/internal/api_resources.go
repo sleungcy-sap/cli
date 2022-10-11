@@ -24,4 +24,7 @@ const (
 	ServicePlansResource = "service_plans"
 
 	RoutesResource = "routes"
+
+	//v3 service credential binding
+	ServiceCredentialBindingsResource = "service_credential_bindings"
 )

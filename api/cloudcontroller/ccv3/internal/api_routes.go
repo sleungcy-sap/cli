@@ -106,6 +106,12 @@ const (
 
 	// v3 package
 	PostPackageBitsRequest = "PostPackageBits"
+
+	// v3 service credential binding
+	PostServiceCredentialBindingRequest       = "PostServiceCredentialBinding"
+	GetServiceCredentialBindingsRequest       = "GetServiceCredentialBindings"
+	DeleteServiceCredentialBindingRequest     = "DeleteServiceCredentialBinding"
+	GetServiceCredentialBindingDetailsRequest = "GetServiceCredentialBindingDetails"
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
@@ -117,6 +123,11 @@ var APIRoutes = []Route{
 	{Resource: DropletsResource, Path: "/:droplet_guid/download", Method: http.MethodGet, Name: GetDropletBitsRequest},
 	// v3 package
 	{Resource: PackagesResource, Path: "/:package_guid/upload", Method: http.MethodPost, Name: PostPackageBitsRequest},
+	// v3 service credential binding
+	{Resource: ServiceCredentialBindingsResource, Path: "/", Method: http.MethodGet, Name: GetServiceCredentialBindingsRequest},
+	{Resource: ServiceCredentialBindingsResource, Path: "/:service_credential_binding_guid/details", Method: http.MethodGet, Name: GetServiceCredentialBindingDetailsRequest},
+	{Resource: ServiceCredentialBindingsResource, Path: "/:service_credential_binding_guid", Method: http.MethodDelete, Name: DeleteServiceCredentialBindingRequest},
+	{Resource: ServiceCredentialBindingsResource, Path: "/", Method: http.MethodPost, Name: PostServiceCredentialBindingRequest},
 
 	{Resource: RoutesResource, Path: "/:route_guid/destinations/:destination_guid", Method: http.MethodDelete, Name: UnmapRouteRequest},
 	{Resource: RoutesResource, Path: "/:route_guid/destinations", Method: http.MethodPost, Name: MapRouteRequest},
