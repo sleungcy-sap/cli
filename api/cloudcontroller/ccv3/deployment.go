@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/internal"
+	"code.cloudfoundry.org/cli/resources"
 )
 
 type Deployment struct {
@@ -46,7 +47,7 @@ func (d *Deployment) UnmarshalJSON(data []byte) error {
 		CreatedAt     string                   `json:"created_at,omitempty"`
 		Relationships Relationships            `json:"relationships,omitempty"`
 		State         constant.DeploymentState `json:"state,omitempty"`
-		Droplet       Droplet                  `json:"droplet,omitempty"`
+		Droplet       resources.Droplet        `json:"droplet,omitempty"`
 	}
 	err := cloudcontroller.DecodeJSON(data, &ccDeployment)
 	if err != nil {

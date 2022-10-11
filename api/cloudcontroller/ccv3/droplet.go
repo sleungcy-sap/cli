@@ -1,98 +1,128 @@
 package ccv3
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
+	"io"
+
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/internal"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/uploads"
+	"code.cloudfoundry.org/cli/resources"
 )
 
-// Droplet represents a Cloud Controller droplet's metadata. A droplet is a set of
-// compiled bits for a given application.
-type Droplet struct {
-	//Buildpacks are the detected buildpacks from the staging process.
-	Buildpacks []DropletBuildpack `json:"buildpacks,omitempty"`
-	// CreatedAt is the timestamp that the Cloud Controller created the droplet.
-	CreatedAt string `json:"created_at"`
-	// GUID is the unique droplet identifier.
-	GUID string `json:"guid"`
-	// Image is the Docker image name.
-	Image string `json:"image"`
-	// Stack is the root filesystem to use with the buildpack.
-	Stack string `json:"stack,omitempty"`
-	// State is the current state of the droplet.
-	State constant.DropletState `json:"state"`
+type DropletCreateRequest struct {
+	Relationships resources.Relationships `json:"relationships"`
 }
 
-// DropletBuildpack is the name and output of a buildpack used to create a
-// droplet.
-type DropletBuildpack struct {
-	// Name is the buildpack name.
-	Name string `json:"name"`
-	//DetectOutput is the output during buildpack detect process.
-	DetectOutput string `json:"detect_output"`
+// CreateDroplet creates a new droplet without a package for the app with
+// the given guid.
+func (client *Client) CreateDroplet(appGUID string) (resources.Droplet, Warnings, error) {
+	requestBody := DropletCreateRequest{
+		Relationships: resources.Relationships{
+			constant.RelationshipTypeApplication: resources.Relationship{GUID: appGUID},
+		},
+	}
+
+	var responseBody resources.Droplet
+
+	_, warnings, err := client.MakeRequest(RequestParams{
+		RequestName:  internal.PostDropletRequest,
+		RequestBody:  requestBody,
+		ResponseBody: &responseBody,
+	})
+
+	return responseBody, warnings, err
 }
 
 // GetApplicationDropletCurrent returns the current droplet for a given
 // application.
-func (client *Client) GetApplicationDropletCurrent(appGUID string) (Droplet, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.GetApplicationDropletCurrentRequest,
-		URIParams:   map[string]string{"app_guid": appGUID},
-	})
-	if err != nil {
-		return Droplet{}, nil, err
-	}
+func (client *Client) GetApplicationDropletCurrent(appGUID string) (resources.Droplet, Warnings, error) {
+	var responseBody resources.Droplet
 
-	var responseDroplet Droplet
-	response := cloudcontroller.Response{
-		DecodeJSONResponseInto: &responseDroplet,
-	}
-	err = client.connection.Make(request, &response)
-	return responseDroplet, response.Warnings, err
+	_, warnings, err := client.MakeRequest(RequestParams{
+		RequestName:  internal.GetApplicationDropletCurrentRequest,
+		URIParams:    internal.Params{"app_guid": appGUID},
+		ResponseBody: &responseBody,
+	})
+
+	return responseBody, warnings, err
 }
 
 // GetDroplet returns a droplet with the given GUID.
-func (client *Client) GetDroplet(dropletGUID string) (Droplet, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.GetDropletRequest,
-		URIParams:   map[string]string{"droplet_guid": dropletGUID},
+func (client *Client) GetDroplet(dropletGUID string) (resources.Droplet, Warnings, error) {
+	var responseBody resources.Droplet
+
+	_, warnings, err := client.MakeRequest(RequestParams{
+		RequestName:  internal.GetDropletRequest,
+		URIParams:    internal.Params{"droplet_guid": dropletGUID},
+		ResponseBody: &responseBody,
 	})
-	if err != nil {
-		return Droplet{}, nil, err
-	}
 
-	var responseDroplet Droplet
-	response := cloudcontroller.Response{
-		DecodeJSONResponseInto: &responseDroplet,
-	}
-	err = client.connection.Make(request, &response)
-
-	return responseDroplet, response.Warnings, err
+	return responseBody, warnings, err
 }
 
 // GetDroplets lists droplets with optional filters.
-func (client *Client) GetDroplets(query ...Query) ([]Droplet, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.GetDropletsRequest,
-		Query:       query,
+func (client *Client) GetDroplets(query ...Query) ([]resources.Droplet, Warnings, error) {
+	var droplets []resources.Droplet
+
+	_, warnings, err := client.MakeListRequest(RequestParams{
+		RequestName:  internal.GetDropletsRequest,
+		Query:        query,
+		ResponseBody: resources.Droplet{},
+		AppendToList: func(item interface{}) error {
+			droplets = append(droplets, item.(resources.Droplet))
+			return nil
+		},
 	})
+
+	return droplets, warnings, err
+}
+
+// GetPackageDroplets returns the droplets that run the specified packages
+func (client *Client) GetPackageDroplets(packageGUID string, query ...Query) ([]resources.Droplet, Warnings, error) {
+	var droplets []resources.Droplet
+
+	_, warnings, err := client.MakeListRequest(RequestParams{
+		RequestName:  internal.GetPackageDropletsRequest,
+		URIParams:    internal.Params{"package_guid": packageGUID},
+		Query:        query,
+		ResponseBody: resources.Droplet{},
+		AppendToList: func(item interface{}) error {
+			droplets = append(droplets, item.(resources.Droplet))
+			return nil
+		},
+	})
+
+	return droplets, warnings, err
+}
+
+// UploadDropletBits asynchronously uploads bits from a .tgz file located at dropletPath to the
+// droplet with guid dropletGUID. It returns a job URL pointing to the asynchronous upload job.
+func (client *Client) UploadDropletBits(dropletGUID string, dropletPath string, droplet io.Reader, dropletLength int64) (JobURL, Warnings, error) {
+	contentLength, err := uploads.CalculateRequestSize(dropletLength, dropletPath, "bits")
 	if err != nil {
-		return nil, nil, err
+		return "", nil, err
 	}
 
-	var responseDroplets []Droplet
-	warnings, err := client.paginate(request, Droplet{}, func(item interface{}) error {
-		if droplet, ok := item.(Droplet); ok {
-			responseDroplets = append(responseDroplets, droplet)
-		} else {
-			return ccerror.UnknownObjectInListError{
-				Expected:   Droplet{},
-				Unexpected: item,
-			}
-		}
-		return nil
-	})
+	contentType, body, writeErrors := uploads.CreateMultipartBodyAndHeader(droplet, dropletPath, "bits")
 
-	return responseDroplets, warnings, err
+	responseLocation, warnings, err := client.MakeRequestUploadAsync(
+		internal.PostDropletBitsRequest,
+		internal.Params{"droplet_guid": dropletGUID},
+		contentType,
+		body,
+		contentLength,
+		nil,
+		writeErrors,
+	)
+
+	return JobURL(responseLocation), warnings, err
+}
+
+func (client *Client) DownloadDroplet(dropletGUID string) ([]byte, Warnings, error) {
+	bytes, warnings, err := client.MakeRequestReceiveRaw(
+		internal.GetDropletBitsRequest,
+		internal.Params{"droplet_guid": dropletGUID},
+		"application/json",
+	)
+	return bytes, warnings, err
 }
