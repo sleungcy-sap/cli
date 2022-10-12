@@ -112,6 +112,15 @@ const (
 	GetServiceCredentialBindingsRequest       = "GetServiceCredentialBindings"
 	DeleteServiceCredentialBindingRequest     = "DeleteServiceCredentialBinding"
 	GetServiceCredentialBindingDetailsRequest = "GetServiceCredentialBindingDetails"
+
+	// service_instance
+	GetServiceInstanceParametersRequest                = "GetServiceInstanceParameters"
+	GetServiceInstanceCredentialsRequest               = "GetServiceInstanceCredentails"
+	PostServiceInstanceRequest                         = "PostServiceInstance"
+	PatchServiceInstanceRequest                        = "PatchServiceInstance"
+	DeleteServiceInstanceRequest                       = "DeleteServiceInstance"
+	GetServiceInstanceRelationshipsSharedSpacesRequest = "GetServiceInstanceRelationshipSharedSpacesRequest"
+	GetServiceInstanceSharedSpacesUsageSummaryRequest  = "GetServiceInstanceSharedSpacesUsageSummaryRequest"
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
@@ -121,13 +130,24 @@ var APIRoutes = []Route{
 	{Resource: PackagesResource, Path: "/:package_guid/droplets", Method: http.MethodGet, Name: GetPackageDropletsRequest},
 	{Resource: DropletsResource, Path: "/:droplet_guid/upload", Method: http.MethodPost, Name: PostDropletBitsRequest},
 	{Resource: DropletsResource, Path: "/:droplet_guid/download", Method: http.MethodGet, Name: GetDropletBitsRequest},
+
 	// v3 package
 	{Resource: PackagesResource, Path: "/:package_guid/upload", Method: http.MethodPost, Name: PostPackageBitsRequest},
+
 	// v3 service credential binding
 	{Resource: ServiceCredentialBindingsResource, Path: "/", Method: http.MethodGet, Name: GetServiceCredentialBindingsRequest},
 	{Resource: ServiceCredentialBindingsResource, Path: "/:service_credential_binding_guid/details", Method: http.MethodGet, Name: GetServiceCredentialBindingDetailsRequest},
 	{Resource: ServiceCredentialBindingsResource, Path: "/:service_credential_binding_guid", Method: http.MethodDelete, Name: DeleteServiceCredentialBindingRequest},
 	{Resource: ServiceCredentialBindingsResource, Path: "/", Method: http.MethodPost, Name: PostServiceCredentialBindingRequest},
+
+	// v3 service instance
+	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/parameters", Method: http.MethodGet, Name: GetServiceInstanceParametersRequest},
+	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/credentials", Method: http.MethodGet, Name: GetServiceInstanceCredentialsRequest},
+	{Resource: ServiceInstancesResource, Path: "/", Method: http.MethodPost, Name: PostServiceInstanceRequest},
+	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid", Method: http.MethodPatch, Name: PatchServiceInstanceRequest},
+	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid", Method: http.MethodDelete, Name: DeleteServiceInstanceRequest},
+	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/relationships/shared_spaces", Method: http.MethodGet, Name: GetServiceInstanceRelationshipsSharedSpacesRequest},
+	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/relationships/shared_spaces/usage_summary", Method: http.MethodGet, Name: GetServiceInstanceSharedSpacesUsageSummaryRequest},
 
 	{Resource: RoutesResource, Path: "/:route_guid/destinations/:destination_guid", Method: http.MethodDelete, Name: UnmapRouteRequest},
 	{Resource: RoutesResource, Path: "/:route_guid/destinations", Method: http.MethodPost, Name: MapRouteRequest},

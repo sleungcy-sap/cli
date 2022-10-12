@@ -31,6 +31,10 @@ const (
 	FieldsServiceBroker QueryKey = "fields[service_broker]"
 	// FieldsServiceOfferingServiceBroker is a query parameter to include specific fields from a service broker in a plan response
 	FieldsServiceOfferingServiceBroker QueryKey = "fields[service_offering.service_broker]"
+	// FieldsSpace is a query parameter to include specific fields from a space
+	FieldsSpace QueryKey = "fields[space]"
+	// FieldsSpaceOrganization is a query parameter to include specific fields from a organization
+	FieldsSpaceOrganization QueryKey = "fields[space.organization]"
 
 	// UnmappedFilter is a query parameter specifying unmapped routes
 	UnmappedFilter QueryKey = "unmapped"
