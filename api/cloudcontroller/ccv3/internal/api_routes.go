@@ -130,6 +130,10 @@ const (
 	GetApplicationFeaturesRequest   = "GetApplicationFeatures"
 	GetSSHEnabled                   = "GetSSHEnabled"
 	PatchApplicationFeaturesRequest = "PatchApplicationFeatures"
+
+	// v3 environment variable
+	GetEnvironmentVariableGroupRequest   = "GetEnvironmentVariableGroup"
+	PatchEnvironmentVariableGroupRequest = "PatchEnvironmentVariableGroup"
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
@@ -176,6 +180,10 @@ var APIRoutes = []Route{
 	{Resource: AppsResource, Path: "/:app_guid/ssh_enabled", Method: http.MethodGet, Name: GetSSHEnabled},
 	{Resource: AppsResource, Path: "/:app_guid/features/:name", Method: http.MethodGet, Name: GetApplicationFeaturesRequest},
 	{Resource: AppsResource, Path: "/:app_guid/features/:name", Method: http.MethodPatch, Name: PatchApplicationFeaturesRequest},
+
+	// v3 environment varirable
+	{Resource: EnvironmentVariableGroupsResource, Path: "/:group_name", Method: http.MethodGet, Name: GetEnvironmentVariableGroupRequest},
+	{Resource: EnvironmentVariableGroupsResource, Path: "/:group_name", Method: http.MethodPatch, Name: PatchEnvironmentVariableGroupRequest},
 
 	{Resource: ServicePlansResource, Path: "/", Method: http.MethodGet, Name: GetServicePlansRequest},
 
