@@ -121,6 +121,10 @@ const (
 	DeleteServiceInstanceRequest                       = "DeleteServiceInstance"
 	GetServiceInstanceRelationshipsSharedSpacesRequest = "GetServiceInstanceRelationshipSharedSpacesRequest"
 	GetServiceInstanceSharedSpacesUsageSummaryRequest  = "GetServiceInstanceSharedSpacesUsageSummaryRequest"
+
+	// v3 process add missing endpoints
+	GetProcessRequest   = "GetProcess"
+	GetProcessesRequest = "GetProcesses"
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
@@ -148,6 +152,10 @@ var APIRoutes = []Route{
 	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid", Method: http.MethodDelete, Name: DeleteServiceInstanceRequest},
 	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/relationships/shared_spaces", Method: http.MethodGet, Name: GetServiceInstanceRelationshipsSharedSpacesRequest},
 	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/relationships/shared_spaces/usage_summary", Method: http.MethodGet, Name: GetServiceInstanceSharedSpacesUsageSummaryRequest},
+
+	// v3 process add missing endpoints
+	{Resource: ProcessesResource, Path: "/", Method: http.MethodGet, Name: GetProcessesRequest},
+	{Resource: ProcessesResource, Path: "/:process_guid", Method: http.MethodGet, Name: GetProcessRequest},
 
 	{Resource: RoutesResource, Path: "/:route_guid/destinations/:destination_guid", Method: http.MethodDelete, Name: UnmapRouteRequest},
 	{Resource: RoutesResource, Path: "/:route_guid/destinations", Method: http.MethodPost, Name: MapRouteRequest},

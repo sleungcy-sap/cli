@@ -1,153 +1,78 @@
 package ccv3
 
 import (
-	"bytes"
-	"encoding/json"
-
-	"code.cloudfoundry.org/cli/api/cloudcontroller"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/internal"
 	"code.cloudfoundry.org/cli/resources"
 )
 
-type Deployment struct {
-	GUID          string
-	State         constant.DeploymentState
-	DropletGUID   string
-	CreatedAt     string
-	UpdatedAt     string
-	Relationships Relationships
-}
-
-// MarshalJSON converts a Deployment into a Cloud Controller Deployment.
-func (d Deployment) MarshalJSON() ([]byte, error) {
-	type Droplet struct {
-		GUID string `json:"guid,omitempty"`
-	}
-
-	var ccDeployment struct {
-		Droplet       *Droplet      `json:"droplet,omitempty"`
-		Relationships Relationships `json:"relationships,omitempty"`
-	}
-
-	if d.DropletGUID != "" {
-		ccDeployment.Droplet = &Droplet{d.DropletGUID}
-	}
-
-	ccDeployment.Relationships = d.Relationships
-
-	return json.Marshal(ccDeployment)
-}
-
-// UnmarshalJSON helps unmarshal a Cloud Controller Deployment response.
-func (d *Deployment) UnmarshalJSON(data []byte) error {
-	var ccDeployment struct {
-		GUID          string                   `json:"guid,omitempty"`
-		CreatedAt     string                   `json:"created_at,omitempty"`
-		Relationships Relationships            `json:"relationships,omitempty"`
-		State         constant.DeploymentState `json:"state,omitempty"`
-		Droplet       resources.Droplet        `json:"droplet,omitempty"`
-	}
-	err := cloudcontroller.DecodeJSON(data, &ccDeployment)
-	if err != nil {
-		return err
-	}
-
-	d.GUID = ccDeployment.GUID
-	d.CreatedAt = ccDeployment.CreatedAt
-	d.Relationships = ccDeployment.Relationships
-	d.State = ccDeployment.State
-	d.DropletGUID = ccDeployment.Droplet.GUID
-
-	return nil
-}
-
 func (client *Client) CancelDeployment(deploymentGUID string) (Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
+	_, warnings, err := client.MakeRequest(RequestParams{
 		RequestName: internal.PostApplicationDeploymentActionCancelRequest,
-		URIParams:   map[string]string{"deployment_guid": deploymentGUID},
+		URIParams:   internal.Params{"deployment_guid": deploymentGUID},
 	})
 
-	if err != nil {
-		return nil, err
-	}
-
-	response := cloudcontroller.Response{}
-
-	err = client.connection.Make(request, &response)
-
-	return response.Warnings, err
+	return warnings, err
 }
 
 func (client *Client) CreateApplicationDeployment(appGUID string, dropletGUID string) (string, Warnings, error) {
-	dep := Deployment{
+	dep := resources.Deployment{
 		DropletGUID:   dropletGUID,
-		Relationships: Relationships{constant.RelationshipTypeApplication: Relationship{GUID: appGUID}},
+		Relationships: resources.Relationships{constant.RelationshipTypeApplication: resources.Relationship{GUID: appGUID}},
 	}
-	bodyBytes, err := json.Marshal(dep)
 
-	if err != nil {
-		return "", nil, err
-	}
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.PostApplicationDeploymentRequest,
-		Body:        bytes.NewReader(bodyBytes),
+	var responseBody resources.Deployment
+
+	_, warnings, err := client.MakeRequest(RequestParams{
+		RequestName:  internal.PostApplicationDeploymentRequest,
+		RequestBody:  dep,
+		ResponseBody: &responseBody,
 	})
 
-	if err != nil {
-		return "", nil, err
-	}
-
-	var responseDeployment Deployment
-	response := cloudcontroller.Response{
-		DecodeJSONResponseInto: &responseDeployment,
-	}
-	err = client.connection.Make(request, &response)
-
-	return responseDeployment.GUID, response.Warnings, err
+	return responseBody.GUID, warnings, err
 }
 
-func (client *Client) GetDeployment(deploymentGUID string) (Deployment, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.GetDeploymentRequest,
-		URIParams:   internal.Params{"deployment_guid": deploymentGUID},
+func (client *Client) CreateApplicationDeploymentByRevision(appGUID string, revisionGUID string) (string, Warnings, error) {
+	dep := resources.Deployment{
+		RevisionGUID:  revisionGUID,
+		Relationships: resources.Relationships{constant.RelationshipTypeApplication: resources.Relationship{GUID: appGUID}},
+	}
+
+	var responseBody resources.Deployment
+
+	_, warnings, err := client.MakeRequest(RequestParams{
+		RequestName:  internal.PostApplicationDeploymentRequest,
+		RequestBody:  dep,
+		ResponseBody: &responseBody,
 	})
-	if err != nil {
-		return Deployment{}, nil, err
-	}
 
-	var responseDeployment Deployment
-	response := cloudcontroller.Response{
-		DecodeJSONResponseInto: &responseDeployment,
-	}
-	err = client.connection.Make(request, &response)
-
-	return responseDeployment, response.Warnings, err
+	return responseBody.GUID, warnings, err
 }
 
-func (client *Client) GetDeployments(query ...Query) ([]Deployment, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.GetDeploymentsRequest,
-		Query:       query,
+func (client *Client) GetDeployment(deploymentGUID string) (resources.Deployment, Warnings, error) {
+	var responseBody resources.Deployment
+
+	_, warnings, err := client.MakeRequest(RequestParams{
+		RequestName:  internal.GetDeploymentRequest,
+		URIParams:    internal.Params{"deployment_guid": deploymentGUID},
+		ResponseBody: &responseBody,
 	})
-	if err != nil {
-		return nil, nil, err // untested
-	}
-	var deployments []Deployment
-	warnings, err := client.paginate(request, Deployment{}, func(item interface{}) error {
-		if deployment, ok := item.(Deployment); ok {
-			deployments = append(deployments, deployment)
-		} else {
-			return ccerror.UnknownObjectInListError{
-				Expected:   Deployment{},
-				Unexpected: item,
-			}
-		}
-		return nil
+
+	return responseBody, warnings, err
+}
+
+func (client *Client) GetDeployments(query ...Query) ([]resources.Deployment, Warnings, error) {
+	var deployments []resources.Deployment
+
+	_, warnings, err := client.MakeListRequest(RequestParams{
+		RequestName:  internal.GetDeploymentsRequest,
+		Query:        query,
+		ResponseBody: resources.Deployment{},
+		AppendToList: func(item interface{}) error {
+			deployments = append(deployments, item.(resources.Deployment))
+			return nil
+		},
 	})
-	if err != nil {
-		return nil, nil, err // untested
-	}
-	return deployments, warnings, nil
+
+	return deployments, warnings, err
 }
