@@ -27,6 +27,9 @@ const (
 	StackFilter QueryKey = "stacks"
 	// ServiceBrokerNamesFilter is a query parameter when getting plans or offerings according to the Service Brokers that it relates to
 	ServiceBrokerNamesFilter QueryKey = "service_broker_names"
+	// StatesFilter is a query parameter when getting a package's droplets by state
+	StatesFilter QueryKey = "states"
+
 	// FieldsServiceBroker is a query parameter to include specific fields from a service broker in an offering response
 	FieldsServiceBroker QueryKey = "fields[service_broker]"
 	// FieldsServiceOfferingServiceBroker is a query parameter to include specific fields from a service broker in a plan response
