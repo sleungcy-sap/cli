@@ -3,7 +3,6 @@ package ccv3
 import (
 	"time"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 )
@@ -16,6 +15,8 @@ type Job struct {
 	GUID string `json:"guid"`
 	// State is the state of the job.
 	State constant.JobState `json:"state"`
+	// Warnings are the warnings emitted by the job during its processing.
+	Warnings []jobWarning `json:"warnings"`
 }
 
 // Errors returns back a list of
@@ -25,8 +26,8 @@ func (job Job) Errors() []error {
 		switch errDetails.Code {
 		case constant.JobErrorCodeBuildpackAlreadyExistsForStack:
 			errs = append(errs, ccerror.BuildpackAlreadyExistsForStackError{Message: errDetails.Detail})
-		case constant.JobErrorCodeBuildpackAlreadyExistsWithoutStack:
-			errs = append(errs, ccerror.BuildpackAlreadyExistsWithoutStackError{Message: errDetails.Detail})
+		case constant.JobErrorCodeBuildpackInvalid:
+			errs = append(errs, ccerror.BuildpackInvalidError{Message: errDetails.Detail})
 		case constant.JobErrorCodeBuildpackStacksDontMatch:
 			errs = append(errs, ccerror.BuildpackStacksDontMatchError{Message: errDetails.Detail})
 		case constant.JobErrorCodeBuildpackStackDoesNotExist:
@@ -55,6 +56,10 @@ func (job Job) IsComplete() bool {
 	return job.State == constant.JobComplete
 }
 
+type jobWarning struct {
+	Detail string `json:"detail"`
+}
+
 // JobErrorDetails provides information regarding a job's error.
 type JobErrorDetails struct {
 	// Code is a numeric code for this error.
@@ -67,24 +72,28 @@ type JobErrorDetails struct {
 
 // GetJob returns a job for the provided GUID.
 func (client *Client) GetJob(jobURL JobURL) (Job, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{URL: string(jobURL)})
-	if err != nil {
-		return Job{}, nil, err
+	var responseBody Job
+
+	_, warnings, err := client.MakeRequest(RequestParams{
+		URL:          string(jobURL),
+		ResponseBody: &responseBody,
+	})
+
+	for _, jobWarning := range responseBody.Warnings {
+		warnings = append(warnings, jobWarning.Detail)
 	}
 
-	var job Job
-	response := cloudcontroller.Response{
-		DecodeJSONResponseInto: &job,
-	}
-
-	err = client.connection.Make(request, &response)
-	return job, response.Warnings, err
+	return responseBody, warnings, err
 }
 
 // PollJob will keep polling the given job until the job has terminated, an
 // error is encountered, or config.OverallPollingTimeout is reached. In the
 // last case, a JobTimeoutError is returned.
 func (client *Client) PollJob(jobURL JobURL) (Warnings, error) {
+	if jobURL == "" {
+		return nil, nil
+	}
+
 	var (
 		err         error
 		warnings    Warnings
@@ -101,8 +110,14 @@ func (client *Client) PollJob(jobURL JobURL) (Warnings, error) {
 		}
 
 		if job.HasFailed() {
-			firstError := job.Errors()[0]
-			return allWarnings, firstError
+			if len(job.Errors()) > 0 {
+				firstError := job.Errors()[0]
+				return allWarnings, firstError
+			} else {
+				return allWarnings, ccerror.JobFailedNoErrorError{
+					JobGUID: job.GUID,
+				}
+			}
 		}
 
 		if job.IsComplete() {
