@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/internal"
 )
@@ -84,46 +83,31 @@ func (instance *ProcessInstance) UnmarshalJSON(data []byte) error {
 // DeleteApplicationProcessInstance deletes/stops a particular application's
 // process instance.
 func (client *Client) DeleteApplicationProcessInstance(appGUID string, processType string, instanceIndex int) (Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
+	_, warnings, err := client.MakeRequest(RequestParams{
 		RequestName: internal.DeleteApplicationProcessInstanceRequest,
-		URIParams: map[string]string{
+		URIParams: internal.Params{
 			"app_guid": appGUID,
 			"type":     processType,
 			"index":    strconv.Itoa(instanceIndex),
 		},
 	})
-	if err != nil {
-		return nil, err
-	}
 
-	var response cloudcontroller.Response
-	err = client.connection.Make(request, &response)
-
-	return response.Warnings, err
+	return warnings, err
 }
 
 // GetProcessInstances lists instance stats for a given process.
 func (client *Client) GetProcessInstances(processGUID string) ([]ProcessInstance, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.GetProcessStatsRequest,
-		URIParams:   map[string]string{"process_guid": processGUID},
-	})
-	if err != nil {
-		return nil, nil, err
-	}
+	var resources []ProcessInstance
 
-	var fullInstancesList []ProcessInstance
-	warnings, err := client.paginate(request, ProcessInstance{}, func(item interface{}) error {
-		if instance, ok := item.(ProcessInstance); ok {
-			fullInstancesList = append(fullInstancesList, instance)
-		} else {
-			return ccerror.UnknownObjectInListError{
-				Expected:   ProcessInstance{},
-				Unexpected: item,
-			}
-		}
-		return nil
+	_, warnings, err := client.MakeListRequest(RequestParams{
+		RequestName:  internal.GetProcessStatsRequest,
+		URIParams:    internal.Params{"process_guid": processGUID},
+		ResponseBody: ProcessInstance{},
+		AppendToList: func(item interface{}) error {
+			resources = append(resources, item.(ProcessInstance))
+			return nil
+		},
 	})
 
-	return fullInstancesList, warnings, err
+	return resources, warnings, err
 }
