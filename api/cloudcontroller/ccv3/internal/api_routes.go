@@ -138,6 +138,11 @@ const (
 	// v3 domain add missing endpoints
 	GetDomainRouteReservationsRequest = "GetDomainRouteReservations"
 	GetDomainRequest                  = "GetDomain"
+
+	// v3 space add missing
+	PostSpaceRequest   = "PostSpace"
+	DeleteSpaceRequest = "DeleteSpace"
+	PatchSpaceRequest  = "PatchSpace"
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
@@ -192,6 +197,11 @@ var APIRoutes = []Route{
 	// v3 domain add missing
 	{Resource: DomainsResource, Path: "/:domain_guid/route_reservations", Method: http.MethodGet, Name: GetDomainRouteReservationsRequest},
 	{Resource: DomainsResource, Path: "/:domain_guid", Method: http.MethodGet, Name: GetDomainRequest},
+
+	// v3 space add missing
+	{Resource: SpacesResource, Path: "/", Method: http.MethodPost, Name: PostSpaceRequest},
+	{Resource: SpacesResource, Path: "/:space_guid", Method: http.MethodDelete, Name: DeleteSpaceRequest},
+	{Resource: SpacesResource, Path: "/:space_guid", Method: http.MethodPatch, Name: PatchSpaceRequest},
 
 	{Resource: ServicePlansResource, Path: "/", Method: http.MethodGet, Name: GetServicePlansRequest},
 

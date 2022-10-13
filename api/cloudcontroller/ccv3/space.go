@@ -1,44 +1,61 @@
 package ccv3
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/internal"
+	"code.cloudfoundry.org/cli/resources"
 )
 
-// Space represents a Cloud Controller V3 Space.
-type Space struct {
-	// GUID is a unique space identifier.
-	GUID string `json:"guid"`
-	// Name is the name of the space.
-	Name string `json:"name"`
-	// Relationships list the relationships to the space.
-	Relationships Relationships `json:"relationships"`
-	// Metadata is used for custom tagging of API resources
-	Metadata *Metadata `json:"metadata,omitempty"`
+func (client *Client) CreateSpace(space resources.Space) (resources.Space, Warnings, error) {
+	var responseBody resources.Space
+
+	_, warnings, err := client.MakeRequest(RequestParams{
+		RequestName:  internal.PostSpaceRequest,
+		RequestBody:  space,
+		ResponseBody: &responseBody,
+	})
+
+	return responseBody, warnings, err
+}
+
+func (client *Client) DeleteSpace(spaceGUID string) (JobURL, Warnings, error) {
+	jobURL, warnings, err := client.MakeRequest(RequestParams{
+		RequestName: internal.DeleteSpaceRequest,
+		URIParams:   internal.Params{"space_guid": spaceGUID},
+	})
+
+	return jobURL, warnings, err
 }
 
 // GetSpaces lists spaces with optional filters.
-func (client *Client) GetSpaces(query ...Query) ([]Space, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.GetSpacesRequest,
-		Query:       query,
-	})
-	if err != nil {
-		return nil, nil, err
-	}
+func (client *Client) GetSpaces(query ...Query) ([]resources.Space, IncludedResources, Warnings, error) {
+	var returnedResources []resources.Space
 
-	var fullSpacesList []Space
-	warnings, err := client.paginate(request, Space{}, func(item interface{}) error {
-		if space, ok := item.(Space); ok {
-			fullSpacesList = append(fullSpacesList, space)
-		} else {
-			return ccerror.UnknownObjectInListError{
-				Expected:   Space{},
-				Unexpected: item,
-			}
-		}
-		return nil
+	includedResources, warnings, err := client.MakeListRequest(RequestParams{
+		RequestName:  internal.GetSpacesRequest,
+		Query:        query,
+		ResponseBody: resources.Space{},
+		AppendToList: func(item interface{}) error {
+			returnedResources = append(returnedResources, item.(resources.Space))
+			return nil
+		},
 	})
 
-	return fullSpacesList, warnings, err
+	return returnedResources, includedResources, warnings, err
+}
+
+func (client *Client) UpdateSpace(space resources.Space) (resources.Space, Warnings, error) {
+	spaceGUID := space.GUID
+	space.GUID = ""
+	space.Relationships = nil
+
+	var responseBody resources.Space
+
+	_, warnings, err := client.MakeRequest(RequestParams{
+		RequestName:  internal.PatchSpaceRequest,
+		URIParams:    internal.Params{"space_guid": spaceGUID},
+		RequestBody:  space,
+		ResponseBody: &responseBody,
+	})
+
+	return responseBody, warnings, err
 }
