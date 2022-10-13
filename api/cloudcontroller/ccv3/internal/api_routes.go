@@ -134,6 +134,10 @@ const (
 	// v3 environment variable
 	GetEnvironmentVariableGroupRequest   = "GetEnvironmentVariableGroup"
 	PatchEnvironmentVariableGroupRequest = "PatchEnvironmentVariableGroup"
+
+	// v3 domain add missing endpoints
+	GetDomainRouteReservationsRequest = "GetDomainRouteReservations"
+	GetDomainRequest                  = "GetDomain"
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
@@ -184,6 +188,10 @@ var APIRoutes = []Route{
 	// v3 environment varirable
 	{Resource: EnvironmentVariableGroupsResource, Path: "/:group_name", Method: http.MethodGet, Name: GetEnvironmentVariableGroupRequest},
 	{Resource: EnvironmentVariableGroupsResource, Path: "/:group_name", Method: http.MethodPatch, Name: PatchEnvironmentVariableGroupRequest},
+
+	// v3 domain add missing
+	{Resource: DomainsResource, Path: "/:domain_guid/route_reservations", Method: http.MethodGet, Name: GetDomainRouteReservationsRequest},
+	{Resource: DomainsResource, Path: "/:domain_guid", Method: http.MethodGet, Name: GetDomainRequest},
 
 	{Resource: ServicePlansResource, Path: "/", Method: http.MethodGet, Name: GetServicePlansRequest},
 

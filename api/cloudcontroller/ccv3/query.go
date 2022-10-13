@@ -29,6 +29,14 @@ const (
 	ServiceBrokerNamesFilter QueryKey = "service_broker_names"
 	// StatesFilter is a query parameter when getting a package's droplets by state
 	StatesFilter QueryKey = "states"
+	// HostsFilter is a query param for listing objects by hostname
+	HostsFilter QueryKey = "hosts"
+	// HostFilter is a query param for getting an object with the given host
+	HostFilter QueryKey = "host"
+	// PathFilter is a query param for getting an object with the given host
+	PathFilter QueryKey = "path"
+	// PortFilter is a query param for getting an object with the given port (TCP routes)
+	PortFilter QueryKey = "port"
 
 	// FieldsServiceBroker is a query parameter to include specific fields from a service broker in an offering response
 	FieldsServiceBroker QueryKey = "fields[service_broker]"
