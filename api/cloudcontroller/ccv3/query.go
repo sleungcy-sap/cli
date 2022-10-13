@@ -25,6 +25,8 @@ const (
 	SpaceGUIDFilter QueryKey = "space_guids"
 	// StackFilter is a query parameter for listing objects by stack name
 	StackFilter QueryKey = "stacks"
+	// ServiceBrokerGUIDsFilter is a query parameter for getting resources according to the service broker GUID
+	ServiceBrokerGUIDsFilter QueryKey = "service_broker_guids"
 	// ServiceBrokerNamesFilter is a query parameter when getting plans or offerings according to the Service Brokers that it relates to
 	ServiceBrokerNamesFilter QueryKey = "service_broker_names"
 	// StatesFilter is a query parameter when getting a package's droplets by state
