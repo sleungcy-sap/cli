@@ -66,3 +66,39 @@ func (client *Client) newHTTPRequest(passedRequest requestOptions) (*cloudcontro
 
 	return cloudcontroller.NewRequest(request, passedRequest.Body), nil
 }
+
+// newHTTPRequest returns a constructed HTTP.Request with some defaults.
+// Defaults are applied when Request options are not filled in.
+func (requester *RealRequester) newHTTPRequest(passedRequest requestOptions) (*cloudcontroller.Request, error) {
+	var request *http.Request
+	var err error
+	if passedRequest.URL != "" {
+		request, err = http.NewRequest(
+			passedRequest.Method,
+			passedRequest.URL,
+			passedRequest.Body,
+		)
+	} else {
+		request, err = requester.router.CreateRequest(
+			passedRequest.RequestName,
+			map[string]string(passedRequest.URIParams),
+			passedRequest.Body,
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if passedRequest.Query != nil {
+		request.URL.RawQuery = FormatQueryParameters(passedRequest.Query).Encode()
+	}
+
+	request.Header = http.Header{}
+	request.Header.Set("Accept", "application/json")
+	request.Header.Set("User-Agent", requester.userAgent)
+
+	if passedRequest.Body != nil {
+		request.Header.Set("Content-Type", "application/json")
+	}
+
+	return cloudcontroller.NewRequest(request, passedRequest.Body), nil
+}
