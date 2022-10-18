@@ -18,4 +18,16 @@ const (
 	SpacesResource            = "spaces"
 	StacksResource            = "stacks"
 	TasksResource             = "tasks"
+
+	ServiceOfferingsResource = "service_offerings"
+
+	ServicePlansResource = "service_plans"
+
+	RoutesResource = "routes"
+
+	//v3 service credential binding
+	ServiceCredentialBindingsResource = "service_credential_bindings"
+
+	//v3 environment variable
+	EnvironmentVariableGroupsResource = "environment_variable_groups"
 )

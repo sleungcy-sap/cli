@@ -81,10 +81,136 @@ const (
 	DeleteOrganizationRequest = "DeleteOrganization"
 	PostOrganizationRequest   = "PostOrganization"
 	GetDefaultDomainRequest   = "GetDefaultDomain"
+
+	GetServiceOfferingsRequest   = "GetServiceOfferings"
+	DeleteServiceOfferingRequest = "DeleteServiceOffering"
+
+	GetServicePlansRequest = "GetServicePlans"
+
+	PostRouteRequest   = "PostRoute"
+	DeleteRouteRequest = "DeleteRouteRequest"
+	PatchRouteRequest  = "PatchRoute"
+
+	DeleteOrphanedRoutesRequest = "DeleteOrphanedRoutes"
+	GetApplicationRoutesRequest = "GetApplicationRoutes"
+	GetRouteDestinationsRequest = "GetRouteDestinations"
+	GetRoutesRequest            = "GetRoutes"
+	MapRouteRequest             = "MapRoute"
+	UnmapRouteRequest           = "UnmapRoute"
+
+	// v3 droplet
+	PostDropletRequest        = "PostDroplet"
+	GetPackageDropletsRequest = "GetPackageDroplets"
+	PostDropletBitsRequest    = "PostDropletBits"
+	GetDropletBitsRequest     = "GetDropletBits"
+
+	// v3 package
+	PostPackageBitsRequest = "PostPackageBits"
+
+	// v3 service credential binding
+	PostServiceCredentialBindingRequest       = "PostServiceCredentialBinding"
+	GetServiceCredentialBindingsRequest       = "GetServiceCredentialBindings"
+	DeleteServiceCredentialBindingRequest     = "DeleteServiceCredentialBinding"
+	GetServiceCredentialBindingDetailsRequest = "GetServiceCredentialBindingDetails"
+
+	// service_instance
+	GetServiceInstanceParametersRequest                = "GetServiceInstanceParameters"
+	GetServiceInstanceCredentialsRequest               = "GetServiceInstanceCredentails"
+	PostServiceInstanceRequest                         = "PostServiceInstance"
+	PatchServiceInstanceRequest                        = "PatchServiceInstance"
+	DeleteServiceInstanceRequest                       = "DeleteServiceInstance"
+	GetServiceInstanceRelationshipsSharedSpacesRequest = "GetServiceInstanceRelationshipSharedSpacesRequest"
+	GetServiceInstanceSharedSpacesUsageSummaryRequest  = "GetServiceInstanceSharedSpacesUsageSummaryRequest"
+
+	// v3 process add missing endpoints
+	GetProcessRequest   = "GetProcess"
+	GetProcessesRequest = "GetProcesses"
+
+	// v3 application feature
+	GetApplicationFeaturesRequest   = "GetApplicationFeatures"
+	GetSSHEnabled                   = "GetSSHEnabled"
+	PatchApplicationFeaturesRequest = "PatchApplicationFeatures"
+
+	// v3 environment variable
+	GetEnvironmentVariableGroupRequest   = "GetEnvironmentVariableGroup"
+	PatchEnvironmentVariableGroupRequest = "PatchEnvironmentVariableGroup"
+
+	// v3 domain add missing endpoints
+	GetDomainRouteReservationsRequest = "GetDomainRouteReservations"
+	GetDomainRequest                  = "GetDomain"
+
+	// v3 space add missing
+	PostSpaceRequest   = "PostSpace"
+	DeleteSpaceRequest = "DeleteSpace"
+	PatchSpaceRequest  = "PatchSpace"
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
 var APIRoutes = []Route{
+	// v3 droplet
+	{Resource: DropletsResource, Path: "/", Method: http.MethodPost, Name: PostDropletRequest},
+	{Resource: PackagesResource, Path: "/:package_guid/droplets", Method: http.MethodGet, Name: GetPackageDropletsRequest},
+	{Resource: DropletsResource, Path: "/:droplet_guid/upload", Method: http.MethodPost, Name: PostDropletBitsRequest},
+	{Resource: DropletsResource, Path: "/:droplet_guid/download", Method: http.MethodGet, Name: GetDropletBitsRequest},
+
+	// v3 package
+	{Resource: PackagesResource, Path: "/:package_guid/upload", Method: http.MethodPost, Name: PostPackageBitsRequest},
+
+	// v3 service credential binding
+	{Resource: ServiceCredentialBindingsResource, Path: "/", Method: http.MethodGet, Name: GetServiceCredentialBindingsRequest},
+	{Resource: ServiceCredentialBindingsResource, Path: "/:service_credential_binding_guid/details", Method: http.MethodGet, Name: GetServiceCredentialBindingDetailsRequest},
+	{Resource: ServiceCredentialBindingsResource, Path: "/:service_credential_binding_guid", Method: http.MethodDelete, Name: DeleteServiceCredentialBindingRequest},
+	{Resource: ServiceCredentialBindingsResource, Path: "/", Method: http.MethodPost, Name: PostServiceCredentialBindingRequest},
+
+	// v3 service instance
+	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/parameters", Method: http.MethodGet, Name: GetServiceInstanceParametersRequest},
+	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/credentials", Method: http.MethodGet, Name: GetServiceInstanceCredentialsRequest},
+	{Resource: ServiceInstancesResource, Path: "/", Method: http.MethodPost, Name: PostServiceInstanceRequest},
+	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid", Method: http.MethodPatch, Name: PatchServiceInstanceRequest},
+	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid", Method: http.MethodDelete, Name: DeleteServiceInstanceRequest},
+	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/relationships/shared_spaces", Method: http.MethodGet, Name: GetServiceInstanceRelationshipsSharedSpacesRequest},
+	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/relationships/shared_spaces/usage_summary", Method: http.MethodGet, Name: GetServiceInstanceSharedSpacesUsageSummaryRequest},
+
+	// v3 process add missing endpoints
+	{Resource: ProcessesResource, Path: "/", Method: http.MethodGet, Name: GetProcessesRequest},
+	{Resource: ProcessesResource, Path: "/:process_guid", Method: http.MethodGet, Name: GetProcessRequest},
+
+	{Resource: RoutesResource, Path: "/:route_guid/destinations/:destination_guid", Method: http.MethodDelete, Name: UnmapRouteRequest},
+	{Resource: RoutesResource, Path: "/:route_guid/destinations", Method: http.MethodPost, Name: MapRouteRequest},
+	{Resource: RoutesResource, Path: "/", Method: http.MethodGet, Name: GetRoutesRequest},
+	{Resource: RoutesResource, Path: "/:route_guid/destinations", Method: http.MethodGet, Name: GetRouteDestinationsRequest},
+	{Resource: AppsResource, Path: "/:app_guid/routes", Method: http.MethodGet, Name: GetApplicationRoutesRequest},
+	{Resource: SpacesResource, Path: "/:space_guid/routes", Method: http.MethodDelete, Name: DeleteOrphanedRoutesRequest},
+	{Resource: RoutesResource, Path: "/", Method: http.MethodPost, Name: PostRouteRequest},
+	{Resource: RoutesResource, Path: "/:route_guid", Method: http.MethodDelete, Name: DeleteRouteRequest},
+	{Resource: RoutesResource, Path: "/:route_guid", Method: http.MethodPatch, Name: PatchRouteRequest},
+
+	// v3 application feature
+	{Resource: AppsResource, Path: "/:app_guid/ssh_enabled", Method: http.MethodGet, Name: GetSSHEnabled},
+	{Resource: AppsResource, Path: "/:app_guid/features/:name", Method: http.MethodGet, Name: GetApplicationFeaturesRequest},
+	{Resource: AppsResource, Path: "/:app_guid/features/:name", Method: http.MethodPatch, Name: PatchApplicationFeaturesRequest},
+
+	// v3 environment varirable
+	{Resource: EnvironmentVariableGroupsResource, Path: "/:group_name", Method: http.MethodGet, Name: GetEnvironmentVariableGroupRequest},
+	{Resource: EnvironmentVariableGroupsResource, Path: "/:group_name", Method: http.MethodPatch, Name: PatchEnvironmentVariableGroupRequest},
+
+	// v3 domain add missing
+	{Resource: DomainsResource, Path: "/:domain_guid/route_reservations", Method: http.MethodGet, Name: GetDomainRouteReservationsRequest},
+	{Resource: DomainsResource, Path: "/:domain_guid", Method: http.MethodGet, Name: GetDomainRequest},
+
+	// v3 space add missing
+	{Resource: SpacesResource, Path: "/", Method: http.MethodPost, Name: PostSpaceRequest},
+	{Resource: SpacesResource, Path: "/:space_guid", Method: http.MethodDelete, Name: DeleteSpaceRequest},
+	{Resource: SpacesResource, Path: "/:space_guid", Method: http.MethodPatch, Name: PatchSpaceRequest},
+
+	// v3 org add missing
+	{Resource: OrgsResource, Path: "/:organization_guid", Method: http.MethodGet, Name: GetOrganizationRequest},
+
+	{Resource: ServicePlansResource, Path: "/", Method: http.MethodGet, Name: GetServicePlansRequest},
+
+	{Resource: ServiceOfferingsResource, Path: "/", Method: http.MethodGet, Name: GetServiceOfferingsRequest},
+	{Resource: ServiceOfferingsResource, Path: "/:service_offering_guid", Method: http.MethodDelete, Name: DeleteServiceOfferingRequest},
+
 	{Resource: OrgsResource, Path: "/", Method: http.MethodGet, Name: GetOrganizationsRequest},
 	{Resource: OrgsResource, Path: "/:organization_guid/", Method: http.MethodDelete, Name: DeleteOrganizationRequest},
 	{Resource: OrgsResource, Path: "/", Method: http.MethodPost, Name: PostOrganizationRequest},

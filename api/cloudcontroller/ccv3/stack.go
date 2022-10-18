@@ -1,41 +1,23 @@
 package ccv3
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/internal"
+	"code.cloudfoundry.org/cli/resources"
 )
 
-type Stack struct {
-	// GUID is a unique stack identifier.
-	GUID string `json:"guid"`
-	// Name is the name of the stack.
-	Name string `json:"name"`
-	// Description is the description for the stack
-	Description string `json:"description"`
-}
-
 // GetStacks lists stacks with optional filters.
-func (client *Client) GetStacks(query ...Query) ([]Stack, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.GetStacksRequest,
-		Query:       query,
-	})
-	if err != nil {
-		return nil, nil, err
-	}
+func (client *Client) GetStacks(query ...Query) ([]resources.Stack, Warnings, error) {
+	var stacks []resources.Stack
 
-	var fullStacksList []Stack
-	warnings, err := client.paginate(request, Stack{}, func(item interface{}) error {
-		if stack, ok := item.(Stack); ok {
-			fullStacksList = append(fullStacksList, stack)
-		} else {
-			return ccerror.UnknownObjectInListError{
-				Expected:   Stack{},
-				Unexpected: item,
-			}
-		}
-		return nil
+	_, warnings, err := client.MakeListRequest(RequestParams{
+		RequestName:  internal.GetStacksRequest,
+		Query:        query,
+		ResponseBody: resources.Stack{},
+		AppendToList: func(item interface{}) error {
+			stacks = append(stacks, item.(resources.Stack))
+			return nil
+		},
 	})
 
-	return fullStacksList, warnings, err
+	return stacks, warnings, err
 }

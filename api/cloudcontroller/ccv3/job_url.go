@@ -1,8 +1,6 @@
 package ccv3
 
 import (
-	"bytes"
-	"code.cloudfoundry.org/cli/api/cloudcontroller"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/internal"
 )
 
@@ -12,39 +10,26 @@ type JobURL string
 // DeleteApplication deletes the app with the given app GUID. Returns back a
 // resulting job URL to poll.
 func (client *Client) DeleteApplication(appGUID string) (JobURL, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
+	jobURL, warnings, err := client.MakeRequest(RequestParams{
 		RequestName: internal.DeleteApplicationRequest,
 		URIParams:   internal.Params{"app_guid": appGUID},
 	})
-	if err != nil {
-		return "", nil, err
-	}
 
-	response := cloudcontroller.Response{}
-	err = client.connection.Make(request, &response)
-
-	return JobURL(response.ResourceLocationURL), response.Warnings, err
+	return jobURL, warnings, err
 }
 
 // UpdateApplicationApplyManifest applies the manifest to the given
 // application. Returns back a resulting job URL to poll.
 func (client *Client) UpdateApplicationApplyManifest(appGUID string, rawManifest []byte) (JobURL, Warnings, error) {
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.PostApplicationActionApplyManifest,
-		URIParams:   map[string]string{"app_guid": appGUID},
-		Body:        bytes.NewReader(rawManifest),
-	})
+	responseLocation, warnings, err := client.MakeRequestSendRaw(
+		internal.PostApplicationActionApplyManifest,
+		internal.Params{"app_guid": appGUID},
+		rawManifest,
+		"application/x-yaml",
+		nil,
+	)
 
-	if err != nil {
-		return "", nil, err
-	}
-
-	request.Header.Set("Content-Type", "application/x-yaml")
-
-	response := cloudcontroller.Response{}
-	err = client.connection.Make(request, &response)
-
-	return JobURL(response.ResourceLocationURL), response.Warnings, err
+	return JobURL(responseLocation), warnings, err
 }
 
 // UpdateSpaceApplyManifest - Is there a better name for this, since ...
@@ -57,22 +42,14 @@ func (client *Client) UpdateApplicationApplyManifest(appGUID string, rawManifest
 // (1) Finding or creating this app.
 // (2) Applying manifest properties to this app.
 
-func (client *Client) UpdateSpaceApplyManifest(spaceGUID string, rawManifest []byte, query ...Query) (JobURL, Warnings, error) {
-	request, requestExecuteErr := client.newHTTPRequest(requestOptions{
-		RequestName: internal.PostSpaceActionApplyManifestRequest,
-		Query:       query,
-		URIParams:   map[string]string{"space_guid": spaceGUID},
-		Body:        bytes.NewReader(rawManifest),
-	})
+func (client *Client) UpdateSpaceApplyManifest(spaceGUID string, rawManifest []byte) (JobURL, Warnings, error) {
+	responseLocation, warnings, err := client.MakeRequestSendRaw(
+		internal.PostSpaceActionApplyManifestRequest,
+		internal.Params{"space_guid": spaceGUID},
+		rawManifest,
+		"application/x-yaml",
+		nil,
+	)
 
-	if requestExecuteErr != nil {
-		return JobURL(""), nil, requestExecuteErr
-	}
-
-	request.Header.Set("Content-Type", "application/x-yaml")
-
-	response := cloudcontroller.Response{}
-	err := client.connection.Make(request, &response)
-
-	return JobURL(response.ResourceLocationURL), response.Warnings, err
+	return JobURL(responseLocation), warnings, err
 }
