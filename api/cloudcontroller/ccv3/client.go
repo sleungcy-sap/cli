@@ -131,6 +131,7 @@ func NewClient(config Config) *Client {
 		jobPollingInterval: config.JobPollingInterval,
 		jobPollingTimeout:  config.JobPollingTimeout,
 		wrappers:           append([]ConnectionWrapper{newErrorWrapper()}, config.Wrappers...),
+		Requester:          NewRequester(config),
 	}
 }
 
