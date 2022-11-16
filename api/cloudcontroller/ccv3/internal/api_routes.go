@@ -143,6 +143,10 @@ const (
 	PostSpaceRequest   = "PostSpace"
 	DeleteSpaceRequest = "DeleteSpace"
 	PatchSpaceRequest  = "PatchSpace"
+
+	// v3 revision
+	GetApplicationRevisionsRequest         = "GetApplicationRevisions"
+	GetApplicationRevisionsDeployedRequest = "GetApplicationRevisionsDeployed"
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
@@ -205,6 +209,10 @@ var APIRoutes = []Route{
 
 	// v3 org add missing
 	{Resource: OrgsResource, Path: "/:organization_guid", Method: http.MethodGet, Name: GetOrganizationRequest},
+
+	// v3 revision
+	{Resource: AppsResource, Path: "/:app_guid/revisions", Method: http.MethodGet, Name: GetApplicationRevisionsRequest},
+	{Resource: AppsResource, Path: "/:app_guid/revisions/deployed", Method: http.MethodGet, Name: GetApplicationRevisionsDeployedRequest},
 
 	{Resource: ServicePlansResource, Path: "/", Method: http.MethodGet, Name: GetServicePlansRequest},
 
