@@ -30,4 +30,7 @@ const (
 
 	//v3 environment variable
 	EnvironmentVariableGroupsResource = "environment_variable_groups"
+
+	// v3 organization quota
+	OrgQuotasResource = "organization_quotas"
 )
