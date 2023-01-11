@@ -147,6 +147,14 @@ const (
 	// v3 revision
 	GetApplicationRevisionsRequest         = "GetApplicationRevisions"
 	GetApplicationRevisionsDeployedRequest = "GetApplicationRevisionsDeployed"
+
+	// v3 organization quota
+	PostOrganizationQuotaApplyRequest = "PostOrganizationQuotaApply"
+	PostOrganizationQuotaRequest      = "PostOrganizationQuota"
+	DeleteOrganizationQuotaRequest    = "DeleteOrganizationQuota"
+	GetOrganizationQuotaRequest       = "GetOrganizationQuota"
+	GetOrganizationQuotasRequest      = "GetOrganizationQuotas"
+	PatchOrganizationQuotaRequest     = "PatchOrganizationQuota"
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
@@ -213,6 +221,14 @@ var APIRoutes = []Route{
 	// v3 revision
 	{Resource: AppsResource, Path: "/:app_guid/revisions", Method: http.MethodGet, Name: GetApplicationRevisionsRequest},
 	{Resource: AppsResource, Path: "/:app_guid/revisions/deployed", Method: http.MethodGet, Name: GetApplicationRevisionsDeployedRequest},
+
+	// v3 organization quota
+	{Resource: OrgQuotasResource, Path: "/:quota_guid/relationships/organizations", Method: http.MethodPost, Name: PostOrganizationQuotaApplyRequest},
+	{Resource: OrgQuotasResource, Path: "/", Method: http.MethodPost, Name: PostOrganizationQuotaRequest},
+	{Resource: OrgQuotasResource, Path: "/:quota_guid", Method: http.MethodDelete, Name: DeleteOrganizationQuotaRequest},
+	{Resource: OrgQuotasResource, Path: "/:quota_guid", Method: http.MethodGet, Name: GetOrganizationQuotaRequest},
+	{Resource: OrgQuotasResource, Path: "/", Method: http.MethodGet, Name: GetOrganizationQuotasRequest},
+	{Resource: OrgQuotasResource, Path: "/:quota_guid", Method: http.MethodPatch, Name: PatchOrganizationQuotaRequest},
 
 	{Resource: ServicePlansResource, Path: "/", Method: http.MethodGet, Name: GetServicePlansRequest},
 
