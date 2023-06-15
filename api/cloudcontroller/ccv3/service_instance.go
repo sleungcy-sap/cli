@@ -135,6 +135,32 @@ func (client *Client) DeleteServiceInstance(serviceInstanceGUID string, query ..
 	})
 }
 
+// ShareServiceInstanceToSpaces will create a sharing relationship between
+// the service instance and the shared-to space for each space provided.
+func (client *Client) ShareServiceInstanceToSpaces(serviceInstanceGUID string, spaceGUIDs []string) (resources.RelationshipList, Warnings, error) {
+	var responseBody resources.RelationshipList
+
+	_, warnings, err := client.MakeRequest(RequestParams{
+		RequestName:  internal.PostServiceInstanceRelationshipsSharedSpacesRequest,
+		URIParams:    internal.Params{"service_instance_guid": serviceInstanceGUID},
+		RequestBody:  resources.RelationshipList{GUIDs: spaceGUIDs},
+		ResponseBody: &responseBody,
+	})
+
+	return responseBody, warnings, err
+}
+
+// UnshareServiceInstanceFromSpace will delete the sharing relationship
+// between the service instance and the shared-to space provided.
+func (client *Client) UnshareServiceInstanceFromSpace(serviceInstanceGUID string, spaceGUID string) (Warnings, error) {
+	_, warnings, err := client.MakeRequest(RequestParams{
+		RequestName: internal.DeleteServiceInstanceRelationshipsSharedSpaceRequest,
+		URIParams:   internal.Params{"service_instance_guid": serviceInstanceGUID, "space_guid": spaceGUID},
+	})
+
+	return warnings, err
+}
+
 // GetServiceInstanceSharedSpaces will fetch relationships between
 // a service instance and the shared-to spaces for that service.
 func (client *Client) GetServiceInstanceSharedSpaces(serviceInstanceGUID string) ([]SpaceWithOrganization, Warnings, error) {
