@@ -74,6 +74,7 @@ const (
 	PostResourceMatchesRequest                                  = "PostResourceMatches"
 	PostServiceInstanceRelationshipsSharedSpacesRequest         = "PostServiceInstanceRelationshipsSharedSpaces"
 	PostSpaceActionApplyManifestRequest                         = "PostSpaceActionApplyManifest"
+	PostSpaceDiffManifestRequest                                = "PostSpaceDiffManifest"
 	PutTaskCancelRequest                                        = "PutTaskCancel"
 	SharePrivateDomainRequest                                   = "SharePrivateDomainRequest"
 
