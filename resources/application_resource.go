@@ -26,8 +26,8 @@ type Application struct {
 	// State is the desired state of the application.
 	State constant.ApplicationState
 
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	CreatedAt string
+	UpdatedAt string
 }
 
 // MarshalJSON converts an Application into a Cloud Controller Application.
@@ -114,8 +114,8 @@ type ccApplication struct {
 	GUID          string                    `json:"guid,omitempty"`
 	State         constant.ApplicationState `json:"state,omitempty"`
 	Metadata      *Metadata                 `json:"metadata,omitempty"`
-	CreatedAt     string                    `json:"created_at"`
-	UpdatedAt     string                    `json:"updated_at"`
+	CreatedAt     string                    `json:"created_at,omitempty"`
+	UpdatedAt     string                    `json:"updated_at,omitempty"`
 }
 
 func (ccApp *ccApplication) setAutodetectedBuildpackLifecycle(a Application) {
