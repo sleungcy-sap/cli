@@ -49,16 +49,14 @@ func (client *Client) GetBuildpacks(query ...Query) ([]resources.Buildpack, Warn
 	return buildpacks, warnings, err
 }
 
-func (client Client) UpdateBuildpack(buildpack Buildpack) (Buildpack, Warnings, error) {
-	bodyBytes, err := json.Marshal(buildpack)
-	if err != nil {
-		return Buildpack{}, nil, err
-	}
+func (client Client) UpdateBuildpack(buildpack resources.Buildpack) (resources.Buildpack, Warnings, error) {
+	var responseBody resources.Buildpack
 
-	request, err := client.newHTTPRequest(requestOptions{
-		RequestName: internal.PatchBuildpackRequest,
-		Body:        bytes.NewReader(bodyBytes),
-		URIParams:   map[string]string{"buildpack_guid": buildpack.GUID},
+	_, warnings, err := client.MakeRequest(RequestParams{
+		RequestName:  internal.PatchBuildpackRequest,
+		URIParams:    internal.Params{"buildpack_guid": buildpack.GUID},
+		RequestBody:  buildpack,
+		ResponseBody: &responseBody,
 	})
 
 	return responseBody, warnings, err
