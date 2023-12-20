@@ -1,6 +1,7 @@
 package ccv3_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"fmt"
 	"net/http"
 
@@ -23,13 +24,13 @@ var _ = Describe("Spaces", func() {
 		var (
 			query Query
 
-			spaces     []Space
+			spaces     []resources.Space
 			warnings   Warnings
 			executeErr error
 		)
 
 		JustBeforeEach(func() {
-			spaces, warnings, executeErr = client.GetSpaces(query)
+			spaces, _, warnings, executeErr = client.GetSpaces(query)
 		})
 
 		When("spaces exist", func() {
@@ -101,14 +102,14 @@ var _ = Describe("Spaces", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 
 				Expect(spaces).To(ConsistOf(
-					Space{Name: "space-name-1", GUID: "space-guid-1", Relationships: Relationships{
-						constant.RelationshipTypeOrganization: Relationship{GUID: "org-guid-1"},
+					resources.Space{Name: "space-name-1", GUID: "space-guid-1", Relationships: resources.Relationships{
+						constant.RelationshipTypeOrganization: resources.Relationship{GUID: "org-guid-1"},
 					}},
-					Space{Name: "space-name-2", GUID: "space-guid-2", Relationships: Relationships{
-						constant.RelationshipTypeOrganization: Relationship{GUID: "org-guid-2"},
+					resources.Space{Name: "space-name-2", GUID: "space-guid-2", Relationships: resources.Relationships{
+						constant.RelationshipTypeOrganization: resources.Relationship{GUID: "org-guid-2"},
 					}},
-					Space{Name: "space-name-3", GUID: "space-guid-3", Relationships: Relationships{
-						constant.RelationshipTypeOrganization: Relationship{GUID: "org-guid-3"},
+					resources.Space{Name: "space-name-3", GUID: "space-guid-3", Relationships: resources.Relationships{
+						constant.RelationshipTypeOrganization: resources.Relationship{GUID: "org-guid-3"},
 					}},
 				))
 				Expect(warnings).To(ConsistOf("this is a warning", "this is another warning"))

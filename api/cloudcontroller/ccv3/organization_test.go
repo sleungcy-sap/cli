@@ -21,7 +21,7 @@ package ccv3_test
 
 // 	Describe("GetIsolationSegmentOrganizations", func() {
 // 		var (
-// 			organizations []Organization
+// 			organizations []resources.Organization
 // 			warnings      Warnings
 // 			executeErr    error
 // 		)
@@ -78,9 +78,9 @@ package ccv3_test
 // 				Expect(executeErr).NotTo(HaveOccurred())
 
 // 				Expect(organizations).To(ConsistOf(
-// 					Organization{Name: "org-name-1", GUID: "org-guid-1"},
-// 					Organization{Name: "org-name-2", GUID: "org-guid-2"},
-// 					Organization{Name: "org-name-3", GUID: "org-guid-3"},
+// 					resources.Organization{Name: "org-name-1", GUID: "org-guid-1"},
+// 					resources.Organization{Name: "org-name-2", GUID: "org-guid-2"},
+// 					resources.Organization{Name: "org-name-3", GUID: "org-guid-3"},
 // 				))
 // 				Expect(warnings).To(ConsistOf("this is a warning", "this is another warning"))
 // 			})
@@ -133,7 +133,7 @@ package ccv3_test
 
 // 	Describe("GetOrganizations", func() {
 // 		var (
-// 			organizations []Organization
+// 			organizations []resources.Organization
 // 			warnings      Warnings
 // 			executeErr    error
 // 		)
@@ -193,9 +193,9 @@ package ccv3_test
 // 				Expect(executeErr).NotTo(HaveOccurred())
 
 // 				Expect(organizations).To(ConsistOf(
-// 					Organization{Name: "org-name-1", GUID: "org-guid-1"},
-// 					Organization{Name: "org-name-2", GUID: "org-guid-2"},
-// 					Organization{Name: "org-name-3", GUID: "org-guid-3"},
+// 					resources.Organization{Name: "org-name-1", GUID: "org-guid-1"},
+// 					resources.Organization{Name: "org-name-2", GUID: "org-guid-2"},
+// 					resources.Organization{Name: "org-name-3", GUID: "org-guid-3"},
 // 				))
 // 				Expect(warnings).To(ConsistOf("this is a warning", "this is another warning"))
 // 			})
@@ -248,8 +248,8 @@ package ccv3_test
 
 // 	Describe("UpdateOrganization", func() {
 // 		var (
-// 			orgToUpdate Organization
-// 			updatedOrg  Organization
+// 			orgToUpdate resources.Organization
+// 			updatedOrg  resources.Organization
 // 			warnings    Warnings
 // 			executeErr  error
 // 		)
@@ -289,7 +289,7 @@ package ccv3_test
 // 					),
 // 				)
 
-// 				orgToUpdate = Organization{
+// 				orgToUpdate = resources.Organization{
 // 					Name: "some-org-name",
 // 					GUID: "some-guid",
 // 					Metadata: &Metadata{

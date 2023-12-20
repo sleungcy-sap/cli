@@ -1,6 +1,7 @@
 package ccv3_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -25,13 +26,13 @@ var _ = Describe("Process", func() {
 	Describe("Process", func() {
 		Describe("MarshalJSON", func() {
 			var (
-				process      Process
+				process      resources.Process
 				processBytes []byte
 				err          error
 			)
 
 			BeforeEach(func() {
-				process = Process{}
+				process = resources.Process{}
 			})
 
 			JustBeforeEach(func() {
@@ -41,7 +42,7 @@ var _ = Describe("Process", func() {
 
 			When("instances is provided", func() {
 				BeforeEach(func() {
-					process = Process{
+					process = resources.Process{
 						Instances: types.NullInt{Value: 0, IsSet: true},
 					}
 				})
@@ -53,7 +54,7 @@ var _ = Describe("Process", func() {
 
 			When("memory is provided", func() {
 				BeforeEach(func() {
-					process = Process{
+					process = resources.Process{
 						MemoryInMB: types.NullUint64{Value: 0, IsSet: true},
 					}
 				})
@@ -65,7 +66,7 @@ var _ = Describe("Process", func() {
 
 			When("disk is provided", func() {
 				BeforeEach(func() {
-					process = Process{
+					process = resources.Process{
 						DiskInMB: types.NullUint64{Value: 0, IsSet: true},
 					}
 				})
@@ -77,7 +78,7 @@ var _ = Describe("Process", func() {
 
 			When("health check type http is provided", func() {
 				BeforeEach(func() {
-					process = Process{
+					process = resources.Process{
 						HealthCheckType:     constant.HTTP,
 						HealthCheckEndpoint: "some-endpoint",
 					}
@@ -90,7 +91,7 @@ var _ = Describe("Process", func() {
 
 			When("health check type port is provided", func() {
 				BeforeEach(func() {
-					process = Process{
+					process = resources.Process{
 						HealthCheckType: constant.Port,
 					}
 				})
@@ -102,7 +103,7 @@ var _ = Describe("Process", func() {
 
 			When("health check type process is provided", func() {
 				BeforeEach(func() {
-					process = Process{
+					process = resources.Process{
 						HealthCheckType: constant.Process,
 					}
 				})
@@ -114,7 +115,7 @@ var _ = Describe("Process", func() {
 
 			When("process has no fields provided", func() {
 				BeforeEach(func() {
-					process = Process{}
+					process = resources.Process{}
 				})
 
 				It("sets the health check type to process", func() {
@@ -125,7 +126,7 @@ var _ = Describe("Process", func() {
 
 		Describe("UnmarshalJSON", func() {
 			var (
-				process      Process
+				process      resources.Process
 				processBytes []byte
 				err          error
 			)
@@ -177,11 +178,11 @@ var _ = Describe("Process", func() {
 	})
 
 	Describe("CreateApplicationProcessScale", func() {
-		var passedProcess Process
+		var passedProcess resources.Process
 
 		When("providing all scale options", func() {
 			BeforeEach(func() {
-				passedProcess = Process{
+				passedProcess = resources.Process{
 					Type:       constant.ProcessTypeWeb,
 					Instances:  types.NullInt{Value: 2, IsSet: true},
 					MemoryInMB: types.NullUint64{Value: 100, IsSet: true},
@@ -214,7 +215,7 @@ var _ = Describe("Process", func() {
 
 		When("providing all scale options with 0 values", func() {
 			BeforeEach(func() {
-				passedProcess = Process{
+				passedProcess = resources.Process{
 					Type:       constant.ProcessTypeWeb,
 					Instances:  types.NullInt{Value: 0, IsSet: true},
 					MemoryInMB: types.NullUint64{Value: 0, IsSet: true},
@@ -247,7 +248,7 @@ var _ = Describe("Process", func() {
 
 		When("providing only one scale option", func() {
 			BeforeEach(func() {
-				passedProcess = Process{Type: constant.ProcessTypeWeb, Instances: types.NullInt{Value: 2, IsSet: true}}
+				passedProcess = resources.Process{Type: constant.ProcessTypeWeb, Instances: types.NullInt{Value: 2, IsSet: true}}
 				expectedBody := `{
 					"instances": 2
 				}`
@@ -277,7 +278,7 @@ var _ = Describe("Process", func() {
 
 		When("an error is encountered", func() {
 			BeforeEach(func() {
-				passedProcess = Process{Type: constant.ProcessTypeWeb, Instances: types.NullInt{Value: 2, IsSet: true}}
+				passedProcess = resources.Process{Type: constant.ProcessTypeWeb, Instances: types.NullInt{Value: 2, IsSet: true}}
 				response := `{
 						"errors": [
 							{
@@ -325,7 +326,7 @@ var _ = Describe("Process", func() {
 
 	Describe("GetApplicationProcessByType", func() {
 		var (
-			process  Process
+			process  resources.Process
 			warnings []string
 			err      error
 		)
@@ -527,7 +528,7 @@ var _ = Describe("Process", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(processes).To(ConsistOf(
-					Process{
+					resources.Process{
 						GUID:               "process-1-guid",
 						Type:               constant.ProcessTypeWeb,
 						Command:            types.FilteredString{IsSet: true, Value: "[PRIVATE DATA HIDDEN IN LISTS]"},
@@ -535,7 +536,7 @@ var _ = Describe("Process", func() {
 						HealthCheckType:    constant.Port,
 						HealthCheckTimeout: 0,
 					},
-					Process{
+					resources.Process{
 						GUID:                "process-2-guid",
 						Type:                "worker",
 						Command:             types.FilteredString{IsSet: true, Value: "[PRIVATE DATA HIDDEN IN LISTS]"},
@@ -544,7 +545,7 @@ var _ = Describe("Process", func() {
 						HealthCheckEndpoint: "/health",
 						HealthCheckTimeout:  60,
 					},
-					Process{
+					resources.Process{
 						GUID:               "process-3-guid",
 						Type:               "console",
 						Command:            types.FilteredString{IsSet: true, Value: "[PRIVATE DATA HIDDEN IN LISTS]"},
@@ -585,15 +586,15 @@ var _ = Describe("Process", func() {
 
 	Describe("UpdateProcess", func() {
 		var (
-			inputProcess Process
+			inputProcess resources.Process
 
-			process  Process
+			process  resources.Process
 			warnings []string
 			err      error
 		)
 
 		BeforeEach(func() {
-			inputProcess = Process{
+			inputProcess = resources.Process{
 				GUID: "some-process-guid",
 			}
 		})
@@ -739,7 +740,7 @@ var _ = Describe("Process", func() {
 				It("patches this process's health check", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(warnings).To(ConsistOf("this is a warning"))
-					Expect(process).To(Equal(Process{
+					Expect(process).To(Equal(resources.Process{
 						HealthCheckType:              "some-type",
 						HealthCheckInvocationTimeout: 42,
 					}))
@@ -779,7 +780,7 @@ var _ = Describe("Process", func() {
 				It("patches this process's health check", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(warnings).To(ConsistOf("this is a warning"))
-					Expect(process).To(Equal(Process{
+					Expect(process).To(Equal(resources.Process{
 						HealthCheckType:     "some-type",
 						HealthCheckEndpoint: "",
 						HealthCheckTimeout:  77,

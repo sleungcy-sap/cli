@@ -1,6 +1,7 @@
 package ccv3_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"fmt"
 	"net/http"
 
@@ -22,13 +23,13 @@ var _ = Describe("Domain", func() {
 
 	Describe("CreateDomain for Unscoped Domains", func() {
 		var (
-			domain     Domain
+			domain     resources.Domain
 			warnings   Warnings
 			executeErr error
 		)
 
 		JustBeforeEach(func() {
-			domain, warnings, executeErr = client.CreateDomain(Domain{Name: "some-name", Internal: types.NullBool{IsSet: true, Value: true}})
+			domain, warnings, executeErr = client.CreateDomain(resources.Domain{Name: "some-name", Internal: types.NullBool{IsSet: true, Value: true}})
 		})
 
 		When("the request succeeds", func() {
@@ -57,7 +58,7 @@ var _ = Describe("Domain", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 				Expect(warnings).To(ConsistOf("warning-1"))
 
-				Expect(domain).To(Equal(Domain{
+				Expect(domain).To(Equal(resources.Domain{
 					GUID:     "some-guid",
 					Name:     "some-name",
 					Internal: types.NullBool{IsSet: true, Value: true},
@@ -112,13 +113,13 @@ var _ = Describe("Domain", func() {
 
 	Describe("CreateDomain for Scoped Domains", func() {
 		var (
-			domain     Domain
+			domain     resources.Domain
 			warnings   Warnings
 			executeErr error
 		)
 
 		JustBeforeEach(func() {
-			domain, warnings, executeErr = client.CreateDomain(Domain{Name: "some-name", Internal: types.NullBool{IsSet: false, Value: true}, OrganizationGUID: "organization-guid"})
+			domain, warnings, executeErr = client.CreateDomain(resources.Domain{Name: "some-name", Internal: types.NullBool{IsSet: false, Value: true}, OrganizationGUID: "organization-guid"})
 		})
 
 		When("the request succeeds", func() {
@@ -160,7 +161,7 @@ var _ = Describe("Domain", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 				Expect(warnings).To(ConsistOf("warning-1"))
 
-				Expect(domain).To(Equal(Domain{
+				Expect(domain).To(Equal(resources.Domain{
 					GUID:             "some-guid",
 					Name:             "some-name",
 					OrganizationGUID: "organization-guid",
@@ -298,7 +299,7 @@ var _ = Describe("Domain", func() {
 	Describe("GetDomains", func() {
 		var (
 			query      Query
-			domains    []Domain
+			domains    []resources.Domain
 			warnings   Warnings
 			executeErr error
 		)
@@ -379,9 +380,9 @@ var _ = Describe("Domain", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 
 				Expect(domains).To(ConsistOf(
-					Domain{Name: "domain-name-1", GUID: "domain-guid-1", OrganizationGUID: "owning-org-1"},
-					Domain{Name: "domain-name-2", GUID: "domain-guid-2", OrganizationGUID: "owning-org-2"},
-					Domain{Name: "domain-name-3", GUID: "domain-guid-3", OrganizationGUID: "owning-org-3"},
+					resources.Domain{Name: "domain-name-1", GUID: "domain-guid-1", OrganizationGUID: "owning-org-1"},
+					resources.Domain{Name: "domain-name-2", GUID: "domain-guid-2", OrganizationGUID: "owning-org-2"},
+					resources.Domain{Name: "domain-name-3", GUID: "domain-guid-3", OrganizationGUID: "owning-org-3"},
 				))
 				Expect(warnings).To(ConsistOf("this is a warning", "this is another warning"))
 			})
@@ -436,7 +437,7 @@ var _ = Describe("Domain", func() {
 		var (
 			orgGUID    string
 			query      Query
-			domains    []Domain
+			domains    []resources.Domain
 			warnings   Warnings
 			executeErr error
 		)
@@ -524,9 +525,9 @@ var _ = Describe("Domain", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 
 				Expect(domains).To(ConsistOf(
-					Domain{Name: "domain-name-1", GUID: "domain-guid-1", OrganizationGUID: orgGUID},
-					Domain{Name: "domain-name-2", GUID: "domain-guid-2", OrganizationGUID: orgGUID},
-					Domain{Name: "domain-name-3", GUID: "domain-guid-3", OrganizationGUID: orgGUID},
+					resources.Domain{Name: "domain-name-1", GUID: "domain-guid-1", OrganizationGUID: orgGUID},
+					resources.Domain{Name: "domain-name-2", GUID: "domain-guid-2", OrganizationGUID: orgGUID},
+					resources.Domain{Name: "domain-name-3", GUID: "domain-guid-3", OrganizationGUID: orgGUID},
 				))
 				Expect(warnings).To(ConsistOf("this is a warning", "this is another warning"))
 			})
