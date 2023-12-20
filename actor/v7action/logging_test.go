@@ -1,6 +1,7 @@
 package v7action_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"errors"
 	"time"
 
@@ -333,7 +334,7 @@ var _ = Describe("Logging Actions", func() {
 				expectedAppGUID = "some-app-guid"
 
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{
+					[]resources.Application{
 						{
 							Name: "some-app",
 							GUID: expectedAppGUID,

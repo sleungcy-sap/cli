@@ -6,6 +6,7 @@ import (
 	"code.cloudfoundry.org/cli/actor/v7action/v7actionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	"errors"
 	. "github.com/onsi/ginkgo"
@@ -70,7 +71,7 @@ var _ = Describe("Buildpack", func() {
 
 		When("multiple buildpacks with stacks are returned", func() {
 			BeforeEach(func() {
-				ccBuildpacks := []ccv3.Buildpack{
+				ccBuildpacks := []resources.Buildpack{
 					{Name: buildpackName, Stack: "a-real-stack", Position: types.NullInt{Value: 1, IsSet: true}},
 					{Name: buildpackName, Stack: "another-stack", Position: types.NullInt{Value: 2, IsSet: true}},
 				}
@@ -90,7 +91,7 @@ var _ = Describe("Buildpack", func() {
 
 		When("multiple buildpacks including one with no stack are returned", func() {
 			BeforeEach(func() {
-				ccBuildpacks := []ccv3.Buildpack{
+				ccBuildpacks := []resources.Buildpack{
 					{GUID: "buildpack-1-guid", Name: "buildpack-1", Stack: "a-real-stack", Position: types.NullInt{Value: 1, IsSet: true}},
 					{GUID: "buildpack-2-guid", Name: "buildpack-2", Stack: "", Position: types.NullInt{Value: 2, IsSet: true}},
 				}
@@ -110,7 +111,7 @@ var _ = Describe("Buildpack", func() {
 
 		When("zero buildpacks are returned", func() {
 			BeforeEach(func() {
-				var ccBuildpacks []ccv3.Buildpack
+				var ccBuildpacks []resources.Buildpack
 
 				fakeCloudControllerClient.GetBuildpacksReturns(
 					ccBuildpacks,
@@ -130,9 +131,9 @@ var _ = Describe("Buildpack", func() {
 					buildpackStack = ""
 					buildpackName = "my-buildpack"
 
-					ccBuildpack := ccv3.Buildpack{Name: "my-buildpack", GUID: "some-guid"}
+					ccBuildpack := resources.Buildpack{Name: "my-buildpack", GUID: "some-guid"}
 					fakeCloudControllerClient.GetBuildpacksReturns(
-						[]ccv3.Buildpack{ccBuildpack},
+						[]resources.Buildpack{ccBuildpack},
 						ccv3.Warnings{"some-warning-1", "some-warning-2"},
 						nil)
 				})
@@ -160,9 +161,9 @@ var _ = Describe("Buildpack", func() {
 					buildpackStack = "good-stack"
 					buildpackName = "my-buildpack"
 
-					ccBuildpack := ccv3.Buildpack{Name: "my-buildpack", GUID: "some-guid", Stack: "good-stack"}
+					ccBuildpack := resources.Buildpack{Name: "my-buildpack", GUID: "some-guid", Stack: "good-stack"}
 					fakeCloudControllerClient.GetBuildpacksReturns(
-						[]ccv3.Buildpack{ccBuildpack},
+						[]resources.Buildpack{ccBuildpack},
 						ccv3.Warnings{"some-warning-1", "some-warning-2"},
 						nil)
 				})
@@ -218,7 +219,7 @@ var _ = Describe("Buildpack", func() {
 
 		When("getting buildpacks is successful", func() {
 			BeforeEach(func() {
-				ccBuildpacks := []ccv3.Buildpack{
+				ccBuildpacks := []resources.Buildpack{
 					{Name: "buildpack-1", Position: types.NullInt{Value: 1, IsSet: true}},
 					{Name: "buildpack-2", Position: types.NullInt{Value: 2, IsSet: true}},
 				}
@@ -261,7 +262,7 @@ var _ = Describe("Buildpack", func() {
 		When("creating a buildpack fails", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.CreateBuildpackReturns(
-					ccv3.Buildpack{},
+					resources.Buildpack{},
 					ccv3.Warnings{"some-warning-1", "some-warning-2"},
 					errors.New("some-error"))
 			})
@@ -279,7 +280,7 @@ var _ = Describe("Buildpack", func() {
 				bp = Buildpack{Name: "some-name", Stack: "some-stack"}
 				returnBuildpack = Buildpack{GUID: "some-guid", Name: "some-name", Stack: "some-stack"}
 				fakeCloudControllerClient.CreateBuildpackReturns(
-					ccv3.Buildpack(returnBuildpack),
+					resources.Buildpack(returnBuildpack),
 					ccv3.Warnings{"some-warning-1", "some-warning-2"},
 					nil)
 			})
@@ -290,7 +291,7 @@ var _ = Describe("Buildpack", func() {
 				Expect(buildpack).To(Equal(returnBuildpack))
 
 				Expect(fakeCloudControllerClient.CreateBuildpackCallCount()).To(Equal(1))
-				Expect(fakeCloudControllerClient.CreateBuildpackArgsForCall(0)).To(Equal(ccv3.Buildpack(bp)))
+				Expect(fakeCloudControllerClient.CreateBuildpackArgsForCall(0)).To(Equal(resources.Buildpack(bp)))
 			})
 		})
 	})
@@ -315,10 +316,10 @@ var _ = Describe("Buildpack", func() {
 		When("it is successful", func() {
 			var updatedBuildpack Buildpack
 			BeforeEach(func() {
-				foundBuildpack := ccv3.Buildpack{GUID: "a guid", Stack: ""}
+				foundBuildpack := resources.Buildpack{GUID: "a guid", Stack: ""}
 				updatedBuildpack = Buildpack{GUID: "a guid", Stack: "new-stack"}
-				fakeCloudControllerClient.GetBuildpacksReturns([]ccv3.Buildpack{foundBuildpack}, ccv3.Warnings{"warning-1"}, nil)
-				fakeCloudControllerClient.UpdateBuildpackReturns(ccv3.Buildpack(updatedBuildpack), ccv3.Warnings{"warning-2"}, nil)
+				fakeCloudControllerClient.GetBuildpacksReturns([]resources.Buildpack{foundBuildpack}, ccv3.Warnings{"warning-1"}, nil)
+				fakeCloudControllerClient.UpdateBuildpackReturns(resources.Buildpack(updatedBuildpack), ccv3.Warnings{"warning-2"}, nil)
 			})
 
 			It("returns the updated buildpack and warnings", func() {
@@ -339,7 +340,7 @@ var _ = Describe("Buildpack", func() {
 				))
 
 				paramBuildpack := fakeCloudControllerClient.UpdateBuildpackArgsForCall(0)
-				Expect(paramBuildpack).To(Equal(ccv3.Buildpack{
+				Expect(paramBuildpack).To(Equal(resources.Buildpack{
 					GUID:  "a guid",
 					Stack: "new-stack",
 				}))
@@ -348,7 +349,7 @@ var _ = Describe("Buildpack", func() {
 
 		When("The get fails", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.GetBuildpacksReturns([]ccv3.Buildpack{}, ccv3.Warnings{"warning-1"}, errors.New("whoops"))
+				fakeCloudControllerClient.GetBuildpacksReturns([]resources.Buildpack{}, ccv3.Warnings{"warning-1"}, errors.New("whoops"))
 			})
 
 			It("returns the error and warnings", func() {
@@ -360,9 +361,9 @@ var _ = Describe("Buildpack", func() {
 
 		When("The update fails", func() {
 			BeforeEach(func() {
-				ccBuildpack := ccv3.Buildpack{GUID: "a guid", Stack: "old-stack"}
-				fakeCloudControllerClient.GetBuildpacksReturns([]ccv3.Buildpack{ccBuildpack}, ccv3.Warnings{"warning-1"}, nil)
-				fakeCloudControllerClient.UpdateBuildpackReturns(ccv3.Buildpack{}, ccv3.Warnings{"warning-2"}, errors.New("whoops"))
+				ccBuildpack := resources.Buildpack{GUID: "a guid", Stack: "old-stack"}
+				fakeCloudControllerClient.GetBuildpacksReturns([]resources.Buildpack{ccBuildpack}, ccv3.Warnings{"warning-1"}, nil)
+				fakeCloudControllerClient.UpdateBuildpackReturns(resources.Buildpack{}, ccv3.Warnings{"warning-2"}, errors.New("whoops"))
 			})
 
 			It("returns the error and warnings", func() {
@@ -627,7 +628,7 @@ var _ = Describe("Buildpack", func() {
 		When("getting the buildpack fails", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetBuildpacksReturns(
-					[]ccv3.Buildpack{},
+					[]resources.Buildpack{},
 					ccv3.Warnings{"some-warning-1", "some-warning-2"},
 					errors.New("api-get-error"))
 			})
@@ -652,7 +653,7 @@ var _ = Describe("Buildpack", func() {
 		When("getting the buildpack succeeds", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetBuildpacksReturns(
-					[]ccv3.Buildpack{{GUID: buildpackGUID, Name: buildpackName, Stack: buildpackStack}},
+					[]resources.Buildpack{{GUID: buildpackGUID, Name: buildpackName, Stack: buildpackStack}},
 					ccv3.Warnings{"some-warning-1", "some-warning-2"},
 					nil)
 			})

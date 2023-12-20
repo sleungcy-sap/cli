@@ -3,12 +3,12 @@ package v7action
 import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 )
 
 // Process represents a V3 actor process.
-type Process ccv3.Process
+type Process resources.Process
 
 // GetProcessByTypeAndApplication returns a process for the given application
 // and type.
@@ -21,7 +21,7 @@ func (actor Actor) GetProcessByTypeAndApplication(processType string, appGUID st
 }
 
 func (actor Actor) ScaleProcessByApplication(appGUID string, process Process) (Warnings, error) {
-	_, warnings, err := actor.CloudControllerClient.CreateApplicationProcessScale(appGUID, ccv3.Process(process))
+	_, warnings, err := actor.CloudControllerClient.CreateApplicationProcessScale(appGUID, resources.Process(process))
 	allWarnings := Warnings(warnings)
 	if err != nil {
 		if _, ok := err.(ccerror.ProcessNotFoundError); ok {
@@ -49,7 +49,7 @@ func (actor Actor) UpdateProcessByTypeAndApplication(processType string, appGUID
 	}
 
 	updatedProcess.GUID = process.GUID
-	_, updateWarnings, err := actor.CloudControllerClient.UpdateProcess(ccv3.Process(updatedProcess))
+	_, updateWarnings, err := actor.CloudControllerClient.UpdateProcess(resources.Process(updatedProcess))
 	allWarnings = append(allWarnings, Warnings(updateWarnings)...)
 	if err != nil {
 		return allWarnings, err

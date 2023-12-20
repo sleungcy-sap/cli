@@ -2,6 +2,7 @@ package v7action
 
 import (
 	"archive/zip"
+	"code.cloudfoundry.org/cli/resources"
 	"io"
 	"os"
 	"path/filepath"
@@ -12,7 +13,7 @@ import (
 	"code.cloudfoundry.org/cli/util"
 )
 
-type Buildpack ccv3.Buildpack
+type Buildpack resources.Buildpack
 type JobURL ccv3.JobURL
 
 //go:generate counterfeiter . Downloader
@@ -41,7 +42,7 @@ func (actor Actor) GetBuildpacks() ([]Buildpack, Warnings, error) {
 // present.
 func (actor Actor) GetBuildpackByNameAndStack(buildpackName string, buildpackStack string) (Buildpack, Warnings, error) {
 	var (
-		ccv3Buildpacks []ccv3.Buildpack
+		ccv3Buildpacks []resources.Buildpack
 		warnings       ccv3.Warnings
 		err            error
 	)
@@ -86,7 +87,7 @@ func (actor Actor) GetBuildpackByNameAndStack(buildpackName string, buildpackSta
 
 func (actor Actor) CreateBuildpack(buildpack Buildpack) (Buildpack, Warnings, error) {
 	ccv3Buildpack, warnings, err := actor.CloudControllerClient.CreateBuildpack(
-		ccv3.Buildpack(buildpack),
+		resources.Buildpack(buildpack),
 	)
 
 	return Buildpack(ccv3Buildpack), Warnings(warnings), err
@@ -103,7 +104,7 @@ func (actor Actor) UpdateBuildpackByNameAndStack(buildpackName string, buildpack
 
 	buildpack.GUID = foundBuildpack.GUID
 
-	updatedBuildpack, updateWarnings, err := actor.CloudControllerClient.UpdateBuildpack(ccv3.Buildpack(buildpack))
+	updatedBuildpack, updateWarnings, err := actor.CloudControllerClient.UpdateBuildpack(resources.Buildpack(buildpack))
 	warnings = append(warnings, updateWarnings...)
 	if err != nil {
 		return Buildpack{}, warnings, err

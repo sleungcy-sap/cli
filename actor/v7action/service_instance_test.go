@@ -1,6 +1,7 @@
 package v7action_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"errors"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
@@ -45,7 +46,7 @@ var _ = Describe("Service Instance Actions", func() {
 		When("the cloud controller request is successful", func() {
 			When("the cloud controller returns one service instance", func() {
 				BeforeEach(func() {
-					fakeCloudControllerClient.GetServiceInstancesReturns([]ccv3.ServiceInstance{
+					fakeCloudControllerClient.GetServiceInstancesReturns([]resources.ServiceInstance{
 						{
 							Name: "some-service-instance",
 							GUID: "some-service-instance-guid",

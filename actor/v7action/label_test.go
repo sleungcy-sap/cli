@@ -1,6 +1,7 @@
 package v7action_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"errors"
 
 	. "code.cloudfoundry.org/cli/actor/v7action"
@@ -39,12 +40,12 @@ var _ = Describe("UpdateApplicationLabelsByApplicationName", func() {
 		When("there are no client errors", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{ccv3.Application{GUID: "some-guid"}},
+					[]resources.Application{resources.Application{GUID: "some-guid"}},
 					ccv3.Warnings([]string{"warning-1", "warning-2"}),
 					nil,
 				)
 				fakeCloudControllerClient.UpdateApplicationReturns(
-					ccv3.Application{},
+					resources.Application{},
 					ccv3.Warnings{"set-app-labels-warnings"},
 					nil,
 				)
@@ -66,7 +67,7 @@ var _ = Describe("UpdateApplicationLabelsByApplicationName", func() {
 			When("GetApplications fails", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.GetApplicationsReturns(
-						[]ccv3.Application{ccv3.Application{GUID: "some-guid"}},
+						[]resources.Application{resources.Application{GUID: "some-guid"}},
 						ccv3.Warnings([]string{"warning-failure-1", "warning-failure-2"}),
 						errors.New("get-apps-error"),
 					)
@@ -82,12 +83,12 @@ var _ = Describe("UpdateApplicationLabelsByApplicationName", func() {
 			When("UpdateApplication fails", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.GetApplicationsReturns(
-						[]ccv3.Application{ccv3.Application{GUID: "some-guid"}},
+						[]resources.Application{resources.Application{GUID: "some-guid"}},
 						ccv3.Warnings([]string{"warning-1", "warning-2"}),
 						nil,
 					)
 					fakeCloudControllerClient.UpdateApplicationReturns(
-						ccv3.Application{},
+						resources.Application{},
 						ccv3.Warnings{"set-app-labels-warnings"},
 						errors.New("update-application-error"),
 					)
@@ -111,12 +112,12 @@ var _ = Describe("UpdateApplicationLabelsByApplicationName", func() {
 		When("there are no client errors", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetOrganizationsReturns(
-					[]ccv3.Organization{ccv3.Organization{GUID: "some-guid"}},
+					[]resources.Organization{resources.Organization{GUID: "some-guid"}},
 					ccv3.Warnings([]string{"warning-1", "warning-2"}),
 					nil,
 				)
 				fakeCloudControllerClient.UpdateOrganizationReturns(
-					ccv3.Organization{},
+					resources.Organization{},
 					ccv3.Warnings{"set-org"},
 					nil,
 				)
@@ -138,7 +139,7 @@ var _ = Describe("UpdateApplicationLabelsByApplicationName", func() {
 			When("fetching the organization fails", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.GetOrganizationsReturns(
-						[]ccv3.Organization{ccv3.Organization{GUID: "some-guid"}},
+						[]resources.Organization{resources.Organization{GUID: "some-guid"}},
 						ccv3.Warnings([]string{"warning-failure-1", "warning-failure-2"}),
 						errors.New("get-orgs-error"),
 					)
@@ -154,12 +155,12 @@ var _ = Describe("UpdateApplicationLabelsByApplicationName", func() {
 			When("updating the organization fails", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.GetOrganizationsReturns(
-						[]ccv3.Organization{ccv3.Organization{GUID: "some-guid"}},
+						[]resources.Organization{resources.Organization{GUID: "some-guid"}},
 						ccv3.Warnings([]string{"warning-1", "warning-2"}),
 						nil,
 					)
 					fakeCloudControllerClient.UpdateOrganizationReturns(
-						ccv3.Organization{},
+						resources.Organization{},
 						ccv3.Warnings{"set-org"},
 						errors.New("update-orgs-error"),
 					)

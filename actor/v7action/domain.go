@@ -1,6 +1,7 @@
 package v7action
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"fmt"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
@@ -8,7 +9,7 @@ import (
 	"code.cloudfoundry.org/cli/types"
 )
 
-type Domain ccv3.Domain
+type Domain resources.Domain
 
 type SharedOrgs ccv3.SharedOrgs
 
@@ -17,7 +18,7 @@ func (domain Domain) Shared() bool {
 }
 
 func (actor Actor) CreateSharedDomain(domainName string, internal bool) (Warnings, error) {
-	_, warnings, err := actor.CloudControllerClient.CreateDomain(ccv3.Domain{
+	_, warnings, err := actor.CloudControllerClient.CreateDomain(resources.Domain{
 		Name:     domainName,
 		Internal: types.NullBool{IsSet: true, Value: internal},
 	})
@@ -32,7 +33,7 @@ func (actor Actor) CreatePrivateDomain(domainName string, orgName string) (Warni
 	if err != nil {
 		return allWarnings, err
 	}
-	_, apiWarnings, err := actor.CloudControllerClient.CreateDomain(ccv3.Domain{
+	_, apiWarnings, err := actor.CloudControllerClient.CreateDomain(resources.Domain{
 		Name:             domainName,
 		OrganizationGUID: organization.GUID,
 	})

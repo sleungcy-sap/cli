@@ -3,9 +3,10 @@ package v7action
 import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 )
 
-type Space ccv3.Space
+type Space resources.Space
 
 // ResetSpaceIsolationSegment disassociates a space from an isolation segment.
 //

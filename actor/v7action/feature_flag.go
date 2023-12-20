@@ -4,14 +4,15 @@ import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 )
 
-type FeatureFlag ccv3.FeatureFlag
+type FeatureFlag resources.FeatureFlag
 
 // GetFeatureFlagByName returns a featureFlag with the provided name.
 func (actor Actor) GetFeatureFlagByName(featureFlagName string) (FeatureFlag, Warnings, error) {
 	var (
-		ccv3FeatureFlag ccv3.FeatureFlag
+		ccv3FeatureFlag resources.FeatureFlag
 		warnings        ccv3.Warnings
 		err             error
 	)
@@ -54,7 +55,7 @@ func (actor Actor) DisableFeatureFlag(flagName string) (Warnings, error) {
 }
 
 func (actor Actor) updateFeatureFlag(flag FeatureFlag) (Warnings, error) {
-	_, warnings, err := actor.CloudControllerClient.UpdateFeatureFlag(ccv3.FeatureFlag(flag))
+	_, warnings, err := actor.CloudControllerClient.UpdateFeatureFlag(resources.FeatureFlag(flag))
 
 	if _, ok := err.(ccerror.FeatureFlagNotFoundError); ok {
 		err = actionerror.FeatureFlagNotFoundError{FeatureFlagName: flag.Name}

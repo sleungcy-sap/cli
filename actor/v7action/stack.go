@@ -3,9 +3,10 @@ package v7action
 import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 )
 
-type Stack ccv3.Stack
+type Stack resources.Stack
 
 func (actor *Actor) GetStackByName(stackName string) (Stack, Warnings, error) {
 	stacks, warnings, err := actor.CloudControllerClient.GetStacks(

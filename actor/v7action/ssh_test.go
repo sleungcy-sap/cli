@@ -1,6 +1,7 @@
 package v7action_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"errors"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
@@ -104,7 +105,7 @@ var _ = Describe("SSH Actions", func() {
 				When("getting the application succeeds with a started application", func() {
 					BeforeEach(func() {
 						fakeCloudControllerClient.GetApplicationsReturns(
-							[]ccv3.Application{
+							[]resources.Application{
 								{Name: "some-app", State: constant.ApplicationStarted},
 							},
 							ccv3.Warnings{"some-app-warnings"},
@@ -125,7 +126,7 @@ var _ = Describe("SSH Actions", func() {
 					When("getting the process summaries succeeds", func() {
 						When("the process does not exist", func() {
 							BeforeEach(func() {
-								fakeCloudControllerClient.GetApplicationProcessesReturns([]ccv3.Process{}, ccv3.Warnings{"some-process-warnings"}, nil)
+								fakeCloudControllerClient.GetApplicationProcessesReturns([]resources.Process{}, ccv3.Warnings{"some-process-warnings"}, nil)
 							})
 
 							It("returns all warnings and the error", func() {
@@ -136,8 +137,8 @@ var _ = Describe("SSH Actions", func() {
 
 						When("the process doesn't have the specified instance index", func() {
 							BeforeEach(func() {
-								fakeCloudControllerClient.GetApplicationsReturns([]ccv3.Application{{Name: "some-app", State: constant.ApplicationStarted}}, ccv3.Warnings{"some-app-warnings"}, nil)
-								fakeCloudControllerClient.GetApplicationProcessesReturns([]ccv3.Process{{Type: "some-process-type", GUID: "some-process-guid"}}, ccv3.Warnings{"some-process-warnings"}, nil)
+								fakeCloudControllerClient.GetApplicationsReturns([]resources.Application{{Name: "some-app", State: constant.ApplicationStarted}}, ccv3.Warnings{"some-app-warnings"}, nil)
+								fakeCloudControllerClient.GetApplicationProcessesReturns([]resources.Process{{Type: "some-process-type", GUID: "some-process-guid"}}, ccv3.Warnings{"some-process-warnings"}, nil)
 							})
 
 							It("returns a ProcessIndexNotFoundError", func() {
@@ -147,8 +148,8 @@ var _ = Describe("SSH Actions", func() {
 
 						When("the process instance is not RUNNING", func() {
 							BeforeEach(func() {
-								fakeCloudControllerClient.GetApplicationsReturns([]ccv3.Application{{Name: "some-app", State: constant.ApplicationStarted}}, ccv3.Warnings{"some-app-warnings"}, nil)
-								fakeCloudControllerClient.GetApplicationProcessesReturns([]ccv3.Process{{Type: "some-process-type", GUID: "some-process-guid"}}, ccv3.Warnings{"some-process-warnings"}, nil)
+								fakeCloudControllerClient.GetApplicationsReturns([]resources.Application{{Name: "some-app", State: constant.ApplicationStarted}}, ccv3.Warnings{"some-app-warnings"}, nil)
+								fakeCloudControllerClient.GetApplicationProcessesReturns([]resources.Process{{Type: "some-process-type", GUID: "some-process-guid"}}, ccv3.Warnings{"some-process-warnings"}, nil)
 								fakeCloudControllerClient.GetProcessInstancesReturns([]ccv3.ProcessInstance{{State: constant.ProcessInstanceDown, Index: 0}}, ccv3.Warnings{"some-instance-warnings"}, nil)
 							})
 
@@ -159,8 +160,8 @@ var _ = Describe("SSH Actions", func() {
 
 						When("the specified process and index exist and the instance is RUNNING", func() {
 							BeforeEach(func() {
-								fakeCloudControllerClient.GetApplicationsReturns([]ccv3.Application{{Name: "some-app", State: constant.ApplicationStarted}}, ccv3.Warnings{"some-app-warnings"}, nil)
-								fakeCloudControllerClient.GetApplicationProcessesReturns([]ccv3.Process{{Type: "some-process-type", GUID: "some-process-guid"}}, ccv3.Warnings{"some-process-warnings"}, nil)
+								fakeCloudControllerClient.GetApplicationsReturns([]resources.Application{{Name: "some-app", State: constant.ApplicationStarted}}, ccv3.Warnings{"some-app-warnings"}, nil)
+								fakeCloudControllerClient.GetApplicationProcessesReturns([]resources.Process{{Type: "some-process-type", GUID: "some-process-guid"}}, ccv3.Warnings{"some-process-warnings"}, nil)
 								fakeCloudControllerClient.GetProcessInstancesReturns([]ccv3.ProcessInstance{{State: constant.ProcessInstanceRunning, Index: 0}}, ccv3.Warnings{"some-instance-warnings"}, nil)
 							})
 
@@ -190,7 +191,7 @@ var _ = Describe("SSH Actions", func() {
 				When("getting the application succeeds with a stopped application", func() {
 					BeforeEach(func() {
 						fakeCloudControllerClient.GetApplicationsReturns(
-							[]ccv3.Application{
+							[]resources.Application{
 								{Name: "some-app", State: constant.ApplicationStopped},
 							},
 							ccv3.Warnings{"some-app-warnings"},

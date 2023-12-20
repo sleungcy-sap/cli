@@ -1,6 +1,7 @@
 package v7action
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"strconv"
 
 	"sort"
@@ -11,12 +12,12 @@ import (
 )
 
 // Task represents a V3 actor Task.
-type Task ccv3.Task
+type Task resources.Task
 
 // RunTask runs the provided command in the application environment associated
 // with the provided application GUID.
 func (actor Actor) RunTask(appGUID string, task Task) (Task, Warnings, error) {
-	createdTask, warnings, err := actor.CloudControllerClient.CreateApplicationTask(appGUID, ccv3.Task(task))
+	createdTask, warnings, err := actor.CloudControllerClient.CreateApplicationTask(appGUID, resources.Task(task))
 	if err != nil {
 		if e, ok := err.(ccerror.TaskWorkersUnavailableError); ok {
 			return Task{}, Warnings(warnings), actionerror.TaskWorkersUnavailableError{Message: e.Error()}
