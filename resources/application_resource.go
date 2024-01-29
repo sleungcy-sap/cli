@@ -25,6 +25,9 @@ type Application struct {
 	SpaceGUID string
 	// State is the desired state of the application.
 	State constant.ApplicationState
+
+	CreatedAt string
+	UpdatedAt string
 }
 
 // MarshalJSON converts an Application into a Cloud Controller Application.
@@ -75,6 +78,8 @@ func (a *Application) UnmarshalJSON(data []byte) error {
 	a.SpaceGUID = ccApp.Relationships[constant.RelationshipTypeSpace].GUID
 	a.State = ccApp.State
 	a.Metadata = ccApp.Metadata
+	a.CreatedAt = ccApp.CreatedAt
+	a.UpdatedAt = ccApp.UpdatedAt
 
 	return nil
 }
@@ -109,6 +114,8 @@ type ccApplication struct {
 	GUID          string                    `json:"guid,omitempty"`
 	State         constant.ApplicationState `json:"state,omitempty"`
 	Metadata      *Metadata                 `json:"metadata,omitempty"`
+	CreatedAt     string                    `json:"created_at,omitempty"`
+	UpdatedAt     string                    `json:"updated_at,omitempty"`
 }
 
 func (ccApp *ccApplication) setAutodetectedBuildpackLifecycle(a Application) {
