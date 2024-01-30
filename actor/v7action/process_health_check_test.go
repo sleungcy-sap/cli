@@ -1,6 +1,7 @@
 package v7action_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"errors"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
@@ -68,7 +69,7 @@ var _ = Describe("Process Health Check Actions", func() {
 		When("application does not exist", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{},
+					[]resources.Application{},
 					ccv3.Warnings{"some-warning"},
 					nil,
 				)
@@ -86,7 +87,7 @@ var _ = Describe("Process Health Check Actions", func() {
 			BeforeEach(func() {
 				expectedErr = errors.New("some-error")
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{},
+					[]resources.Application{},
 					ccv3.Warnings{"some-warning"},
 					expectedErr,
 				)
@@ -101,7 +102,7 @@ var _ = Describe("Process Health Check Actions", func() {
 		When("application exists", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{
+					[]resources.Application{
 						{
 							GUID: "some-app-guid",
 						},
@@ -117,7 +118,7 @@ var _ = Describe("Process Health Check Actions", func() {
 				BeforeEach(func() {
 					expectedErr = errors.New("some-error")
 					fakeCloudControllerClient.GetApplicationProcessesReturns(
-						[]ccv3.Process{},
+						[]resources.Process{},
 						ccv3.Warnings{"some-process-warning"},
 						expectedErr,
 					)
@@ -132,7 +133,7 @@ var _ = Describe("Process Health Check Actions", func() {
 			When("application has processes", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.GetApplicationProcessesReturns(
-						[]ccv3.Process{
+						[]resources.Process{
 							{
 								GUID:                         "process-guid-1",
 								Type:                         "process-type-1",

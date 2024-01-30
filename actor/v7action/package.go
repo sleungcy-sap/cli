@@ -1,6 +1,7 @@
 package v7action
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"io"
 	"time"
 
@@ -16,7 +17,7 @@ const (
 	DefaultArchiveFilePermissions = 0744
 )
 
-type Package ccv3.Package
+type Package resources.Package
 
 type DockerImageCredentials struct {
 	Path     string
@@ -25,10 +26,10 @@ type DockerImageCredentials struct {
 }
 
 func (actor Actor) CreateDockerPackageByApplication(appGUID string, dockerImageCredentials DockerImageCredentials) (Package, Warnings, error) {
-	inputPackage := ccv3.Package{
+	inputPackage := resources.Package{
 		Type: constant.PackageTypeDocker,
-		Relationships: ccv3.Relationships{
-			constant.RelationshipTypeApplication: ccv3.Relationship{GUID: appGUID},
+		Relationships: resources.Relationships{
+			constant.RelationshipTypeApplication: resources.Relationship{GUID: appGUID},
 		},
 		DockerImage:    dockerImageCredentials.Path,
 		DockerUsername: dockerImageCredentials.Username,
@@ -71,10 +72,10 @@ func (actor *Actor) GetApplicationPackages(appName string, spaceGUID string) ([]
 }
 
 func (actor Actor) CreateBitsPackageByApplication(appGUID string) (Package, Warnings, error) {
-	inputPackage := ccv3.Package{
+	inputPackage := resources.Package{
 		Type: constant.PackageTypeBits,
-		Relationships: ccv3.Relationships{
-			constant.RelationshipTypeApplication: ccv3.Relationship{GUID: appGUID},
+		Relationships: resources.Relationships{
+			constant.RelationshipTypeApplication: resources.Relationship{GUID: appGUID},
 		},
 	}
 
@@ -93,7 +94,7 @@ func (actor Actor) UploadBitsPackage(pkg Package, matchedResources []sharedactio
 		apiResources = append(apiResources, ccv3.Resource(resource))
 	}
 
-	appPkg, warnings, err := actor.CloudControllerClient.UploadBitsPackage(ccv3.Package(pkg), apiResources, newResources, newResourcesLength)
+	appPkg, warnings, err := actor.CloudControllerClient.UploadBitsPackage(resources.Package(pkg), apiResources, newResources, newResourcesLength)
 	return Package(appPkg), Warnings(warnings), err
 }
 

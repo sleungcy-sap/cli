@@ -3,10 +3,11 @@ package v7action
 import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 )
 
 // Organization represents a V3 actor organization.
-type Organization ccv3.Organization
+type Organization resources.Organization
 
 // GetOrganizationByName returns the organization with the given name.
 func (actor Actor) GetOrganizationByName(name string) (Organization, Warnings, error) {

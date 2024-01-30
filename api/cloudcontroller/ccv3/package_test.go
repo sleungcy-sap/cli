@@ -2,6 +2,7 @@ package ccv3_test
 
 import (
 	"bytes"
+	"code.cloudfoundry.org/cli/resources"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,9 +34,9 @@ var _ = Describe("Package", func() {
 
 	Describe("CreatePackage", func() {
 		var (
-			inputPackage Package
+			inputPackage resources.Package
 
-			pkg        Package
+			pkg        resources.Package
 			warnings   Warnings
 			executeErr error
 		)
@@ -47,10 +48,10 @@ var _ = Describe("Package", func() {
 		When("the package successfully is created", func() {
 			When("creating a docker package", func() {
 				BeforeEach(func() {
-					inputPackage = Package{
+					inputPackage = resources.Package{
 						Type: constant.PackageTypeDocker,
-						Relationships: Relationships{
-							constant.RelationshipTypeApplication: Relationship{GUID: "some-app-guid"},
+						Relationships: resources.Relationships{
+							constant.RelationshipTypeApplication: resources.Relationship{GUID: "some-app-guid"},
 						},
 						DockerImage:    "some-docker-image",
 						DockerUsername: "some-username",
@@ -102,12 +103,12 @@ var _ = Describe("Package", func() {
 					Expect(executeErr).NotTo(HaveOccurred())
 					Expect(warnings).To(ConsistOf("this is a warning"))
 
-					expectedPackage := Package{
+					expectedPackage := resources.Package{
 						GUID:  "some-pkg-guid",
 						Type:  constant.PackageTypeDocker,
 						State: constant.PackageProcessingUpload,
-						Links: map[string]APILink{
-							"upload": APILink{HREF: "some-package-upload-url", Method: http.MethodPost},
+						Links: map[string]resources.APILink{
+							"upload": resources.APILink{HREF: "some-package-upload-url", Method: http.MethodPost},
 						},
 						DockerImage:    "some-docker-image",
 						DockerUsername: "some-username",
@@ -119,10 +120,10 @@ var _ = Describe("Package", func() {
 
 			When("creating a bits package", func() {
 				BeforeEach(func() {
-					inputPackage = Package{
+					inputPackage = resources.Package{
 						Type: constant.PackageTypeBits,
-						Relationships: Relationships{
-							constant.RelationshipTypeApplication: Relationship{GUID: "some-app-guid"},
+						Relationships: resources.Relationships{
+							constant.RelationshipTypeApplication: resources.Relationship{GUID: "some-app-guid"},
 						},
 					}
 					response := `{
@@ -160,12 +161,12 @@ var _ = Describe("Package", func() {
 					Expect(executeErr).NotTo(HaveOccurred())
 					Expect(warnings).To(ConsistOf("this is a warning"))
 
-					expectedPackage := Package{
+					expectedPackage := resources.Package{
 						GUID:  "some-pkg-guid",
 						Type:  constant.PackageTypeBits,
 						State: constant.PackageProcessingUpload,
-						Links: map[string]APILink{
-							"upload": APILink{HREF: "some-package-upload-url", Method: http.MethodPost},
+						Links: map[string]resources.APILink{
+							"upload": resources.APILink{HREF: "some-package-upload-url", Method: http.MethodPost},
 						},
 					}
 					Expect(pkg).To(Equal(expectedPackage))
@@ -175,7 +176,7 @@ var _ = Describe("Package", func() {
 
 		When("cc returns back an error or warnings", func() {
 			BeforeEach(func() {
-				inputPackage = Package{}
+				inputPackage = resources.Package{}
 				response := ` {
   "errors": [
     {
@@ -221,7 +222,7 @@ var _ = Describe("Package", func() {
 
 	Describe("GetPackage", func() {
 		var (
-			pkg        Package
+			pkg        resources.Package
 			warnings   Warnings
 			executeErr error
 		)
@@ -253,11 +254,11 @@ var _ = Describe("Package", func() {
 			It("returns the queried package and all warnings", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 
-				expectedPackage := Package{
+				expectedPackage := resources.Package{
 					GUID:  "some-pkg-guid",
 					State: constant.PackageProcessingUpload,
-					Links: map[string]APILink{
-						"upload": APILink{HREF: "some-package-upload-url", Method: http.MethodPost},
+					Links: map[string]resources.APILink{
+						"upload": resources.APILink{HREF: "some-package-upload-url", Method: http.MethodPost},
 					},
 				}
 				Expect(pkg).To(Equal(expectedPackage))
@@ -312,7 +313,7 @@ var _ = Describe("Package", func() {
 
 	Describe("GetPackages", func() {
 		var (
-			pkgs       []Package
+			pkgs       []resources.Package
 			warnings   Warnings
 			executeErr error
 		)
@@ -362,14 +363,14 @@ var _ = Describe("Package", func() {
 			It("returns the queried packages and all warnings", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 
-				Expect(pkgs).To(Equal([]Package{
+				Expect(pkgs).To(Equal([]resources.Package{
 					{
 						GUID:      "some-pkg-guid-1",
 						Type:      constant.PackageTypeBits,
 						State:     constant.PackageProcessingUpload,
 						CreatedAt: "2017-08-14T21:16:12Z",
-						Links: map[string]APILink{
-							"upload": APILink{HREF: "some-pkg-upload-url-1", Method: http.MethodPost},
+						Links: map[string]resources.APILink{
+							"upload": {HREF: "some-pkg-upload-url-1", Method: http.MethodPost},
 						},
 					},
 					{
@@ -377,8 +378,8 @@ var _ = Describe("Package", func() {
 						Type:      constant.PackageTypeBits,
 						State:     constant.PackageReady,
 						CreatedAt: "2017-08-14T21:20:13Z",
-						Links: map[string]APILink{
-							"upload": APILink{HREF: "some-pkg-upload-url-2", Method: http.MethodPost},
+						Links: map[string]resources.APILink{
+							"upload": {HREF: "some-pkg-upload-url-2", Method: http.MethodPost},
 						},
 					},
 				}))
@@ -433,14 +434,14 @@ var _ = Describe("Package", func() {
 
 	Describe("UploadBitsPackage", func() {
 		var (
-			inputPackage Package
+			inputPackage resources.Package
 		)
 
 		BeforeEach(func() {
 			client, _ = NewTestClient()
 
-			inputPackage = Package{
-				Links: map[string]APILink{
+			inputPackage = resources.Package{
+				Links: map[string]resources.APILink{
 					"upload": {
 						HREF:   fmt.Sprintf("%s/v3/my-special-endpoint/some-pkg-guid/upload", server.URL()),
 						Method: http.MethodPost,
@@ -451,13 +452,13 @@ var _ = Describe("Package", func() {
 
 		When("the upload is successful", func() {
 			var (
-				resources           []Resource
+				resourcesList       []Resource
 				readerBody          []byte
 				verifyHeaderAndBody func(http.ResponseWriter, *http.Request)
 			)
 
 			BeforeEach(func() {
-				resources = []Resource{
+				resourcesList = []Resource{
 					{FilePath: "foo"},
 					{FilePath: "bar"},
 				}
@@ -493,14 +494,14 @@ var _ = Describe("Package", func() {
 						defer req.Body.Close()
 						requestReader := multipart.NewReader(req.Body, contentType[30:])
 
-						// Verify that matched resources are sent properly
+						// Verify that matched resourcesList are sent properly
 						resourcesPart, err := requestReader.NextPart()
 						Expect(err).NotTo(HaveOccurred())
 
-						Expect(resourcesPart.FormName()).To(Equal("resources"))
+						Expect(resourcesPart.FormName()).To(Equal("resourcesList"))
 
 						defer resourcesPart.Close()
-						expectedJSON, err := json.Marshal(resources)
+						expectedJSON, err := json.Marshal(resourcesList)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(ioutil.ReadAll(resourcesPart)).To(MatchJSON(expectedJSON))
 
@@ -517,10 +518,10 @@ var _ = Describe("Package", func() {
 				})
 
 				It("returns the created job and warnings", func() {
-					pkg, warnings, err := client.UploadBitsPackage(inputPackage, resources, reader, int64(len(readerBody)))
+					pkg, warnings, err := client.UploadBitsPackage(inputPackage, resourcesList, reader, int64(len(readerBody)))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(warnings).To(ConsistOf("this is a warning"))
-					Expect(pkg).To(Equal(Package{
+					Expect(pkg).To(Equal(resources.Package{
 						GUID:  "some-package-guid",
 						Type:  constant.PackageTypeBits,
 						State: constant.PackageProcessingUpload,
@@ -537,14 +538,14 @@ var _ = Describe("Package", func() {
 						defer req.Body.Close()
 						requestReader := multipart.NewReader(req.Body, contentType[30:])
 
-						// Verify that matched resources are sent properly
+						// Verify that matched resourcesList are sent properly
 						resourcesPart, err := requestReader.NextPart()
 						Expect(err).NotTo(HaveOccurred())
 
-						Expect(resourcesPart.FormName()).To(Equal("resources"))
+						Expect(resourcesPart.FormName()).To(Equal("resourcesList"))
 
 						defer resourcesPart.Close()
-						expectedJSON, err := json.Marshal(resources)
+						expectedJSON, err := json.Marshal(resourcesList)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(ioutil.ReadAll(resourcesPart)).To(MatchJSON(expectedJSON))
 
@@ -555,10 +556,10 @@ var _ = Describe("Package", func() {
 				})
 
 				It("does not send the application bits", func() {
-					pkg, warnings, err := client.UploadBitsPackage(inputPackage, resources, nil, 33513531353)
+					pkg, warnings, err := client.UploadBitsPackage(inputPackage, resourcesList, nil, 33513531353)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(warnings).To(ConsistOf("this is a warning"))
-					Expect(pkg).To(Equal(Package{
+					Expect(pkg).To(Equal(resources.Package{
 						GUID:  "some-package-guid",
 						Type:  constant.PackageTypeBits,
 						State: constant.PackageProcessingUpload,
@@ -681,7 +682,7 @@ var _ = Describe("Package", func() {
 
 		When("the input package does not have an upload link", func() {
 			It("returns an UploadLinkNotFoundError", func() {
-				_, _, err := client.UploadBitsPackage(Package{GUID: "some-pkg-guid"}, nil, nil, 0)
+				_, _, err := client.UploadBitsPackage(resources.Package{GUID: "some-pkg-guid"}, nil, nil, 0)
 				Expect(err).To(MatchError(ccerror.UploadLinkNotFoundError{PackageGUID: "some-pkg-guid"}))
 			})
 		})
@@ -689,10 +690,10 @@ var _ = Describe("Package", func() {
 
 	Describe("UploadPackage", func() {
 		var (
-			inputPackage Package
+			inputPackage resources.Package
 			fileToUpload string
 
-			pkg        Package
+			pkg        resources.Package
 			warnings   Warnings
 			executeErr error
 		)
@@ -707,10 +708,10 @@ var _ = Describe("Package", func() {
 			BeforeEach(func() {
 				var err error
 
-				inputPackage = Package{
+				inputPackage = resources.Package{
 					State: constant.PackageAwaitingUpload,
-					Links: map[string]APILink{
-						"upload": APILink{
+					Links: map[string]resources.APILink{
+						"upload": {
 							HREF:   fmt.Sprintf("%s/v3/my-special-endpoint/some-pkg-guid/upload", server.URL()),
 							Method: http.MethodPost,
 						},
@@ -773,11 +774,11 @@ var _ = Describe("Package", func() {
 			It("returns the created package and warnings", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 
-				expectedPackage := Package{
+				expectedPackage := resources.Package{
 					GUID:  "some-pkg-guid",
 					State: constant.PackageProcessingUpload,
-					Links: map[string]APILink{
-						"upload": APILink{HREF: "some-package-upload-url", Method: http.MethodPost},
+					Links: map[string]resources.APILink{
+						"upload": {HREF: "some-package-upload-url", Method: http.MethodPost},
 					},
 				}
 				Expect(pkg).To(Equal(expectedPackage))
@@ -787,7 +788,7 @@ var _ = Describe("Package", func() {
 
 		When("the package does not have an upload link", func() {
 			BeforeEach(func() {
-				inputPackage = Package{GUID: "some-pkg-guid", State: constant.PackageAwaitingUpload}
+				inputPackage = resources.Package{GUID: "some-pkg-guid", State: constant.PackageAwaitingUpload}
 				fileToUpload = "/path/to/foo"
 			})
 
@@ -802,10 +803,10 @@ var _ = Describe("Package", func() {
 			BeforeEach(func() {
 				var err error
 
-				inputPackage = Package{
+				inputPackage = resources.Package{
 					State: constant.PackageAwaitingUpload,
-					Links: map[string]APILink{
-						"upload": APILink{
+					Links: map[string]resources.APILink{
+						"upload": {
 							HREF:   fmt.Sprintf("%s/v3/my-special-endpoint/some-pkg-guid/upload", server.URL()),
 							Method: http.MethodPost,
 						},

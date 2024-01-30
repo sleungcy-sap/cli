@@ -1,6 +1,7 @@
 package v7action_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"errors"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
@@ -27,7 +28,7 @@ var _ = Describe("Organization Actions", func() {
 		When("the org exists", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetOrganizationsReturns(
-					[]ccv3.Organization{
+					[]resources.Organization{
 						{
 							Name: "some-org-name",
 							GUID: "some-org-guid",
@@ -60,7 +61,7 @@ var _ = Describe("Organization Actions", func() {
 			BeforeEach(func() {
 				expectedError = errors.New("I am a CloudControllerClient Error")
 				fakeCloudControllerClient.GetOrganizationsReturns(
-					[]ccv3.Organization{},
+					[]resources.Organization{},
 					ccv3.Warnings{"some-warning"},
 					expectedError)
 			})
@@ -76,7 +77,7 @@ var _ = Describe("Organization Actions", func() {
 	When("the org does not exist", func() {
 		BeforeEach(func() {
 			fakeCloudControllerClient.GetOrganizationsReturns(
-				[]ccv3.Organization{},
+				[]resources.Organization{},
 				ccv3.Warnings{"some-warning"},
 				nil,
 			)

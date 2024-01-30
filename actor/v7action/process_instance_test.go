@@ -1,6 +1,7 @@
 package v7action_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"errors"
 	"time"
 
@@ -48,7 +49,7 @@ var _ = Describe("instance actions", func() {
 
 		When("getting the application returns an error", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.GetApplicationsReturns([]ccv3.Application{}, ccv3.Warnings{"some-get-app-warning"}, errors.New("some-get-app-error"))
+				fakeCloudControllerClient.GetApplicationsReturns([]resources.Application{}, ccv3.Warnings{"some-get-app-warning"}, errors.New("some-get-app-error"))
 			})
 
 			It("returns all warnings and the error", func() {
@@ -59,7 +60,7 @@ var _ = Describe("instance actions", func() {
 
 		When("getting the application succeeds", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.GetApplicationsReturns([]ccv3.Application{{GUID: "some-app-guid"}}, ccv3.Warnings{"some-get-app-warning"}, nil)
+				fakeCloudControllerClient.GetApplicationsReturns([]resources.Application{{GUID: "some-app-guid"}}, ccv3.Warnings{"some-get-app-warning"}, nil)
 			})
 
 			When("deleting the instance returns ProcessNotFoundError", func() {

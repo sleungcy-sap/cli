@@ -1,6 +1,7 @@
 package v7action_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"errors"
 
 	"code.cloudfoundry.org/cli/actor/v2action"
@@ -91,7 +92,7 @@ var _ = Describe("Application Summary Actions", func() {
 			When("retrieving the application is successful", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.GetApplicationsReturns(
-						[]ccv3.Application{
+						[]resources.Application{
 							{
 								Name:  "some-app-name",
 								GUID:  "some-app-guid",
@@ -105,7 +106,7 @@ var _ = Describe("Application Summary Actions", func() {
 
 				When("retrieving the process information is successful", func() {
 					BeforeEach(func() {
-						listedProcesses := []ccv3.Process{
+						listedProcesses := []resources.Process{
 							{
 								GUID:       "some-process-guid",
 								Type:       "some-type",
@@ -161,9 +162,9 @@ var _ = Describe("Application Summary Actions", func() {
 					When("app has droplet", func() {
 						BeforeEach(func() {
 							fakeCloudControllerClient.GetApplicationDropletCurrentReturns(
-								ccv3.Droplet{
+								resources.Droplet{
 									Stack: "some-stack",
-									Buildpacks: []ccv3.DropletBuildpack{
+									Buildpacks: []resources.DropletBuildpack{
 										{
 											Name: "some-buildpack",
 										},
@@ -262,7 +263,7 @@ var _ = Describe("Application Summary Actions", func() {
 							BeforeEach(func() {
 								expectedErr = errors.New("some error")
 								fakeCloudControllerClient.GetApplicationDropletCurrentReturns(
-									ccv3.Droplet{},
+									resources.Droplet{},
 									ccv3.Warnings{"some-droplet-warning"},
 									expectedErr,
 								)
@@ -278,7 +279,7 @@ var _ = Describe("Application Summary Actions", func() {
 					When("app does not have current droplet", func() {
 						BeforeEach(func() {
 							fakeCloudControllerClient.GetApplicationDropletCurrentReturns(
-								ccv3.Droplet{},
+								resources.Droplet{},
 								ccv3.Warnings{"some-droplet-warning"},
 								ccerror.DropletNotFoundError{},
 							)
@@ -344,7 +345,7 @@ var _ = Describe("Application Summary Actions", func() {
 
 					BeforeEach(func() {
 						fakeCloudControllerClient.GetApplicationProcessesReturns(
-							[]ccv3.Process{
+							[]resources.Process{
 								{
 									GUID: "some-process-guid",
 									Type: "some-type",
@@ -355,7 +356,7 @@ var _ = Describe("Application Summary Actions", func() {
 						)
 
 						fakeCloudControllerClient.GetApplicationProcessByTypeReturns(
-							ccv3.Process{},
+							resources.Process{},
 							ccv3.Warnings{"get-process-by-type-warning"},
 							nil,
 						)
@@ -380,7 +381,7 @@ var _ = Describe("Application Summary Actions", func() {
 
 				BeforeEach(func() {
 					fakeCloudControllerClient.GetApplicationsReturns(
-						[]ccv3.Application{
+						[]resources.Application{
 							{
 								Name:  "some-app-name",
 								GUID:  "some-app-guid",
@@ -393,7 +394,7 @@ var _ = Describe("Application Summary Actions", func() {
 
 					expectedErr = errors.New("some error")
 					fakeCloudControllerClient.GetApplicationProcessesReturns(
-						[]ccv3.Process{{Type: constant.ProcessTypeWeb}},
+						[]resources.Process{{Type: constant.ProcessTypeWeb}},
 						ccv3.Warnings{"some-process-warning"},
 						expectedErr,
 					)
@@ -409,7 +410,7 @@ var _ = Describe("Application Summary Actions", func() {
 		When("passed with a routeActor", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{
+					[]resources.Application{
 						{
 							Name:  "some-app-name",
 							GUID:  "some-app-guid",

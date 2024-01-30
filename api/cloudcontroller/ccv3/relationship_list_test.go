@@ -1,6 +1,7 @@
 package ccv3_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"net/http"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
@@ -49,7 +50,7 @@ var _ = Describe("RelationshipList", func() {
 				relationships, warnings, err := client.EntitleIsolationSegmentToOrganizations("some-iso-guid", []string{"org-guid-1", "org-guid-2"})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(warnings).To(ConsistOf("this is a warning"))
-				Expect(relationships).To(Equal(RelationshipList{
+				Expect(relationships).To(Equal(resources.RelationshipList{
 					GUIDs: []string{"some-relationship-guid-1", "some-relationship-guid-2"},
 				}))
 			})
@@ -98,7 +99,7 @@ var _ = Describe("RelationshipList", func() {
 			serviceInstanceGUID string
 			spaceGUIDs          []string
 
-			relationshipList RelationshipList
+			relationshipList resources.RelationshipList
 			warnings         Warnings
 			executeErr       error
 		)
@@ -141,7 +142,7 @@ var _ = Describe("RelationshipList", func() {
 			It("returns all relationships and warnings", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 				Expect(warnings).To(ConsistOf("this is a warning"))
-				Expect(relationshipList).To(Equal(RelationshipList{
+				Expect(relationshipList).To(Equal(resources.RelationshipList{
 					GUIDs: []string{"some-space-guid", "some-other-space-guid"},
 				}))
 			})

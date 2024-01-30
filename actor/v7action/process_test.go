@@ -1,6 +1,7 @@
 package v7action_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"errors"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
@@ -48,7 +49,7 @@ var _ = Describe("Process Actions", func() {
 		When("getting the application process is succesful", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetApplicationProcessByTypeReturns(
-					ccv3.Process{
+					resources.Process{
 						GUID: "some-process-guid",
 					},
 					ccv3.Warnings{"some-process-warning"},
@@ -76,7 +77,7 @@ var _ = Describe("Process Actions", func() {
 			When("the api returns a ProcessNotFoundError", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.GetApplicationProcessByTypeReturns(
-						ccv3.Process{},
+						resources.Process{},
 						ccv3.Warnings{"some-process-warning"},
 						ccerror.ProcessNotFoundError{},
 					)
@@ -92,7 +93,7 @@ var _ = Describe("Process Actions", func() {
 				BeforeEach(func() {
 					expectedErr = errors.New("some-error")
 					fakeCloudControllerClient.GetApplicationProcessByTypeReturns(
-						ccv3.Process{},
+						resources.Process{},
 						ccv3.Warnings{"some-process-warning"},
 						expectedErr,
 					)
@@ -129,7 +130,7 @@ var _ = Describe("Process Actions", func() {
 		When("no errors are encountered scaling the application process", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.CreateApplicationProcessScaleReturns(
-					ccv3.Process{GUID: "some-process-guid"},
+					resources.Process{GUID: "some-process-guid"},
 					ccv3.Warnings{"scale-process-warning"},
 					nil)
 			})
@@ -141,7 +142,7 @@ var _ = Describe("Process Actions", func() {
 				Expect(fakeCloudControllerClient.CreateApplicationProcessScaleCallCount()).To(Equal(1))
 				appGUIDArg, processArg := fakeCloudControllerClient.CreateApplicationProcessScaleArgsForCall(0)
 				Expect(appGUIDArg).To(Equal("some-app-guid"))
-				Expect(processArg).To(Equal(ccv3.Process{
+				Expect(processArg).To(Equal(resources.Process{
 					Type:       constant.ProcessTypeWeb,
 					Instances:  passedProcess.Instances,
 					MemoryInMB: passedProcess.MemoryInMB,
@@ -156,7 +157,7 @@ var _ = Describe("Process Actions", func() {
 			BeforeEach(func() {
 				expectedErr = errors.New("scale process error")
 				fakeCloudControllerClient.CreateApplicationProcessScaleReturns(
-					ccv3.Process{GUID: "some-process-guid"},
+					resources.Process{GUID: "some-process-guid"},
 					ccv3.Warnings{"scale-process-warning"},
 					expectedErr)
 			})
@@ -170,7 +171,7 @@ var _ = Describe("Process Actions", func() {
 		When("a ProcessNotFoundError error is encountered scaling the application process", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.CreateApplicationProcessScaleReturns(
-					ccv3.Process{GUID: "some-process-guid"},
+					resources.Process{GUID: "some-process-guid"},
 					ccv3.Warnings{"scale-process-warning"},
 					ccerror.ProcessNotFoundError{},
 				)
@@ -221,7 +222,7 @@ var _ = Describe("Process Actions", func() {
 			BeforeEach(func() {
 				expectedErr = errors.New("some-error")
 				fakeCloudControllerClient.GetApplicationProcessByTypeReturns(
-					ccv3.Process{},
+					resources.Process{},
 					ccv3.Warnings{"some-process-warning"},
 					expectedErr,
 				)
@@ -236,7 +237,7 @@ var _ = Describe("Process Actions", func() {
 		When("application process exists", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetApplicationProcessByTypeReturns(
-					ccv3.Process{
+					resources.Process{
 						GUID: "some-process-guid",
 					},
 					ccv3.Warnings{"some-process-warning"},
@@ -253,7 +254,7 @@ var _ = Describe("Process Actions", func() {
 
 					expectedErr = errors.New("some-error")
 					fakeCloudControllerClient.UpdateProcessReturns(
-						ccv3.Process{},
+						resources.Process{},
 						ccv3.Warnings{"some-health-check-warning"},
 						expectedErr,
 					)
@@ -268,7 +269,7 @@ var _ = Describe("Process Actions", func() {
 			When("update the process is successful", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.UpdateProcessReturns(
-						ccv3.Process{GUID: "some-process-guid"},
+						resources.Process{GUID: "some-process-guid"},
 						ccv3.Warnings{"some-health-check-warning"},
 						nil,
 					)

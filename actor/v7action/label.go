@@ -1,7 +1,7 @@
 package v7action
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 )
 
@@ -20,7 +20,7 @@ func (actor *Actor) UpdateOrganizationLabelsByOrganizationName(orgName string, l
 	if err != nil {
 		return warnings, err
 	}
-	org.Metadata = &ccv3.Metadata{Labels: labels}
-	_, updateWarnings, err := actor.CloudControllerClient.UpdateOrganization(ccv3.Organization(org))
+	org.Metadata = &resources.Metadata{Labels: labels}
+	_, updateWarnings, err := actor.CloudControllerClient.UpdateOrganization(resources.Organization(org))
 	return append(warnings, updateWarnings...), err
 }

@@ -1,6 +1,7 @@
 package v7action_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"errors"
 
 	. "code.cloudfoundry.org/cli/actor/v7action"
@@ -23,7 +24,7 @@ var _ = Describe("Domain Actions", func() {
 
 	Describe("create shared domain", func() {
 		It("delegates to the cloud controller client", func() {
-			fakeCloudControllerClient.CreateDomainReturns(ccv3.Domain{}, ccv3.Warnings{"create-warning-1", "create-warning-2"}, errors.New("create-error"))
+			fakeCloudControllerClient.CreateDomainReturns(resources.Domain{}, ccv3.Warnings{"create-warning-1", "create-warning-2"}, errors.New("create-error"))
 
 			warnings, executeErr := actor.CreateSharedDomain("the-domain-name", true)
 			Expect(executeErr).To(MatchError("create-error"))
@@ -33,7 +34,7 @@ var _ = Describe("Domain Actions", func() {
 			passedDomain := fakeCloudControllerClient.CreateDomainArgsForCall(0)
 
 			Expect(passedDomain).To(Equal(
-				ccv3.Domain{
+				resources.Domain{
 					Name:     "the-domain-name",
 					Internal: types.NullBool{IsSet: true, Value: true},
 				},
@@ -45,7 +46,7 @@ var _ = Describe("Domain Actions", func() {
 
 		BeforeEach(func() {
 			fakeCloudControllerClient.GetOrganizationsReturns(
-				[]ccv3.Organization{
+				[]resources.Organization{
 					{GUID: "org-guid"},
 				},
 				ccv3.Warnings{"get-orgs-warning"},
@@ -53,7 +54,7 @@ var _ = Describe("Domain Actions", func() {
 			)
 
 			fakeCloudControllerClient.CreateDomainReturns(
-				ccv3.Domain{},
+				resources.Domain{},
 				ccv3.Warnings{"create-warning-1", "create-warning-2"},
 				errors.New("create-error"),
 			)
@@ -68,7 +69,7 @@ var _ = Describe("Domain Actions", func() {
 			passedDomain := fakeCloudControllerClient.CreateDomainArgsForCall(0)
 
 			Expect(passedDomain).To(Equal(
-				ccv3.Domain{
+				resources.Domain{
 					Name:             "private-domain-name",
 					OrganizationGUID: "org-guid",
 				},
@@ -80,7 +81,7 @@ var _ = Describe("Domain Actions", func() {
 		When("attempting to delete a shared domain", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetDomainsReturns(
-					[]ccv3.Domain{
+					[]resources.Domain{
 						{Name: "the-domain.com", GUID: "shared-domain-guid"},
 					},
 					ccv3.Warnings{"get-domains-warning"},
@@ -99,7 +100,7 @@ var _ = Describe("Domain Actions", func() {
 	Describe("delete shared domain", func() {
 		BeforeEach(func() {
 			fakeCloudControllerClient.GetDomainsReturns(
-				[]ccv3.Domain{
+				[]resources.Domain{
 					{Name: "the-domain.com", GUID: "domain-guid"},
 				},
 				ccv3.Warnings{"get-domains-warning"},
@@ -125,7 +126,7 @@ var _ = Describe("Domain Actions", func() {
 		When("deleting a private domain", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetDomainsReturns(
-					[]ccv3.Domain{
+					[]resources.Domain{
 						{Name: "the-domain.com", OrganizationGUID: "org-guid", GUID: "private-domain-guid"},
 					},
 					ccv3.Warnings{"get-domains-warning"},
@@ -151,7 +152,7 @@ var _ = Describe("Domain Actions", func() {
 
 	Describe("list domains for org", func() {
 		var (
-			ccv3Domains []ccv3.Domain
+			ccv3Domains []resources.Domain
 			domains     []Domain
 
 			domain1Name string
@@ -170,7 +171,7 @@ var _ = Describe("Domain Actions", func() {
 		)
 
 		BeforeEach(func() {
-			ccv3Domains = []ccv3.Domain{
+			ccv3Domains = []resources.Domain{
 				{Name: domain1Name, GUID: domain1Guid, OrganizationGUID: org1Guid},
 				{Name: domain2Name, GUID: domain2Guid, OrganizationGUID: org1Guid},
 				{Name: domain3Name, GUID: domain3Guid, OrganizationGUID: sharedFromOrgGuid},
@@ -213,7 +214,7 @@ var _ = Describe("Domain Actions", func() {
 		When("when the API layer call returns an error", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetOrganizationDomainsReturns(
-					[]ccv3.Domain{},
+					[]resources.Domain{},
 					ccv3.Warnings{"some-domain-warning"},
 					errors.New("list-error"),
 				)
@@ -232,7 +233,7 @@ var _ = Describe("Domain Actions", func() {
 
 	Describe("get domain by name", func() {
 		var (
-			ccv3Domains []ccv3.Domain
+			ccv3Domains []resources.Domain
 			domain      Domain
 
 			domain1Name string
@@ -243,7 +244,7 @@ var _ = Describe("Domain Actions", func() {
 		)
 
 		BeforeEach(func() {
-			ccv3Domains = []ccv3.Domain{
+			ccv3Domains = []resources.Domain{
 				{Name: domain1Name, GUID: domain1Guid},
 			}
 		})
@@ -280,7 +281,7 @@ var _ = Describe("Domain Actions", func() {
 		When("when the API layer call returns an error", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetDomainsReturns(
-					[]ccv3.Domain{},
+					[]resources.Domain{},
 					ccv3.Warnings{"some-domain-warning"},
 					errors.New("list-error"),
 				)
@@ -299,7 +300,7 @@ var _ = Describe("Domain Actions", func() {
 	Describe("share private domain to org", func() {
 		BeforeEach(func() {
 			fakeCloudControllerClient.GetOrganizationsReturns(
-				[]ccv3.Organization{
+				[]resources.Organization{
 					{GUID: "org-guid"},
 				},
 				ccv3.Warnings{"get-orgs-warning"},
@@ -307,7 +308,7 @@ var _ = Describe("Domain Actions", func() {
 			)
 
 			fakeCloudControllerClient.GetDomainsReturns(
-				[]ccv3.Domain{
+				[]resources.Domain{
 					{Name: "private-domain.com", GUID: "private-domain-guid"},
 				},
 				ccv3.Warnings{"get-domains-warning"},
@@ -367,7 +368,7 @@ var _ = Describe("Domain Actions", func() {
 		When("getting the guids succeeds", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetDomainsReturns(
-					[]ccv3.Domain{
+					[]resources.Domain{
 						{Name: domainName, GUID: "private-domain-guid"},
 					},
 					ccv3.Warnings{"get-domains-warning"},
@@ -375,7 +376,7 @@ var _ = Describe("Domain Actions", func() {
 				)
 
 				fakeCloudControllerClient.GetOrganizationsReturns(
-					[]ccv3.Organization{
+					[]resources.Organization{
 						{Name: orgName, GUID: "org-guid"},
 					},
 					ccv3.Warnings{"get-orgs-warning"},
@@ -461,7 +462,7 @@ var _ = Describe("Domain Actions", func() {
 		When("getting the orgs succeeds", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetOrganizationsReturns(
-					[]ccv3.Organization{
+					[]resources.Organization{
 						{Name: orgName, GUID: "org-guid"},
 					},
 					ccv3.Warnings{"get-orgs-warning"},
@@ -494,7 +495,7 @@ var _ = Describe("Domain Actions", func() {
 			When("the api call are successful", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.GetDomainsReturns(
-						[]ccv3.Domain{
+						[]resources.Domain{
 							{Name: domainName, GUID: "private-domain-guid"},
 						},
 						ccv3.Warnings{"get-domains-warning"},

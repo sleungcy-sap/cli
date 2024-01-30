@@ -109,7 +109,7 @@ var _ = Describe("Target", func() {
 			})
 
 			It("calls wrap on all the wrappers", func() {
-				_, err := client.TargetCF(TargetSettings{
+				_, _, err := client.TargetCF(TargetSettings{
 					SkipSSLValidation: true,
 					URL:               server.URL(),
 				})
@@ -125,7 +125,7 @@ var _ = Describe("Target", func() {
 			When("the server has unverified SSL", func() {
 				When("setting the skip ssl flag", func() {
 					It("sets all the endpoints on the client and returns all warnings", func() {
-						warnings, err := client.TargetCF(TargetSettings{
+						_, warnings, err := client.TargetCF(TargetSettings{
 							SkipSSLValidation: true,
 							URL:               server.URL(),
 						})
@@ -153,7 +153,7 @@ var _ = Describe("Target", func() {
 			})
 
 			It("returns the same error", func() {
-				warnings, err := client.TargetCF(TargetSettings{
+				_, warnings, err := client.TargetCF(TargetSettings{
 					SkipSSLValidation: true,
 					URL:               server.URL(),
 				})

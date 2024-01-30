@@ -1,6 +1,7 @@
 package v7action_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"errors"
 
 	. "code.cloudfoundry.org/cli/actor/v7action"
@@ -43,10 +44,10 @@ var _ = Describe("Relationship List Actions", func() {
 		})
 
 		When("no errors occur sharing the service instance", func() {
-			var returnedRelationshipList ccv3.RelationshipList
+			var returnedRelationshipList resources.RelationshipList
 
 			BeforeEach(func() {
-				returnedRelationshipList = ccv3.RelationshipList{
+				returnedRelationshipList = resources.RelationshipList{
 					GUIDs: []string{"some-space-guid"},
 				}
 				fakeCloudControllerClient.ShareServiceInstanceToSpacesReturns(
@@ -73,7 +74,7 @@ var _ = Describe("Relationship List Actions", func() {
 			BeforeEach(func() {
 				expectedErr = errors.New("share service instance error")
 				fakeCloudControllerClient.ShareServiceInstanceToSpacesReturns(
-					ccv3.RelationshipList{},
+					resources.RelationshipList{},
 					ccv3.Warnings{"share-service-instance-warning"},
 					expectedErr)
 			})

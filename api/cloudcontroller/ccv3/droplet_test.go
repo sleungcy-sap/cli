@@ -1,6 +1,7 @@
 package ccv3_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"fmt"
 	"net/http"
 
@@ -21,7 +22,7 @@ var _ = Describe("Droplet", func() {
 
 	Describe("GetApplicationDropletCurrent", func() {
 		var (
-			droplet    Droplet
+			droplet    resources.Droplet
 			warnings   Warnings
 			executeErr error
 		)
@@ -62,11 +63,11 @@ var _ = Describe("Droplet", func() {
 			It("returns the given droplet and all warnings", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 
-				Expect(droplet).To(Equal(Droplet{
+				Expect(droplet).To(Equal(resources.Droplet{
 					GUID:  "some-guid",
 					Stack: "some-stack",
 					State: constant.DropletStaged,
-					Buildpacks: []DropletBuildpack{
+					Buildpacks: []resources.DropletBuildpack{
 						{
 							Name:         "some-buildpack",
 							DetectOutput: "detected-buildpack",
@@ -107,7 +108,7 @@ var _ = Describe("Droplet", func() {
 
 	Describe("GetDroplet", func() {
 		var (
-			droplet    Droplet
+			droplet    resources.Droplet
 			warnings   Warnings
 			executeErr error
 		)
@@ -148,11 +149,11 @@ var _ = Describe("Droplet", func() {
 			It("returns the given droplet and all warnings", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 
-				Expect(droplet).To(Equal(Droplet{
+				Expect(droplet).To(Equal(resources.Droplet{
 					GUID:  "some-guid",
 					Stack: "some-stack",
 					State: constant.DropletStaged,
-					Buildpacks: []DropletBuildpack{
+					Buildpacks: []resources.DropletBuildpack{
 						{
 							Name:         "some-buildpack",
 							DetectOutput: "detected-buildpack",
@@ -193,7 +194,7 @@ var _ = Describe("Droplet", func() {
 
 	Describe("GetDroplets", func() {
 		var (
-			droplets   []Droplet
+			droplets   []resources.Droplet
 			warnings   Warnings
 			executeErr error
 		)
@@ -274,11 +275,11 @@ var _ = Describe("Droplet", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 				Expect(droplets).To(HaveLen(3))
 
-				Expect(droplets[0]).To(Equal(Droplet{
+				Expect(droplets[0]).To(Equal(resources.Droplet{
 					GUID:  "some-guid-1",
 					Stack: "some-stack-1",
 					State: constant.DropletStaged,
-					Buildpacks: []DropletBuildpack{
+					Buildpacks: []resources.DropletBuildpack{
 						{
 							Name:         "some-buildpack-1",
 							DetectOutput: "detected-buildpack-1",
@@ -286,11 +287,11 @@ var _ = Describe("Droplet", func() {
 					},
 					CreatedAt: "2017-08-16T00:18:24Z",
 				}))
-				Expect(droplets[1]).To(Equal(Droplet{
+				Expect(droplets[1]).To(Equal(resources.Droplet{
 					GUID:  "some-guid-2",
 					Stack: "some-stack-2",
 					State: constant.DropletCopying,
-					Buildpacks: []DropletBuildpack{
+					Buildpacks: []resources.DropletBuildpack{
 						{
 							Name:         "some-buildpack-2",
 							DetectOutput: "detected-buildpack-2",
@@ -298,11 +299,11 @@ var _ = Describe("Droplet", func() {
 					},
 					CreatedAt: "2017-08-16T00:19:05Z",
 				}))
-				Expect(droplets[2]).To(Equal(Droplet{
+				Expect(droplets[2]).To(Equal(resources.Droplet{
 					GUID:  "some-guid-3",
 					Stack: "some-stack-3",
 					State: constant.DropletFailed,
-					Buildpacks: []DropletBuildpack{
+					Buildpacks: []resources.DropletBuildpack{
 						{
 							Name:         "some-buildpack-3",
 							DetectOutput: "detected-buildpack-3",

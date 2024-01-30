@@ -1,6 +1,7 @@
 package ccv3_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"fmt"
 	"net/http"
 
@@ -23,13 +24,13 @@ var _ = Describe("Service Instance", func() {
 		var (
 			query Query
 
-			instances  []ServiceInstance
+			instances  []resources.ServiceInstance
 			warnings   Warnings
 			executeErr error
 		)
 
 		JustBeforeEach(func() {
-			instances, warnings, executeErr = client.GetServiceInstances(query)
+			instances, _, warnings, executeErr = client.GetServiceInstances(query)
 		})
 
 		When("service instances exist", func() {
@@ -89,15 +90,15 @@ var _ = Describe("Service Instance", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 
 				Expect(instances).To(ConsistOf(
-					ServiceInstance{
+					resources.ServiceInstance{
 						GUID: "service-instance-1-guid",
 						Name: "service-instance-1-name",
 					},
-					ServiceInstance{
+					resources.ServiceInstance{
 						GUID: "service-instance-2-guid",
 						Name: "service-instance-2-name",
 					},
-					ServiceInstance{
+					resources.ServiceInstance{
 						GUID: "service-instance-3-guid",
 						Name: "service-instance-3-name",
 					},

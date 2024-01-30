@@ -1,6 +1,7 @@
 package ccv3_test
 
 import (
+	"code.cloudfoundry.org/cli/resources"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -24,13 +25,13 @@ var _ = Describe("Application", func() {
 	Describe("Application", func() {
 		Describe("MarshalJSON", func() {
 			var (
-				app      Application
+				app      resources.Application
 				appBytes []byte
 				err      error
 			)
 
 			BeforeEach(func() {
-				app = Application{}
+				app = resources.Application{}
 			})
 
 			JustBeforeEach(func() {
@@ -40,7 +41,7 @@ var _ = Describe("Application", func() {
 
 			When("no lifecycle is provided", func() {
 				BeforeEach(func() {
-					app = Application{}
+					app = resources.Application{}
 				})
 
 				It("omits the lifecycle from the JSON", func() {
@@ -50,7 +51,7 @@ var _ = Describe("Application", func() {
 
 			When("lifecycle type docker is provided", func() {
 				BeforeEach(func() {
-					app = Application{
+					app = resources.Application{
 						LifecycleType: constant.AppLifecycleTypeDocker,
 					}
 				})
@@ -114,8 +115,8 @@ var _ = Describe("Application", func() {
 
 			When("metadata is provided", func() {
 				BeforeEach(func() {
-					app = Application{
-						Metadata: &Metadata{
+					app = resources.Application{
+						Metadata: &resources.Metadata{
 							Labels: map[string]types.NullString{
 								"some-key":  types.NewNullString("some-value"),
 								"other-key": types.NewNullString("other-value")},
@@ -136,8 +137,8 @@ var _ = Describe("Application", func() {
 
 				When("labels need to be removed", func() {
 					BeforeEach(func() {
-						app = Application{
-							Metadata: &Metadata{
+						app = resources.Application{
+							Metadata: &resources.Metadata{
 								Labels: map[string]types.NullString{
 									"some-key":      types.NewNullString("some-value"),
 									"other-key":     types.NewNullString("other-value"),
@@ -164,14 +165,14 @@ var _ = Describe("Application", func() {
 
 		Describe("UnmarshalJSON", func() {
 			var (
-				app      Application
+				app      resources.Application
 				appBytes []byte
 				err      error
 			)
 
 			BeforeEach(func() {
 				appBytes = []byte("{}")
-				app = Application{}
+				app = resources.Application{}
 			})
 
 			JustBeforeEach(func() {
@@ -185,7 +186,7 @@ var _ = Describe("Application", func() {
 				})
 
 				It("omits the lifecycle from the JSON", func() {
-					Expect(app).To(Equal(Application{}))
+					Expect(app).To(Equal(resources.Application{}))
 				})
 			})
 
@@ -194,7 +195,7 @@ var _ = Describe("Application", func() {
 					appBytes = []byte(`{"lifecycle":{"type":"docker","data":{}}}`)
 				})
 				It("sets the lifecycle type to docker with empty data", func() {
-					Expect(app).To(Equal(Application{
+					Expect(app).To(Equal(resources.Application{
 						LifecycleType: constant.AppLifecycleTypeDocker,
 					}))
 				})
@@ -208,7 +209,7 @@ var _ = Describe("Application", func() {
 					})
 
 					It("sets them in the JSON", func() {
-						Expect(app).To(Equal(Application{
+						Expect(app).To(Equal(resources.Application{
 							LifecycleType:       constant.AppLifecycleTypeBuildpack,
 							LifecycleBuildpacks: []string{"some-buildpack"},
 						}))
@@ -222,8 +223,8 @@ var _ = Describe("Application", func() {
 				})
 
 				It("sets the labels", func() {
-					Expect(app).To(Equal(Application{
-						Metadata: &Metadata{
+					Expect(app).To(Equal(resources.Application{
+						Metadata: &resources.Metadata{
 							Labels: map[string]types.NullString{
 								"some-key": types.NewNullString("some-value"),
 							},
@@ -236,9 +237,9 @@ var _ = Describe("Application", func() {
 
 	Describe("CreateApplication", func() {
 		var (
-			appToCreate Application
+			appToCreate resources.Application
 
-			createdApp Application
+			createdApp resources.Application
 			warnings   Warnings
 			executeErr error
 		)
@@ -272,11 +273,9 @@ var _ = Describe("Application", func() {
 					),
 				)
 
-				appToCreate = Application{
-					Name: "some-app-name",
-					Relationships: Relationships{
-						constant.RelationshipTypeSpace: Relationship{GUID: "some-space-guid"},
-					},
+				appToCreate = resources.Application{
+					Name:      "some-app-name",
+					SpaceGUID: "some-space-guid",
 				}
 			})
 
@@ -284,7 +283,7 @@ var _ = Describe("Application", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 				Expect(warnings).To(ConsistOf("this is a warning"))
 
-				Expect(createdApp).To(Equal(Application{
+				Expect(createdApp).To(Equal(resources.Application{
 					Name: "some-app-name",
 					GUID: "some-app-guid",
 				}))
@@ -328,13 +327,11 @@ var _ = Describe("Application", func() {
 					),
 				)
 
-				appToCreate = Application{
+				appToCreate = resources.Application{
 					Name:                "some-app-name",
 					LifecycleType:       constant.AppLifecycleTypeBuildpack,
 					LifecycleBuildpacks: []string{"some-buildpack"},
-					Relationships: Relationships{
-						constant.RelationshipTypeSpace: Relationship{GUID: "some-space-guid"},
-					},
+					SpaceGUID:           "some-space-guid",
 				}
 			})
 
@@ -342,7 +339,7 @@ var _ = Describe("Application", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 				Expect(warnings).To(ConsistOf("this is a warning"))
 
-				Expect(createdApp).To(Equal(Application{
+				Expect(createdApp).To(Equal(resources.Application{
 					Name:                "some-app-name",
 					GUID:                "some-app-guid",
 					LifecycleType:       constant.AppLifecycleTypeBuildpack,
@@ -400,7 +397,7 @@ var _ = Describe("Application", func() {
 		var (
 			filters []Query
 
-			apps       []Application
+			apps       []resources.Application
 			warnings   Warnings
 			executeErr error
 		)
@@ -470,15 +467,15 @@ var _ = Describe("Application", func() {
 				Expect(warnings).To(ConsistOf("this is a warning", "this is another warning"))
 
 				Expect(apps).To(ConsistOf(
-					Application{
+					resources.Application{
 						Name:                "app-name-1",
 						GUID:                "app-guid-1",
 						StackName:           "some-stack",
 						LifecycleType:       constant.AppLifecycleTypeBuildpack,
 						LifecycleBuildpacks: []string{"some-buildpack"},
 					},
-					Application{Name: "app-name-2", GUID: "app-guid-2"},
-					Application{Name: "app-name-3", GUID: "app-guid-3"},
+					resources.Application{Name: "app-name-2", GUID: "app-guid-2"},
+					resources.Application{Name: "app-name-3", GUID: "app-guid-3"},
 				))
 			})
 		})
@@ -530,9 +527,9 @@ var _ = Describe("Application", func() {
 
 	Describe("UpdateApplication", func() {
 		var (
-			appToUpdate Application
+			appToUpdate resources.Application
 
-			updatedApp Application
+			updatedApp resources.Application
 			warnings   Warnings
 			executeErr error
 		)
@@ -580,15 +577,13 @@ var _ = Describe("Application", func() {
 					),
 				)
 
-				appToUpdate = Application{
+				appToUpdate = resources.Application{
 					GUID:                "some-app-guid",
 					Name:                "some-app-name",
 					StackName:           "some-stack-name",
 					LifecycleType:       constant.AppLifecycleTypeBuildpack,
 					LifecycleBuildpacks: []string{"some-buildpack"},
-					Relationships: Relationships{
-						constant.RelationshipTypeSpace: Relationship{GUID: "some-space-guid"},
-					},
+					SpaceGUID:           "some-space-guid",
 				}
 			})
 
@@ -596,7 +591,7 @@ var _ = Describe("Application", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 				Expect(warnings).To(ConsistOf("this is a warning"))
 
-				Expect(updatedApp).To(Equal(Application{
+				Expect(updatedApp).To(Equal(resources.Application{
 					GUID:                "some-app-guid",
 					StackName:           "some-stack-name",
 					LifecycleBuildpacks: []string{"some-buildpack"},
@@ -629,7 +624,7 @@ var _ = Describe("Application", func() {
 					),
 				)
 
-				appToUpdate = Application{
+				appToUpdate = resources.Application{
 					GUID: "some-app-guid",
 				}
 			})
@@ -657,7 +652,7 @@ var _ = Describe("Application", func() {
 
 	Describe("UpdateApplicationStop", func() {
 		var (
-			responseApp Application
+			responseApp resources.Application
 			warnings    Warnings
 			executeErr  error
 		)
@@ -683,7 +678,7 @@ var _ = Describe("Application", func() {
 			})
 
 			It("returns the application, warnings, and no error", func() {
-				Expect(responseApp).To(Equal(Application{
+				Expect(responseApp).To(Equal(resources.Application{
 					GUID:  "some-app-guid",
 					Name:  "some-app",
 					State: constant.ApplicationStopped,
@@ -740,7 +735,7 @@ var _ = Describe("Application", func() {
 
 	Describe("UpdateApplicationStart", func() {
 		var (
-			app        Application
+			app        resources.Application
 			warnings   Warnings
 			executeErr error
 		)
@@ -818,7 +813,7 @@ var _ = Describe("Application", func() {
 
 	Describe("UpdateApplicationRestart", func() {
 		var (
-			responseApp Application
+			responseApp resources.Application
 			warnings    Warnings
 			executeErr  error
 		)
@@ -844,7 +839,7 @@ var _ = Describe("Application", func() {
 			})
 
 			It("returns the application, warnings, and no error", func() {
-				Expect(responseApp).To(Equal(Application{
+				Expect(responseApp).To(Equal(resources.Application{
 					GUID:  "some-app-guid",
 					Name:  "some-app",
 					State: constant.ApplicationStarted,
