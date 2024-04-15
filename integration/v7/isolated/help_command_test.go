@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"strings"
 
+	. "code.cloudfoundry.org/cli/cf/util/testhelpers/matchers"
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -13,6 +14,12 @@ import (
 )
 
 var _ = Describe("help command", func() {
+	It("appears in cf help -a", func() {
+		session := helpers.CF("help", "-a")
+		Eventually(session).Should(Exit(0))
+		Expect(session).To(HaveCommandInCategoryWithDescription("help", "GETTING STARTED", "Show help"))
+	})
+
 	DescribeTable("displays help for common commands",
 		func(setup func() *exec.Cmd) {
 			cmd := setup()
@@ -36,7 +43,7 @@ var _ = Describe("help command", func() {
 			Eventually(session).Should(Say(`  domains\s+map-route`))
 
 			Eventually(session).Should(Say("Space management:"))
-			Eventually(session).Should(Say(`  spaces\s+create-space\s+set-space-role`))
+			Eventually(session).Should(Say(`  spaces\s+create-space,csp\s+set-space-role`))
 
 			Eventually(session).Should(Say("Org management:"))
 			Eventually(session).Should(Say(`  orgs,o\s+set-org-role`))
@@ -79,9 +86,8 @@ var _ = Describe("help command", func() {
 			Eventually(session).Should(Say("VERSION:"))
 			Eventually(session).Should(Say("GETTING STARTED:"))
 			Eventually(session).Should(Say("ENVIRONMENT VARIABLES:"))
-			Eventually(session).Should(Say(`CF_DIAL_TIMEOUT=5\s+Max wait time to establish a connection, including name resolution, in seconds`))
+			Eventually(session).Should(Say(`CF_DIAL_TIMEOUT=6\s+Max wait time to establish a connection, including name resolution, in seconds`))
 			Eventually(session).Should(Say("GLOBAL OPTIONS:"))
-			Eventually(session).Should(Say(`APPS \(experimental\):`))
 			Eventually(session).Should(Exit(0))
 		},
 
@@ -189,7 +195,7 @@ var _ = Describe("help command", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Eventually(session).Should(Say("ENVIRONMENT:"))
-					Eventually(session).Should(Say("CF_STAGING_TIMEOUT=15\\s+Max wait time for buildpack staging, in minutes"))
+					Eventually(session).Should(Say("CF_STAGING_TIMEOUT=15\\s+Max wait time for staging, in minutes"))
 					Eventually(session).Should(Say("CF_STARTUP_TIMEOUT=5\\s+Max wait time for app instance startup, in minutes"))
 					Eventually(session).Should(Exit(exitCode))
 				},
@@ -206,12 +212,12 @@ var _ = Describe("help command", func() {
 					return exec.Command("cf", "h", "restart"), 0
 				}),
 
-				Entry("cf restage", func() (*exec.Cmd, int) {
-					return exec.Command("cf", "h", "restage"), 0
-				}),
-
 				Entry("cf copy-source", func() (*exec.Cmd, int) {
 					return exec.Command("cf", "h", "copy-source"), 0
+				}),
+
+				Entry("cf restage", func() (*exec.Cmd, int) {
+					return exec.Command("cf", "h", "restage"), 0
 				}),
 			)
 		})
@@ -222,12 +228,15 @@ var _ = Describe("help command", func() {
 			func(command func() *exec.Cmd) {
 				session, err := Start(command(), GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
-
 				Eventually(session.Err).Should(Say("'rock' is not a registered command. See 'cf help -a'"))
 				Eventually(session).Should(Exit(1))
 			},
 
-			Entry("passing the --help flag", func() *exec.Cmd {
+			Entry("passing --help into rock (cf rock --help)", func() *exec.Cmd {
+				return exec.Command("cf", "rock", "--help")
+			}),
+
+			Entry("passing the --help flag (cf --help rock)", func() *exec.Cmd {
 				return exec.Command("cf", "--help", "rock")
 			}),
 

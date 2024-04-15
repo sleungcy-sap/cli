@@ -5,6 +5,9 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"path"
+
+	. "code.cloudfoundry.org/cli/cf/util/testhelpers/matchers"
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,6 +30,12 @@ var _ = Describe("app command", func() {
 
 	Describe("help", func() {
 		When("--help flag is set", func() {
+			It("appears in cf help -a", func() {
+				session := helpers.CF("help", "-a")
+				Eventually(session).Should(Exit(0))
+				Expect(session).To(HaveCommandInCategoryWithDescription("app", "APPS", "Display health and status for an app"))
+			})
+
 			It("Displays command usage to output", func() {
 				session := helpers.CF("app", "--help")
 				Eventually(session).Should(Say("NAME:"))
@@ -60,7 +69,7 @@ var _ = Describe("app command", func() {
 		Describe("version dependent display", func() {
 			When("the app is created but not pushed", func() {
 				BeforeEach(func() {
-					Eventually(helpers.CF("v3-create-app", appName)).Should(Exit(0))
+					Eventually(helpers.CF("create-app", appName)).Should(Exit(0))
 				})
 
 				It("displays blank fields for unpopulated fields", func() {
@@ -116,13 +125,13 @@ applications:
 						Eventually(session).Should(Say(`name:\s+%s`, appName))
 						Eventually(session).Should(Say(`requested state:\s+started`))
 						Eventually(session).Should(Say(`routes:\s+%s\.%s`, appName, domainName))
-						Eventually(session).Should(Say(`last uploaded:\s+\w{3} \d{1,2} \w{3} \d{2}:\d{2}:\d{2} \w{3} \d{4}`))
+						Eventually(session).Should(Say(`last uploaded:\s+%s`, helpers.ReadableDateTimeRegex))
 						Eventually(session).Should(Say(`stack:\s+cflinuxfs`))
-						Eventually(session).Should(Say(`buildpacks:\s+staticfile`))
+						Eventually(session).Should(Say(`staticfile_buildpack\s+\d+.\d+.\d+\s+staticfile\s+staticfile`))
 						Eventually(session).Should(Say(`type:\s+web`))
 						Eventually(session).Should(Say(`instances:\s+\d/2`))
 						Eventually(session).Should(Say(`memory usage:\s+128M`))
-						Eventually(session).Should(Say(`\s+state\s+since\s+cpu\s+memory\s+disk\s+details`))
+						Eventually(session).Should(Say(`\s+state\s+since\s+cpu\s+memory\s+disk\s+logging\s+details`))
 						Eventually(session).Should(Say(`#0\s+(starting|running)\s+\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`))
 
 						Eventually(session).Should(Exit(0))
@@ -227,7 +236,21 @@ applications:
 
 				It("displays the app buildpacks", func() {
 					session := helpers.CF("app", appName)
-					Eventually(session).Should(Say(`buildpacks:\s+ruby_buildpack,\s+go`))
+					Eventually(session).Should(Say(`ruby_buildpack\s+\d+.\d+.\d+\s+ruby`))
+					Eventually(session).Should(Exit(0))
+				})
+			})
+
+			When("the app uses sidecars", func() {
+				BeforeEach(func() {
+					helpers.WithSidecarApp(func(appDir string) {
+						Eventually(helpers.CF("push", appName, "-p", appDir, "-f", path.Join(appDir, "manifest.yml"), "-b", "staticfile_buildpack", "--no-start")).Should(Exit(0))
+					}, appName)
+				})
+
+				It("displays the sidecars", func() {
+					session := helpers.CF("app", appName)
+					Eventually(session).Should(Say(`sidecars:\s+sidecar_name\s+`))
 					Eventually(session).Should(Exit(0))
 				})
 			})

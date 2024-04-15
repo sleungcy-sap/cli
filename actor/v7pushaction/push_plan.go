@@ -6,33 +6,27 @@ import (
 	"code.cloudfoundry.org/cli/actor/sharedaction"
 	"code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
+	"github.com/cloudfoundry/bosh-cli/director/template"
 )
 
 type PushPlan struct {
 	SpaceGUID string
 	OrgGUID   string
 
-	Application            v7action.Application
-	ApplicationNeedsUpdate bool
+	Application resources.Application
 
-	NoStart           bool
-	NoRouteFlag       bool
-	SkipRouteCreation bool
+	NoStart             bool
+	NoWait              bool
+	Strategy            constant.DeploymentStrategy
+	TaskTypeApplication bool
 
-	DockerImageCredentials            v7action.DockerImageCredentials
-	DockerImageCredentialsNeedsUpdate bool
-
-	ScaleWebProcess            v7action.Process
-	ScaleWebProcessNeedsUpdate bool
-
-	UpdateWebProcess            v7action.Process
-	UpdateWebProcessNeedsUpdate bool
-
-	Manifest []byte
+	DockerImageCredentials v7action.DockerImageCredentials
 
 	Archive      bool
 	BitsPath     string
+	DropletPath  string
 	AllResources []sharedaction.V3Resource
 
 	PackageGUID string
@@ -40,9 +34,11 @@ type PushPlan struct {
 }
 
 type FlagOverrides struct {
+	AppName             string
 	Buildpacks          []string
 	Stack               string
-	Disk                types.NullUint64
+	Disk                string
+	DropletPath         string
 	DockerImage         string
 	DockerPassword      string
 	DockerUsername      string
@@ -50,11 +46,20 @@ type FlagOverrides struct {
 	HealthCheckTimeout  int64
 	HealthCheckType     constant.HealthCheckType
 	Instances           types.NullInt
-	Memory              types.NullUint64
+	Memory              string
 	NoStart             bool
+	NoWait              bool
 	ProvidedAppPath     string
-	SkipRouteCreation   bool
+	NoRoute             bool
+	RandomRoute         bool
 	StartCommand        types.FilteredString
+	Strategy            constant.DeploymentStrategy
+	ManifestPath        string
+	PathsToVarsFiles    []string
+	Vars                []template.VarKV
+	NoManifest          bool
+	Task                bool
+	LogRateLimit        string
 }
 
 func (state PushPlan) String() string {

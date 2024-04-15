@@ -26,8 +26,15 @@ type Application struct {
 	// State is the desired state of the application.
 	State constant.ApplicationState
 
+
 	CreatedAt string
 	UpdatedAt string
+}
+
+// ApplicationNameOnly represents only the name field of a Cloud Controller V3 Application
+type ApplicationNameOnly struct {
+	// Name is the name given to the application.
+	Name string `json:"name,omitempty"`
 }
 
 // MarshalJSON converts an Application into a Cloud Controller Application.

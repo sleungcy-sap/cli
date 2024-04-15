@@ -26,7 +26,7 @@ var _ = Describe("create-app-manifest Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeCreateAppManifestActor
+		fakeActor       *v7fakes.FakeActor
 		binaryName      string
 		executeErr      error
 	)
@@ -35,13 +35,15 @@ var _ = Describe("create-app-manifest Command", func() {
 		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeCreateAppManifestActor)
+		fakeActor = new(v7fakes.FakeActor)
 
 		cmd = CreateAppManifestCommand{
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
+			BaseCommand: BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		cmd.RequiredArgs.AppName = "some-app"
@@ -77,7 +79,7 @@ var _ = Describe("create-app-manifest Command", func() {
 			fakeConfig.TargetedSpaceReturns(configv3.Space{
 				GUID: "some-space-guid",
 				Name: "some-space"})
-			fakeConfig.CurrentUserReturns(
+			fakeActor.GetCurrentUserReturns(
 				configv3.User{Name: "some-user"},
 				nil)
 		})
@@ -114,7 +116,7 @@ var _ = Describe("create-app-manifest Command", func() {
 				Expect(os.RemoveAll(tempDir)).ToNot(HaveOccurred())
 			})
 
-			It("creates application manifest in current directry as <app-name>-manifest.yml", func() {
+			It("creates application manifest in current directory as <app-name>-manifest.yml", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 
 				Expect(fakeActor.GetRawApplicationManifestByNameAndSpaceCallCount()).To(Equal(1))
@@ -171,8 +173,8 @@ var _ = Describe("create-app-manifest Command", func() {
 				fakeActor.GetRawApplicationManifestByNameAndSpaceReturns([]byte(yamlContents), v7action.Warnings{"some-warning"}, nil)
 			})
 
-			It("returns a 'ManifestCreationError' error", func() {
-				Expect(executeErr.Error()).To(ContainSubstring("Error creating manifest file:"))
+			It("returns a 'FileCreationError' error", func() {
+				Expect(executeErr.Error()).To(ContainSubstring("Error creating file:"))
 			})
 		})
 	})

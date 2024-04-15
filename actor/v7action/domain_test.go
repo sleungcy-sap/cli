@@ -7,6 +7,8 @@ import (
 	. "code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/actor/v7action/v7actionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/api/router"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,33 +18,162 @@ var _ = Describe("Domain Actions", func() {
 	var (
 		actor                     *Actor
 		fakeCloudControllerClient *v7actionfakes.FakeCloudControllerClient
+		fakeRoutingClient         *v7actionfakes.FakeRoutingClient
 	)
 
 	BeforeEach(func() {
-		actor, fakeCloudControllerClient, _, _, _ = NewTestActor()
+		actor, fakeCloudControllerClient, _, _, _, fakeRoutingClient, _ = NewTestActor()
 	})
 
-	Describe("create shared domain", func() {
+	Describe("CheckRoute", func() {
+		var (
+			domainName string
+			hostname   string
+			path       string
+			port       int
+
+			matches    bool
+			warnings   Warnings
+			executeErr error
+		)
+
+		BeforeEach(func() {
+			domainName = "domain-name"
+			hostname = "host"
+			path = "/path"
+
+			fakeCloudControllerClient.GetDomainsReturns(
+				[]resources.Domain{{GUID: "domain-guid"}},
+				ccv3.Warnings{"get-domains-warning"},
+				nil,
+			)
+
+			fakeCloudControllerClient.CheckRouteReturns(
+				true,
+				ccv3.Warnings{"check-route-warning-1", "check-route-warning-2"},
+				nil,
+			)
+		})
+
+		JustBeforeEach(func() {
+			matches, warnings, executeErr = actor.CheckRoute(domainName, hostname, path, port)
+		})
+
 		It("delegates to the cloud controller client", func() {
-			fakeCloudControllerClient.CreateDomainReturns(resources.Domain{}, ccv3.Warnings{"create-warning-1", "create-warning-2"}, errors.New("create-error"))
+			Expect(fakeCloudControllerClient.GetDomainsCallCount()).To(Equal(1))
+			givenQuery := fakeCloudControllerClient.GetDomainsArgsForCall(0)
+			Expect(givenQuery).To(Equal([]ccv3.Query{
+				{Key: ccv3.NameFilter, Values: []string{domainName}},
+				{Key: ccv3.PerPage, Values: []string{"1"}},
+				{Key: ccv3.Page, Values: []string{"1"}},
+			}))
 
-			warnings, executeErr := actor.CreateSharedDomain("the-domain-name", true)
-			Expect(executeErr).To(MatchError("create-error"))
-			Expect(warnings).To(ConsistOf("create-warning-1", "create-warning-2"))
+			Expect(fakeCloudControllerClient.CheckRouteCallCount()).To(Equal(1))
+			givenDomainGUID, givenHostname, givenPath, givenPort := fakeCloudControllerClient.CheckRouteArgsForCall(0)
+			Expect(givenDomainGUID).To(Equal("domain-guid"))
+			Expect(givenHostname).To(Equal(hostname))
+			Expect(givenPath).To(Equal(path))
+			Expect(givenPort).To(Equal(0))
 
-			Expect(fakeCloudControllerClient.CreateDomainCallCount()).To(Equal(1))
-			passedDomain := fakeCloudControllerClient.CreateDomainArgsForCall(0)
+			Expect(matches).To(BeTrue())
+			Expect(warnings).To(ConsistOf("get-domains-warning", "check-route-warning-1", "check-route-warning-2"))
+			Expect(executeErr).NotTo(HaveOccurred())
+		})
 
-			Expect(passedDomain).To(Equal(
-				resources.Domain{
-					Name:     "the-domain-name",
-					Internal: types.NullBool{IsSet: true, Value: true},
-				},
-			))
+		When("getting the domain by name errors", func() {
+			BeforeEach(func() {
+				fakeCloudControllerClient.GetDomainsReturns(
+					[]resources.Domain{{GUID: "domain-guid"}},
+					ccv3.Warnings{"get-domains-warning"},
+					errors.New("domain not found"),
+				)
+			})
+
+			It("returns the error and any warnings", func() {
+				Expect(warnings).To(ConsistOf("get-domains-warning"))
+				Expect(executeErr).To(MatchError("domain not found"))
+			})
+		})
+
+		When("checking the route errors", func() {
+			BeforeEach(func() {
+				fakeCloudControllerClient.CheckRouteReturns(
+					true,
+					ccv3.Warnings{"check-route-warning-1", "check-route-warning-2"},
+					errors.New("failed to check route"),
+				)
+			})
+
+			It("returns the error and any warnings", func() {
+				Expect(warnings).To(ConsistOf("get-domains-warning", "check-route-warning-1", "check-route-warning-2"))
+				Expect(executeErr).To(MatchError("failed to check route"))
+			})
 		})
 	})
 
-	Describe("create private domain", func() {
+	Describe("CreateSharedDomain", func() {
+		var (
+			warnings    Warnings
+			executeErr  error
+			routerGroup string
+		)
+
+		JustBeforeEach(func() {
+			warnings, executeErr = actor.CreateSharedDomain("the-domain-name", true, routerGroup)
+		})
+
+		BeforeEach(func() {
+			routerGroup = ""
+			fakeCloudControllerClient.CreateDomainReturns(resources.Domain{}, ccv3.Warnings{"create-warning-1", "create-warning-2"}, errors.New("create-error"))
+		})
+
+		It("delegates to the cloud controller client", func() {
+			Expect(executeErr).To(MatchError("create-error"))
+			Expect(warnings).To(ConsistOf("create-warning-1", "create-warning-2"))
+
+			Expect(fakeRoutingClient.GetRouterGroupsCallCount()).To(Equal(0))
+
+			Expect(fakeCloudControllerClient.CreateDomainCallCount()).To(Equal(1))
+			passedDomain := fakeCloudControllerClient.CreateDomainArgsForCall(0)
+			Expect(passedDomain).To(Equal(
+				resources.Domain{
+					Name:        "the-domain-name",
+					Internal:    types.NullBool{IsSet: true, Value: true},
+					RouterGroup: "",
+				},
+			))
+		})
+
+		Context("when a router group name is provided", func() {
+			BeforeEach(func() {
+				routerGroup = "router-group"
+				fakeRoutingClient.GetRouterGroupByNameReturns(
+					router.RouterGroup{Name: routerGroup, GUID: "router-group-guid"}, nil,
+				)
+			})
+
+			It("delegates to the cloud controller client", func() {
+				Expect(executeErr).To(MatchError("create-error"))
+				Expect(warnings).To(ConsistOf("create-warning-1", "create-warning-2"))
+
+				Expect(fakeRoutingClient.GetRouterGroupByNameCallCount()).To(Equal(1))
+				Expect(fakeRoutingClient.GetRouterGroupByNameArgsForCall(0)).To(Equal(routerGroup))
+
+				Expect(fakeCloudControllerClient.CreateDomainCallCount()).To(Equal(1))
+				passedDomain := fakeCloudControllerClient.CreateDomainArgsForCall(0)
+
+				Expect(passedDomain).To(Equal(
+					resources.Domain{
+						Name:        "the-domain-name",
+						Internal:    types.NullBool{IsSet: true, Value: true},
+						RouterGroup: "router-group-guid",
+					},
+				))
+			})
+		})
+	})
+
+	Describe("CreatePrivateDomain", func() {
 
 		BeforeEach(func() {
 			fakeCloudControllerClient.GetOrganizationsReturns(
@@ -77,83 +208,56 @@ var _ = Describe("Domain Actions", func() {
 		})
 	})
 
-	Describe("check if shared domain", func() {
-		When("attempting to delete a shared domain", func() {
-			BeforeEach(func() {
-				fakeCloudControllerClient.GetDomainsReturns(
-					[]resources.Domain{
-						{Name: "the-domain.com", GUID: "shared-domain-guid"},
-					},
-					ccv3.Warnings{"get-domains-warning"},
-					nil,
-				)
-			})
-
-			It("delegates to the cloud controller client", func() {
-				warnings, executeErr := actor.CheckSharedDomain("the-domain.com")
-				Expect(executeErr).To(MatchError("Domain 'the-domain.com' is a shared domain, not a private domain."))
-				Expect(warnings).To(ConsistOf("get-domains-warning"))
-			})
-		})
-	})
-
-	Describe("delete shared domain", func() {
+	Describe("delete domain", func() {
+		var (
+			domain resources.Domain
+		)
 		BeforeEach(func() {
-			fakeCloudControllerClient.GetDomainsReturns(
-				[]resources.Domain{
-					{Name: "the-domain.com", GUID: "domain-guid"},
-				},
-				ccv3.Warnings{"get-domains-warning"},
-				nil,
-			)
+			domain = resources.Domain{Name: "the-domain.com", GUID: "domain-guid"}
 		})
 
 		It("delegates to the cloud controller client", func() {
-			fakeCloudControllerClient.DeleteDomainReturns(ccv3.JobURL("https://job.com"), ccv3.Warnings{"delete-warning"}, errors.New("delete-error"))
+			fakeCloudControllerClient.DeleteDomainReturns(
+				ccv3.JobURL("https://jobs/job_guid"),
+				ccv3.Warnings{"delete-warning"},
+				nil)
 
-			warnings, executeErr := actor.DeleteSharedDomain("the-domain.com")
-			Expect(executeErr).To(MatchError("delete-error"))
-			Expect(warnings).To(ConsistOf("get-domains-warning", "delete-warning"))
+			warnings, executeErr := actor.DeleteDomain(domain)
+			Expect(executeErr).ToNot(HaveOccurred())
+			Expect(warnings).To(ConsistOf("delete-warning"))
 
 			Expect(fakeCloudControllerClient.DeleteDomainCallCount()).To(Equal(1))
 			passedDomainGuid := fakeCloudControllerClient.DeleteDomainArgsForCall(0)
 
 			Expect(passedDomainGuid).To(Equal("domain-guid"))
-		})
-	})
 
-	Describe("delete private domain", func() {
-		When("deleting a private domain", func() {
+			Expect(fakeCloudControllerClient.PollJobCallCount()).To(Equal(1))
+			responseJobUrl := fakeCloudControllerClient.PollJobArgsForCall(0)
+			Expect(responseJobUrl).To(Equal(ccv3.JobURL("https://jobs/job_guid")))
+		})
+
+		When("polling the job fails", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.GetDomainsReturns(
-					[]resources.Domain{
-						{Name: "the-domain.com", OrganizationGUID: "org-guid", GUID: "private-domain-guid"},
-					},
-					ccv3.Warnings{"get-domains-warning"},
-					nil,
+				fakeCloudControllerClient.PollJobReturns(
+					ccv3.Warnings{"poll-job-warning"},
+					errors.New("async-domain-delete-error"),
 				)
 			})
 
-			It("delegates to the cloud controller client", func() {
-				fakeCloudControllerClient.DeleteDomainReturns(ccv3.JobURL("https://job.com"), ccv3.Warnings{"delete-warning"}, errors.New("delete-error"))
-
-				warnings, executeErr := actor.DeletePrivateDomain("the-domain.com")
-				Expect(executeErr).To(MatchError("delete-error"))
-				Expect(warnings).To(ConsistOf("get-domains-warning", "delete-warning"))
-
-				Expect(fakeCloudControllerClient.DeleteDomainCallCount()).To(Equal(1))
-				passedDomainGuid := fakeCloudControllerClient.DeleteDomainArgsForCall(0)
-
-				Expect(passedDomainGuid).To(Equal("private-domain-guid"))
+			It("returns the error", func() {
+				warnings, err := actor.DeleteDomain(domain)
+				Expect(err).To(MatchError("async-domain-delete-error"))
+				Expect(warnings).To(ConsistOf(
+					"poll-job-warning",
+				))
 			})
 		})
-
 	})
 
 	Describe("list domains for org", func() {
 		var (
 			ccv3Domains []resources.Domain
-			domains     []Domain
+			domains     []resources.Domain
 
 			domain1Name string
 			domain1Guid string
@@ -168,6 +272,7 @@ var _ = Describe("Domain Actions", func() {
 			sharedFromOrgGuid = "another-org-guid"
 			warnings          Warnings
 			executeErr        error
+			labelSelector     string
 		)
 
 		BeforeEach(func() {
@@ -176,10 +281,11 @@ var _ = Describe("Domain Actions", func() {
 				{Name: domain2Name, GUID: domain2Guid, OrganizationGUID: org1Guid},
 				{Name: domain3Name, GUID: domain3Guid, OrganizationGUID: sharedFromOrgGuid},
 			}
+			labelSelector = "foo=bar"
 		})
 
 		JustBeforeEach(func() {
-			domains, warnings, executeErr = actor.GetOrganizationDomains(org1Guid)
+			domains, warnings, executeErr = actor.GetOrganizationDomains(org1Guid, labelSelector)
 		})
 
 		When("the API layer call is successful", func() {
@@ -197,17 +303,35 @@ var _ = Describe("Domain Actions", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 
 				Expect(fakeCloudControllerClient.GetOrganizationDomainsCallCount()).To(Equal(1))
-				actualOrgGuid, actualQuery := fakeCloudControllerClient.GetOrganizationDomainsArgsForCall(0)
+				actualOrgGuid, _ := fakeCloudControllerClient.GetOrganizationDomainsArgsForCall(0)
 				Expect(actualOrgGuid).To(Equal(expectedOrgGUID))
-				Expect(actualQuery).To(BeNil())
 
 				Expect(domains).To(ConsistOf(
-					Domain{Name: domain1Name, GUID: domain1Guid, OrganizationGUID: org1Guid},
-					Domain{Name: domain2Name, GUID: domain2Guid, OrganizationGUID: org1Guid},
-					Domain{Name: domain3Name, GUID: domain3Guid, OrganizationGUID: sharedFromOrgGuid},
+					resources.Domain{Name: domain1Name, GUID: domain1Guid, OrganizationGUID: org1Guid},
+					resources.Domain{Name: domain2Name, GUID: domain2Guid, OrganizationGUID: org1Guid},
+					resources.Domain{Name: domain3Name, GUID: domain3Guid, OrganizationGUID: sharedFromOrgGuid},
 				))
 				Expect(warnings).To(ConsistOf("some-domain-warning"))
 
+			})
+
+			It("uses the label selector", func() {
+				_, actualQuery := fakeCloudControllerClient.GetOrganizationDomainsArgsForCall(0)
+				Expect(actualQuery).To(ContainElement(ccv3.Query{Key: ccv3.LabelSelectorFilter, Values: []string{"foo=bar"}}))
+			})
+
+			When("the label selector isn't specified", func() {
+				BeforeEach(func() {
+					labelSelector = ""
+				})
+
+				It("calls the API with no label selectors", func() {
+					Expect(executeErr).ToNot(HaveOccurred())
+
+					Expect(fakeCloudControllerClient.GetOrganizationDomainsCallCount()).To(Equal(1))
+					_, actualQuery := fakeCloudControllerClient.GetOrganizationDomainsArgsForCall(0)
+					Expect(len(actualQuery)).To(Equal(0))
+				})
 			})
 		})
 
@@ -223,7 +347,7 @@ var _ = Describe("Domain Actions", func() {
 			It("returns the error and prints warnings", func() {
 				Expect(executeErr).To(MatchError("list-error"))
 				Expect(warnings).To(ConsistOf("some-domain-warning"))
-				Expect(domains).To(ConsistOf([]Domain{}))
+				Expect(domains).To(ConsistOf([]resources.Domain{}))
 
 				Expect(fakeCloudControllerClient.GetOrganizationDomainsCallCount()).To(Equal(1))
 			})
@@ -231,10 +355,73 @@ var _ = Describe("Domain Actions", func() {
 		})
 	})
 
+	Describe("get domain by guid", func() {
+		var (
+			domain      resources.Domain
+			ccv3Domain  resources.Domain
+			domain1Guid string
+
+			warnings   Warnings
+			executeErr error
+		)
+
+		BeforeEach(func() {
+			domain1Guid = "domain-1-guid"
+			ccv3Domain = resources.Domain{Name: "domain-1-name", GUID: domain1Guid}
+		})
+
+		JustBeforeEach(func() {
+
+			domain, warnings, executeErr = actor.GetDomain(domain1Guid)
+		})
+
+		When("the API layer call is successful", func() {
+			BeforeEach(func() {
+				fakeCloudControllerClient.GetDomainReturns(
+					ccv3Domain,
+					ccv3.Warnings{"some-domain-warning"},
+					nil,
+				)
+			})
+
+			It("returns back the domains and warnings", func() {
+				Expect(executeErr).ToNot(HaveOccurred())
+
+				Expect(fakeCloudControllerClient.GetDomainCallCount()).To(Equal(1))
+				actualGUID := fakeCloudControllerClient.GetDomainArgsForCall(0)
+				Expect(actualGUID).To(Equal(domain1Guid))
+
+				Expect(domain).To(Equal(
+					resources.Domain{Name: "domain-1-name", GUID: domain1Guid},
+				))
+				Expect(warnings).To(ConsistOf("some-domain-warning"))
+
+			})
+		})
+
+		When("when the API layer call returns an error", func() {
+			BeforeEach(func() {
+				fakeCloudControllerClient.GetDomainReturns(
+					resources.Domain{},
+					ccv3.Warnings{"some-domain-warning"},
+					errors.New("get-domain-error"),
+				)
+			})
+
+			It("returns the error and prints warnings", func() {
+				Expect(executeErr).To(MatchError("get-domain-error"))
+				Expect(warnings).To(ConsistOf("some-domain-warning"))
+				Expect(domain).To(Equal(resources.Domain{}))
+
+				Expect(fakeCloudControllerClient.GetDomainCallCount()).To(Equal(1))
+			})
+		})
+	})
+
 	Describe("get domain by name", func() {
 		var (
 			ccv3Domains []resources.Domain
-			domain      Domain
+			domain      resources.Domain
 
 			domain1Name string
 			domain1Guid string
@@ -254,7 +441,11 @@ var _ = Describe("Domain Actions", func() {
 		})
 
 		When("the API layer call is successful", func() {
-			expectedQuery := []ccv3.Query{{Key: ccv3.NameFilter, Values: []string{domain1Name}}}
+			expectedQuery := []ccv3.Query{
+				{Key: ccv3.NameFilter, Values: []string{domain1Name}},
+				{Key: ccv3.PerPage, Values: []string{"1"}},
+				{Key: ccv3.Page, Values: []string{"1"}},
+			}
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetDomainsReturns(
 					ccv3Domains,
@@ -271,7 +462,7 @@ var _ = Describe("Domain Actions", func() {
 				Expect(actualQuery).To(Equal(expectedQuery))
 
 				Expect(domain).To(Equal(
-					Domain{Name: domain1Name, GUID: domain1Guid},
+					resources.Domain{Name: domain1Name, GUID: domain1Guid},
 				))
 				Expect(warnings).To(ConsistOf("some-domain-warning"))
 
@@ -290,7 +481,7 @@ var _ = Describe("Domain Actions", func() {
 			It("returns the error and prints warnings", func() {
 				Expect(executeErr).To(MatchError("list-error"))
 				Expect(warnings).To(ConsistOf("some-domain-warning"))
-				Expect(domain).To(Equal(Domain{}))
+				Expect(domain).To(Equal(resources.Domain{}))
 
 				Expect(fakeCloudControllerClient.GetDomainsCallCount()).To(Equal(1))
 			})
@@ -328,7 +519,11 @@ var _ = Describe("Domain Actions", func() {
 
 			Expect(fakeCloudControllerClient.GetDomainsCallCount()).To(Equal(1))
 			actualQuery := fakeCloudControllerClient.GetDomainsArgsForCall(0)
-			Expect(actualQuery).To(Equal([]ccv3.Query{{Key: ccv3.NameFilter, Values: []string{"private-domain.com"}}}))
+			Expect(actualQuery).To(Equal([]ccv3.Query{
+				{Key: ccv3.NameFilter, Values: []string{"private-domain.com"}},
+				{Key: ccv3.PerPage, Values: []string{"1"}},
+				{Key: ccv3.Page, Values: []string{"1"}},
+			}))
 
 			Expect(fakeCloudControllerClient.SharePrivateDomainToOrgsCallCount()).To(Equal(1))
 			domainGuid, sharedOrgs := fakeCloudControllerClient.SharePrivateDomainToOrgsArgsForCall(0)
@@ -388,7 +583,7 @@ var _ = Describe("Domain Actions", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.UnsharePrivateDomainFromOrgReturns(
 						ccv3.Warnings{"unshare-domain-warning"},
-						errors.New("unsahre-domain-error"),
+						errors.New("unshare-domain-error"),
 					)
 				})
 
@@ -398,7 +593,7 @@ var _ = Describe("Domain Actions", func() {
 					Expect(actualDomainGUID).To(Equal("private-domain-guid"))
 					Expect(actualOrgGUID).To(Equal("org-guid"))
 
-					Expect(executeErr).To(MatchError(errors.New("unsahre-domain-error")))
+					Expect(executeErr).To(MatchError(errors.New("unshare-domain-error")))
 					Expect(warnings).To(ConsistOf("get-orgs-warning", "get-domains-warning", "unshare-domain-warning"))
 				})
 			})
@@ -450,7 +645,11 @@ var _ = Describe("Domain Actions", func() {
 			It("returns the error and doesnt get the domain", func() {
 				Expect(fakeCloudControllerClient.GetOrganizationsCallCount()).To(Equal(1))
 				actualQuery := fakeCloudControllerClient.GetOrganizationsArgsForCall(0)
-				Expect(actualQuery).To(Equal([]ccv3.Query{{Key: ccv3.NameFilter, Values: []string{orgName}}}))
+				Expect(actualQuery).To(Equal([]ccv3.Query{
+					{Key: ccv3.NameFilter, Values: []string{orgName}},
+					{Key: ccv3.PerPage, Values: []string{"1"}},
+					{Key: ccv3.Page, Values: []string{"1"}},
+				}))
 
 				Expect(fakeCloudControllerClient.GetDomainsCallCount()).To(Equal(0))
 
@@ -481,11 +680,19 @@ var _ = Describe("Domain Actions", func() {
 				It("returns the error and doesnt get the domain", func() {
 					Expect(fakeCloudControllerClient.GetOrganizationsCallCount()).To(Equal(1))
 					actualQuery := fakeCloudControllerClient.GetOrganizationsArgsForCall(0)
-					Expect(actualQuery).To(Equal([]ccv3.Query{{Key: ccv3.NameFilter, Values: []string{orgName}}}))
+					Expect(actualQuery).To(Equal([]ccv3.Query{
+						{Key: ccv3.NameFilter, Values: []string{orgName}},
+						{Key: ccv3.PerPage, Values: []string{"1"}},
+						{Key: ccv3.Page, Values: []string{"1"}},
+					}))
 
 					Expect(fakeCloudControllerClient.GetDomainsCallCount()).To(Equal(1))
 					actualQuery = fakeCloudControllerClient.GetDomainsArgsForCall(0)
-					Expect(actualQuery).To(Equal([]ccv3.Query{{Key: ccv3.NameFilter, Values: []string{domainName}}}))
+					Expect(actualQuery).To(Equal([]ccv3.Query{
+						{Key: ccv3.NameFilter, Values: []string{domainName}},
+						{Key: ccv3.PerPage, Values: []string{"1"}},
+						{Key: ccv3.Page, Values: []string{"1"}},
+					}))
 
 					Expect(executeErr).To(MatchError(errors.New("get-domains-error")))
 					Expect(warnings).To(ConsistOf("get-orgs-warning", "get-domains-warning"))
@@ -506,11 +713,19 @@ var _ = Describe("Domain Actions", func() {
 				It("returns the GUIDs", func() {
 					Expect(fakeCloudControllerClient.GetOrganizationsCallCount()).To(Equal(1))
 					actualQuery := fakeCloudControllerClient.GetOrganizationsArgsForCall(0)
-					Expect(actualQuery).To(Equal([]ccv3.Query{{Key: ccv3.NameFilter, Values: []string{orgName}}}))
+					Expect(actualQuery).To(Equal([]ccv3.Query{
+						{Key: ccv3.NameFilter, Values: []string{orgName}},
+						{Key: ccv3.PerPage, Values: []string{"1"}},
+						{Key: ccv3.Page, Values: []string{"1"}},
+					}))
 
 					Expect(fakeCloudControllerClient.GetDomainsCallCount()).To(Equal(1))
 					actualQuery = fakeCloudControllerClient.GetDomainsArgsForCall(0)
-					Expect(actualQuery).To(Equal([]ccv3.Query{{Key: ccv3.NameFilter, Values: []string{domainName}}}))
+					Expect(actualQuery).To(Equal([]ccv3.Query{
+						{Key: ccv3.NameFilter, Values: []string{domainName}},
+						{Key: ccv3.PerPage, Values: []string{"1"}},
+						{Key: ccv3.Page, Values: []string{"1"}},
+					}))
 
 					Expect(executeErr).ToNot(HaveOccurred())
 					Expect(warnings).To(ConsistOf("get-orgs-warning", "get-domains-warning"))

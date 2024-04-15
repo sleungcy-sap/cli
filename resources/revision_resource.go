@@ -1,6 +1,5 @@
 package resources
 
-// Revision : application revision
 type Revision struct {
 	GUID        string  `json:"guid"`
 	Version     int     `json:"version"`

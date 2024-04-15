@@ -24,7 +24,8 @@ Running `make integration-tests` can be time-consuming, because it includes the 
 - `isolated` suite is for tests that are stand alone and do not affect each other. They are meant to run in their own organization and space, and will not affect system state. This is the most common type of integration tests.
 - `push` suite is for tests related to the `cf push` command only.
 - `experimental` suite is for tests that require the cf experimental flag to be set and/or an experimental feature for the CF CLI.
-- `plugin` suite is for tests that surround the CF CLI plugin framework. *These tests do not run in parallel.*
+- `plugin` suite is for tests that surround the CF CLI plugin framework. _These tests do not run in parallel._
+- `selfcontained` suite is for tests that talk to a fake CF API, hence they do not require a cf deployment
 
 ## How to run
 These tests rely on [ginkgo](https://github.com/onsi/ginkgo) to be installed.
@@ -42,19 +43,25 @@ ginkgo -r -randomizeAllSpecs -slowSpecThreshold=120 integration/shared/global in
 ### Customizations (based on environment variables)
 
 - `CF_INT_API` - Sets the CF API URL these tests will be using. Will default to `api.bosh-lite.com` if not set.
-- `SKIP_SSL_VALIDATION` - If true, will skip SSL Validation. Will default `--skip-ssl-validation` if not set.
+- `SKIP_SSL_VALIDATION` - If true, will skip SSL Validation. Will default to `--skip-ssl-validation` if not set.
 - `CF_INT_USERNAME` - The CF Administrator username. Will default to `admin` if not set.
 - `CF_INT_PASSWORD` - The CF Administrator password. Will default to `admin` if not set.
+- `CF_INT_CLIENT_ID` - The ID for the integration client credentials identity.
+- `CF_INT_CLIENT_SECRET` - The secret for the integration client credentials identity.
+- `CF_INT_CLIENT_CREDENTIALS_TEST_MODE` - If `true` all tests capable of being run under a client will authenticate with client credentials.
+- `CF_INT_CUSTOM_CLIENT_ID` - The ID for a custom client used in place of the standard `cf` client.
+- `CF_INT_CUSTOM_CLIENT_SECRET` - The secret for a custom client used in place of the standard `cf` client.
 - `CF_INT_OIDC_USERNAME` - The admin user in the OIDC identity provider. Will default to `admin_oidc` if not set.
 - `CF_INT_OIDC_PASSWORD` - The admin password in the OIDC identity provider. Will default to `admin` if not set.
 - `CF_INT_DOCKER_IMAGE` - A private docker image used for the docker authentication tests.
 - `CF_INT_DOCKER_USERNAME` - The username for the private docker registry for `CF_INT_DOCKER_IMAGE`.
 - `CF_INT_DOCKER_PASSWORD` - The password for `CF_INT_DOCKER_USERNAME`.
-- `CF_INT_CLIENT_ID` - the ID for the integration client credentials identity.
-- `CF_INT_CLIENT_SECRET` - the secret for the integration client credentials identity.
+- `CF_INT_IGNORE_API_VERSION_CHECK` - If `true`, will not skip tests that are dependent on a minimum version of the API.
 - `CF_CLI_EXPERIMENTAL` - Will enable both experimental functionality of the CF CLI and tests for that functionality. Will default to `false` if not set.
+- `KEEP_FAKE_SERVICE_BROKERS` - If `true`, will not delete any deployed reusable fake service broker apps. Useful for local development: allows for faster test suite re-runs. Will default to `false` if not set.
 
 ### The test suite does not cleanup after itself!
-In order to focus on clean test code and performance of each test, we have decided to not cleanup after each test. However, in order to facilitate [clean up scripts](https://github.com/cloudfoundry/cli/blob/master/bin/cleanup-integration), we are trying to keep consistent naming across organizations, spaces, etc.
+In order to focus on clean test code and performance of each test, we have decided to not cleanup after each test. However, in order to facilitate [clean up scripts](https://github.com/cloudfoundry/cli-ci/blob/main/bin/cleanup-integration), we are trying to keep consistent naming across organizations, spaces, etc.
 
 In addition, several router groups are created using a `INTEGRATION-TCP-NODE-[NUMBER]` format. These cannot be deleted without manual changes to the database.
+ 

@@ -1,42 +1,18 @@
 package v7
 
 import (
-	"code.cloudfoundry.org/cli/actor/sharedaction"
-	"code.cloudfoundry.org/cli/actor/v7action"
-	"code.cloudfoundry.org/cli/command"
+	"fmt"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/command/flag"
-	"code.cloudfoundry.org/cli/command/v7/shared"
 )
 
-//go:generate counterfeiter . CreatePrivateDomainActor
-
-type CreatePrivateDomainActor interface {
-	CreatePrivateDomain(domainName string, orgName string) (v7action.Warnings, error)
-}
-
 type CreatePrivateDomainCommand struct {
+	BaseCommand
+
 	RequiredArgs    flag.OrgDomain `positional-args:"yes"`
 	usage           interface{}    `usage:"CF_NAME create-private-domain ORG DOMAIN"`
 	relatedCommands interface{}    `related_commands:"create-shared-domain, domains, share-private-domain"`
-
-	UI          command.UI
-	Config      command.Config
-	Actor       CreatePrivateDomainActor
-	SharedActor command.SharedActor
-}
-
-func (cmd *CreatePrivateDomainCommand) Setup(config command.Config, ui command.UI) error {
-	cmd.UI = ui
-	cmd.Config = config
-	sharedActor := sharedaction.NewActor(config)
-	cmd.SharedActor = sharedActor
-
-	ccClient, uaaClient, err := shared.NewClients(config, ui, true, "")
-	if err != nil {
-		return err
-	}
-	cmd.Actor = v7action.NewActor(ccClient, config, sharedActor, uaaClient)
-	return nil
 }
 
 func (cmd CreatePrivateDomainCommand) Execute(args []string) error {
@@ -45,7 +21,7 @@ func (cmd CreatePrivateDomainCommand) Execute(args []string) error {
 		return err
 	}
 
-	user, err := cmd.Config.CurrentUser()
+	user, err := cmd.Actor.GetCurrentUser()
 	if err != nil {
 		return err
 	}
@@ -61,8 +37,17 @@ func (cmd CreatePrivateDomainCommand) Execute(args []string) error {
 		})
 
 	warnings, err := cmd.Actor.CreatePrivateDomain(domain, orgName)
+
 	cmd.UI.DisplayWarnings(warnings)
 	if err != nil {
+		if e, ok := err.(ccerror.UnprocessableEntityError); ok {
+			inUse := fmt.Sprintf("The domain name \"%s\" is already in use", domain)
+			if e.Message == inUse {
+				cmd.UI.DisplayWarning(err.Error())
+				cmd.UI.DisplayOK()
+				return nil
+			}
+		}
 		return err
 	}
 

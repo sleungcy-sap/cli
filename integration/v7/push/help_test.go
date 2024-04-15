@@ -1,13 +1,14 @@
 package push
 
 import (
+	"regexp"
+	"strings"
+
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gexec"
-	"regexp"
-	"strings"
 )
 
 var _ = Describe("help", func() {
@@ -26,12 +27,15 @@ var _ = Describe("help", func() {
 				"[-c COMMAND]",
 				"[-f MANIFEST_PATH | --no-manifest]",
 				"[--no-start]",
+				"[--no-wait]",
 				"[-i NUM_INSTANCES]",
 				"[-k DISK]",
 				"[-m MEMORY]",
+				"[-l LOG_RATE_LIMIT]",
 				"[-p PATH]",
 				"[-s STACK]",
 				"[-t HEALTH_TIMEOUT]",
+				"[--task TASK]",
 				"[-u (process | port | http)]",
 				"[--no-route | --random-route]",
 				"[--var KEY=VALUE]",
@@ -48,12 +52,15 @@ var _ = Describe("help", func() {
 				"[-c COMMAND]",
 				"[-f MANIFEST_PATH | --no-manifest]",
 				"[--no-start]",
+				"[--no-wait]",
 				"[-i NUM_INSTANCES]",
 				"[-k DISK]",
 				"[-m MEMORY]",
+				"[-l LOG_RATE_LIMIT]",
 				"[-p PATH]",
 				"[-s STACK]",
 				"[-t HEALTH_TIMEOUT]",
+				"[--task TASK]",
 				"[-u (process | port | http)]",
 				"[--no-route | --random-route ]",
 				"[--var KEY=VALUE]",
@@ -63,15 +70,33 @@ var _ = Describe("help", func() {
 			assertUsage(session, buildpackAppUsage, dockerAppUsage)
 
 			Eventually(session).Should(Say("OPTIONS:"))
-			Eventually(session).Should(Say(`-b\s+Custom buildpack by name \(e\.g\. my-buildpack\) or Git URL \(e\.g\. 'https://github.com/cloudfoundry/java-buildpack.git'\) or Git URL with a branch or tag \(e\.g\. 'https://github.com/cloudfoundry/java-buildpack\.git#v3.3.0' for 'v3.3.0' tag\)\. To use built-in buildpacks only, specify 'default' or 'null'`))
-			Eventually(session).Should(Say(`--docker-image, -o\s+Docker image to use \(e\.g\. user/docker-image-name\)`))
-			Eventually(session).Should(Say(`--docker-username\s+Repository username; used with password from environment variable CF_DOCKER_PASSWORD`))
-			Eventually(session).Should(Say(`--no-route\s+Do not map a route to this app`))
-			Eventually(session).Should(Say(`--no-start\s+Do not stage and start the app after pushing`))
-			Eventually(session).Should(Say(`-p\s+Path to app directory or to a zip file of the contents of the app directory`))
+			Eventually(session).Should(Say(`--app-start-timeout, -t`))
+			Eventually(session).Should(Say(`--buildpack, -b`))
+			Eventually(session).Should(Say(`--disk, -k`))
+			Eventually(session).Should(Say(`--docker-image, -o`))
+			Eventually(session).Should(Say(`--docker-username`))
+			Eventually(session).Should(Say(`--droplet`))
+			Eventually(session).Should(Say(`--endpoint`))
+			Eventually(session).Should(Say(`--health-check-type, -u`))
+			Eventually(session).Should(Say(`--instances, -i`))
+			Eventually(session).Should(Say(`--log-rate-limit, -l\s+Log rate limit per second, in bytes \(e.g. 128B, 4K, 1M\). -l=-1 represents unlimited`))
+			Eventually(session).Should(Say(`--manifest, -f`))
+			Eventually(session).Should(Say(`--memory, -m`))
+			Eventually(session).Should(Say(`--no-manifest`))
+			Eventually(session).Should(Say(`--no-route`))
+			Eventually(session).Should(Say(`--no-start`))
+			Eventually(session).Should(Say(`--no-wait`))
+			Eventually(session).Should(Say(`--path, -p`))
+			Eventually(session).Should(Say(`--random-route`))
+			Eventually(session).Should(Say(`--stack, -s`))
+			Eventually(session).Should(Say(`--start-command, -c`))
+			Eventually(session).Should(Say(`--strategy`))
+			Eventually(session).Should(Say(`--task`))
+			Eventually(session).Should(Say(`--var`))
+			Eventually(session).Should(Say(`--vars-file`))
 			Eventually(session).Should(Say("ENVIRONMENT:"))
 			Eventually(session).Should(Say(`CF_DOCKER_PASSWORD=\s+Password used for private docker repository`))
-			Eventually(session).Should(Say(`CF_STAGING_TIMEOUT=15\s+Max wait time for buildpack staging, in minutes`))
+			Eventually(session).Should(Say(`CF_STAGING_TIMEOUT=15\s+Max wait time for staging, in minutes`))
 			Eventually(session).Should(Say(`CF_STARTUP_TIMEOUT=5\s+Max wait time for app instance startup, in minutes`))
 
 			Eventually(session).Should(Exit(0))

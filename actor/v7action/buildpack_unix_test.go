@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package v7action_test
@@ -11,7 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "code.cloudfoundry.org/cli/actor/v2action"
+	. "code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/integration/helpers"
 	"code.cloudfoundry.org/ykk"
 )

@@ -3,6 +3,7 @@ package isolated
 import (
 	"regexp"
 
+	. "code.cloudfoundry.org/cli/cf/util/testhelpers/matchers"
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -11,7 +12,13 @@ import (
 )
 
 var _ = Describe("delete-shared-domain command", func() {
-	When("--help flag is given", func() {
+	Context("Help", func() {
+		It("appears in cf help -a", func() {
+			session := helpers.CF("help", "-a")
+			Eventually(session).Should(Exit(0))
+			Expect(session).To(HaveCommandInCategoryWithDescription("delete-shared-domain", "DOMAINS", "Delete a shared domain"))
+		})
+
 		It("Displays command usage to output", func() {
 			session := helpers.CF("delete-shared-domain", "--help")
 
@@ -91,6 +98,10 @@ var _ = Describe("delete-shared-domain command", func() {
 				Eventually(session).Should(Say(regexp.QuoteMeta(`Deleting domain %s as %s...`), domainName, username))
 				Consistently(session).ShouldNot(Say("Are you sure"))
 				Eventually(session).Should(Say("OK"))
+				Eventually(session).Should(Exit(0))
+
+				session = helpers.CF("domains")
+				Consistently(session).ShouldNot(Say(`%s\s+shared`, domainName))
 				Eventually(session).Should(Exit(0))
 			})
 		})

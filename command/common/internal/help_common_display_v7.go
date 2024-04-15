@@ -1,5 +1,3 @@
-// +build V7
-
 package internal
 
 var CommonHelpCategoryList = []HelpCategory{
@@ -18,8 +16,8 @@ var CommonHelpCategoryList = []HelpCategory{
 			{"push", "logs", "set-env"},
 			{"start", "ssh", "create-app-manifest"},
 			{"stop", "app", "delete"},
-			{"restart", "env", ""},
-			{"restage", "scale", ""},
+			{"restart", "env", "apply-manifest"},
+			{"restage", "scale", "revisions"},
 		},
 	},
 
@@ -51,6 +49,7 @@ var CommonHelpCategoryList = []HelpCategory{
 		CommandList: [][]string{
 			{"spaces", "create-space", "set-space-role"},
 			{"space-users", "delete-space", "unset-space-role"},
+			{"apply-manifest", "", ""},
 		},
 	},
 

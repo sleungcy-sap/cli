@@ -9,6 +9,8 @@ import (
 	"code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/command"
+	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/util/ui"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -22,32 +24,60 @@ func NewAppSummaryDisplayer(ui command.UI) *AppSummaryDisplayer {
 	}
 }
 
-func (display AppSummaryDisplayer) AppDisplay(summary v7action.ApplicationSummary, displayStartCommand bool) {
+func (display AppSummaryDisplayer) AppDisplay(summary v7action.DetailedApplicationSummary, displayStartCommand bool) {
 	var isoRow []string
+	var keyValueTable [][]string
 	if name, exists := summary.GetIsolationSegmentName(); exists {
 		isoRow = append(isoRow, display.UI.TranslateText("isolation segment:"), name)
 	}
 
-	var lifecycleInfo []string
 	if summary.LifecycleType == constant.AppLifecycleTypeDocker {
-		lifecycleInfo = []string{display.UI.TranslateText("docker image:"), summary.CurrentDroplet.Image}
+		keyValueTable = [][]string{
+			{display.UI.TranslateText("name:"), summary.Application.Name},
+			{display.UI.TranslateText("requested state:"), strings.ToLower(string(summary.State))},
+			isoRow,
+			{display.UI.TranslateText("routes:"), routeSummary(summary.Routes)},
+			{display.UI.TranslateText("last uploaded:"), display.getCreatedTime(summary)},
+			{display.UI.TranslateText("stack:"), summary.CurrentDroplet.Stack},
+			{display.UI.TranslateText("docker image:"), summary.CurrentDroplet.Image},
+			isoRow,
+		}
 	} else {
-		lifecycleInfo = []string{display.UI.TranslateText("buildpacks:"), display.buildpackNames(summary.CurrentDroplet.Buildpacks)}
-	}
-
-	keyValueTable := [][]string{
-		{display.UI.TranslateText("name:"), summary.Application.Name},
-		{display.UI.TranslateText("requested state:"), strings.ToLower(string(summary.State))},
-		isoRow,
-		{display.UI.TranslateText("routes:"), summary.Routes.Summary()},
-		{display.UI.TranslateText("last uploaded:"), display.getCreatedTime(summary)},
-		{display.UI.TranslateText("stack:"), summary.CurrentDroplet.Stack},
-		lifecycleInfo,
+		keyValueTable = [][]string{
+			{display.UI.TranslateText("name:"), summary.Application.Name},
+			{display.UI.TranslateText("requested state:"), strings.ToLower(string(summary.State))},
+			isoRow,
+			{display.UI.TranslateText("routes:"), routeSummary(summary.Routes)},
+			{display.UI.TranslateText("last uploaded:"), display.getCreatedTime(summary)},
+			{display.UI.TranslateText("stack:"), summary.CurrentDroplet.Stack},
+			{display.UI.TranslateText("buildpacks:"), ""},
+			isoRow,
+		}
 	}
 
 	display.UI.DisplayKeyValueTable("", keyValueTable, 3)
 
+	if summary.LifecycleType == constant.AppLifecycleTypeBuildpack {
+		display.displayBuildpackTable(summary.CurrentDroplet.Buildpacks)
+	}
+
 	display.displayProcessTable(summary, displayStartCommand)
+}
+
+func routeSummary(rs []resources.Route) string {
+	formattedRoutes := []string{}
+	for _, route := range rs {
+		formattedRoutes = append(formattedRoutes, route.URL)
+	}
+	return strings.Join(formattedRoutes, ", ")
+}
+
+func formatLogRateLimit(limit int64) string {
+	if limit == -1 {
+		return "unlimited"
+	} else {
+		return bytefmt.ByteSize(uint64(limit)) + "/s"
+	}
 }
 
 func (display AppSummaryDisplayer) displayAppInstancesTable(processSummary v7action.ProcessSummary) {
@@ -59,6 +89,7 @@ func (display AppSummaryDisplayer) displayAppInstancesTable(processSummary v7act
 			display.UI.TranslateText("cpu"),
 			display.UI.TranslateText("memory"),
 			display.UI.TranslateText("disk"),
+			display.UI.TranslateText("logging"),
 			display.UI.TranslateText("details"),
 		},
 	}
@@ -77,6 +108,10 @@ func (display AppSummaryDisplayer) displayAppInstancesTable(processSummary v7act
 				"DiskUsage": bytefmt.ByteSize(instance.DiskUsage),
 				"DiskQuota": bytefmt.ByteSize(instance.DiskQuota),
 			}),
+			display.UI.TranslateText("{{.LogRate}}/s of {{.LogRateLimit}}", map[string]interface{}{
+				"LogRate":      bytefmt.ByteSize(instance.LogRate),
+				"LogRateLimit": formatLogRateLimit(instance.LogRateLimit),
+			}),
 			instance.Details,
 		})
 	}
@@ -84,7 +119,7 @@ func (display AppSummaryDisplayer) displayAppInstancesTable(processSummary v7act
 	display.UI.DisplayInstancesTableForApp(table)
 }
 
-func (display AppSummaryDisplayer) displayProcessTable(summary v7action.ApplicationSummary, displayStartCommand bool) {
+func (display AppSummaryDisplayer) displayProcessTable(summary v7action.DetailedApplicationSummary, displayStartCommand bool) {
 	for _, process := range summary.ProcessSummaries {
 		display.UI.DisplayNewline()
 
@@ -93,8 +128,14 @@ func (display AppSummaryDisplayer) displayProcessTable(summary v7action.Applicat
 			startCommandRow = append(startCommandRow, display.UI.TranslateText("start command:"), process.Command.Value)
 		}
 
+		var processSidecars []string
+		for _, sidecar := range process.Sidecars {
+			processSidecars = append(processSidecars, sidecar.Name)
+		}
+
 		keyValueTable := [][]string{
 			{display.UI.TranslateText("type:"), process.Type},
+			{display.UI.TranslateText("sidecars:"), strings.Join(processSidecars, ", ")},
 			{display.UI.TranslateText("instances:"), fmt.Sprintf("%d/%d", process.HealthyInstanceCount(), process.TotalInstanceCount())},
 			{display.UI.TranslateText("memory usage:"), fmt.Sprintf("%dM", process.MemoryInMB.Value)},
 			startCommandRow,
@@ -103,7 +144,6 @@ func (display AppSummaryDisplayer) displayProcessTable(summary v7action.Applicat
 		display.UI.DisplayKeyValueTable("", keyValueTable, 3)
 
 		if len(process.InstanceDetails) == 0 {
-			display.UI.DisplayNewline()
 			display.UI.DisplayText("There are no running instances of this process.")
 			continue
 		}
@@ -111,7 +151,7 @@ func (display AppSummaryDisplayer) displayProcessTable(summary v7action.Applicat
 	}
 }
 
-func (display AppSummaryDisplayer) getCreatedTime(summary v7action.ApplicationSummary) string {
+func (display AppSummaryDisplayer) getCreatedTime(summary v7action.DetailedApplicationSummary) string {
 	if summary.CurrentDroplet.CreatedAt != "" {
 		timestamp, err := time.Parse(time.RFC3339, summary.CurrentDroplet.CreatedAt)
 		if err != nil {
@@ -124,19 +164,30 @@ func (display AppSummaryDisplayer) getCreatedTime(summary v7action.ApplicationSu
 	return ""
 }
 
-func (AppSummaryDisplayer) buildpackNames(buildpacks []v7action.DropletBuildpack) string {
-	var names []string
-	for _, buildpack := range buildpacks {
-		if buildpack.DetectOutput != "" {
-			names = append(names, buildpack.DetectOutput)
-		} else {
-			names = append(names, buildpack.Name)
-		}
-	}
-
-	return strings.Join(names, ", ")
-}
-
 func (AppSummaryDisplayer) appInstanceDate(input time.Time) string {
 	return input.UTC().Format(time.RFC3339)
+}
+
+func (display AppSummaryDisplayer) displayBuildpackTable(buildpacks []resources.DropletBuildpack) {
+	if len(buildpacks) > 0 {
+		var keyValueTable = [][]string{
+			{
+				display.UI.TranslateText("name"),
+				display.UI.TranslateText("version"),
+				display.UI.TranslateText("detect output"),
+				display.UI.TranslateText("buildpack name"),
+			},
+		}
+
+		for _, buildpack := range buildpacks {
+			keyValueTable = append(keyValueTable, []string{
+				buildpack.Name,
+				buildpack.Version,
+				buildpack.DetectOutput,
+				buildpack.BuildpackName,
+			})
+		}
+
+		display.UI.DisplayTableWithHeader("\t", keyValueTable, ui.DefaultTableSpacePadding)
+	}
 }

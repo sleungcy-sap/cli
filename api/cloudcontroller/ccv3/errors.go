@@ -3,12 +3,17 @@ package ccv3
 import (
 	"encoding/json"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 )
 
-const taskWorkersUnavailable = "CF-TaskWorkersUnavailable"
+const (
+	taskWorkersUnavailable = "CF-TaskWorkersUnavailable"
+	operationInProgress    = "CF-AsyncServiceInstanceOperationInProgress"
+)
 
 // errorWrapper is the wrapper that converts responses with 4xx and 5xx status
 // codes to an error.
@@ -51,6 +56,8 @@ func convert400(rawHTTPStatusErr ccerror.RawHTTPStatusError, request *cloudcontr
 	}
 
 	switch rawHTTPStatusErr.StatusCode {
+	case http.StatusBadRequest: // 400
+		return handleBadRequest(firstErr, request)
 	case http.StatusUnauthorized: // 401
 		if firstErr.Title == "CF-InvalidAuthToken" {
 			return ccerror.InvalidAuthTokenError{Message: firstErr.Detail}
@@ -67,12 +74,16 @@ func convert400(rawHTTPStatusErr ccerror.RawHTTPStatusError, request *cloudcontr
 			return ccerror.TaskWorkersUnavailableError{Message: firstErr.Detail}
 		}
 		return ccerror.ServiceUnavailableError{Message: firstErr.Detail}
-	default:
-		return ccerror.V3UnexpectedResponseError{
-			ResponseCode:    rawHTTPStatusErr.StatusCode,
-			RequestIDs:      rawHTTPStatusErr.RequestIDs,
-			V3ErrorResponse: errorResponse,
+	case http.StatusConflict:
+		if firstErr.Title == operationInProgress {
+			return ccerror.ServiceInstanceOperationInProgressError{Message: firstErr.Detail}
 		}
+	}
+
+	return ccerror.V3UnexpectedResponseError{
+		ResponseCode:    rawHTTPStatusErr.StatusCode,
+		RequestIDs:      rawHTTPStatusErr.RequestIDs,
+		V3ErrorResponse: errorResponse,
 	}
 }
 
@@ -100,6 +111,17 @@ func convert500(rawHTTPStatusErr ccerror.RawHTTPStatusError) error {
 	}
 }
 
+func handleBadRequest(errorResponse ccerror.V3Error, _ *cloudcontroller.Request) error {
+	switch errorResponse.Detail {
+	case "Bad request: Cannot stage package whose state is not ready.":
+		return ccerror.InvalidStateError{}
+	case "This service does not support fetching service instance parameters.":
+		return ccerror.ServiceInstanceParametersFetchNotSupportedError{Message: errorResponse.Detail}
+	default:
+		return ccerror.BadRequestError{Message: errorResponse.Detail}
+	}
+}
+
 func handleNotFound(errorResponse ccerror.V3Error, request *cloudcontroller.Request) error {
 	switch errorResponse.Detail {
 	case "App not found":
@@ -114,6 +136,8 @@ func handleNotFound(errorResponse ccerror.V3Error, request *cloudcontroller.Requ
 		return ccerror.InstanceNotFoundError{}
 	case "Process not found":
 		return ccerror.ProcessNotFoundError{}
+	case "User not found":
+		return ccerror.UserNotFoundError{}
 	case "Unknown request":
 		return ccerror.APINotFoundError{URL: request.URL.String()}
 	default:
@@ -122,13 +146,55 @@ func handleNotFound(errorResponse ccerror.V3Error, request *cloudcontroller.Requ
 }
 
 func handleUnprocessableEntity(errorResponse ccerror.V3Error) error {
-	switch errorResponse.Detail {
-	case "name must be unique in space":
-		return ccerror.NameNotUniqueInSpaceError{}
-	case "Buildpack must be an existing admin buildpack or a valid git URI":
+	//idea to make route already exist error flexible for all relevant error cases
+	errorString := errorResponse.Detail
+	err := ccerror.UnprocessableEntityError{Message: errorResponse.Detail}
+	appNameTakenRegexp := regexp.MustCompile(`App with the name '.*' already exists\.`)
+	orgNameTakenRegexp := regexp.MustCompile(`Organization '.*' already exists\.`)
+	roleExistsRegexp := regexp.MustCompile(`User '.*' already has '.*' role.*`)
+	quotaExistsRegexp := regexp.MustCompile(`.* Quota '.*' already exists\.`)
+	securityGroupExistsRegexp := regexp.MustCompile(`Security group with name '.*' already exists\.`)
+
+	// boolean switch case with partial/regex string matchers
+	switch {
+	case appNameTakenRegexp.MatchString(errorString) || strings.Contains(errorString, "name must be unique in space"):
+		return ccerror.NameNotUniqueInSpaceError{UnprocessableEntityError: err}
+	case strings.Contains(errorString,
+		"Name must be unique per organization"):
+		return ccerror.NameNotUniqueInOrgError{}
+	case strings.Contains(errorString,
+		"Route already exists"):
+		return ccerror.RouteNotUniqueError{UnprocessableEntityError: err}
+	case strings.Contains(errorString,
+		"Buildpack must be an existing admin buildpack or a valid git URI"):
 		return ccerror.InvalidBuildpackError{}
+	case strings.Contains(errorString,
+		"Assign a droplet before starting this app."):
+		return ccerror.InvalidStartError{}
+	case strings.Contains(errorString,
+		"The service instance name is taken"):
+		return ccerror.ServiceInstanceNameTakenError{Message: err.Message}
+	case orgNameTakenRegexp.MatchString(errorString):
+		return ccerror.OrganizationNameTakenError{UnprocessableEntityError: err}
+	case roleExistsRegexp.MatchString(errorString):
+		return ccerror.RoleAlreadyExistsError{UnprocessableEntityError: err}
+	case quotaExistsRegexp.MatchString(errorString):
+		return ccerror.QuotaAlreadyExists{Message: err.Message}
+	case securityGroupExistsRegexp.MatchString(errorString):
+		return ccerror.SecurityGroupAlreadyExists{Message: err.Message}
+	case strings.Contains(errorString,
+		"Ensure the space is bound to this security group."):
+		return ccerror.SecurityGroupNotBound{Message: err.Message}
+	case errorResponse.Title == "CF-ServiceInstanceAlreadyBoundToSameRoute":
+		return ccerror.ResourceAlreadyExistsError{Message: err.Message}
+	case strings.Contains(errorString,
+		"The app is already bound to the service instance"):
+		return ccerror.ResourceAlreadyExistsError{Message: err.Message}
+	case strings.Contains(errorString,
+		"Key binding names must be unique"):
+		return ccerror.ServiceKeyTakenError{Message: err.Message}
 	default:
-		return ccerror.UnprocessableEntityError{Message: errorResponse.Detail}
+		return err
 	}
 }
 

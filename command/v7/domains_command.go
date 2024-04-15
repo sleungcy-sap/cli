@@ -1,43 +1,20 @@
 package v7
 
 import (
-	"code.cloudfoundry.org/cli/actor/sharedaction"
-	"code.cloudfoundry.org/cli/actor/v7action"
-	"code.cloudfoundry.org/cli/command"
-	"code.cloudfoundry.org/cli/command/v7/shared"
+	"sort"
+	"strings"
+
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/util/sorting"
 	"code.cloudfoundry.org/cli/util/ui"
-	"sort"
 )
 
-//go:generate counterfeiter . DomainsActor
-
-type DomainsActor interface {
-	GetOrganizationDomains(string) ([]v7action.Domain, v7action.Warnings, error)
-}
-
 type DomainsCommand struct {
-	usage           interface{} `usage:"CF_NAME domains"`
-	relatedCommands interface{} `related_commands:"create-route, routes, create-shared-domain, create-private-domain"`
+	BaseCommand
 
-	UI          command.UI
-	Config      command.Config
-	SharedActor command.SharedActor
-	Actor       DomainsActor
-}
-
-func (cmd *DomainsCommand) Setup(config command.Config, ui command.UI) error {
-	cmd.UI = ui
-	cmd.Config = config
-	cmd.SharedActor = sharedaction.NewActor(config)
-
-	ccClient, _, err := shared.NewClients(config, ui, true, "")
-	if err != nil {
-		return err
-	}
-	cmd.Actor = v7action.NewActor(ccClient, config, nil, nil)
-
-	return nil
+	usage           interface{} `usage:"CF_NAME domains\n\nEXAMPLES:\n   CF_NAME domains\n   CF_NAME domains --labels 'environment in (production,staging),tier in (backend)'\n   CF_NAME domains --labels 'env=dev,!chargeback-code,tier in (backend,worker)'"`
+	relatedCommands interface{} `related_commands:"create-private-domain, create-route, create-shared-domain, routes, set-label"`
+	Labels          string      `long:"labels" description:"Selector to filter domains by labels"`
 }
 
 func (cmd DomainsCommand) Execute(args []string) error {
@@ -46,7 +23,7 @@ func (cmd DomainsCommand) Execute(args []string) error {
 		return err
 	}
 
-	currentUser, err := cmd.Config.CurrentUser()
+	currentUser, err := cmd.Actor.GetCurrentUser()
 	if err != nil {
 		return err
 	}
@@ -57,7 +34,7 @@ func (cmd DomainsCommand) Execute(args []string) error {
 		"CurrentUser": currentUser.Name,
 	})
 
-	domains, warnings, err := cmd.Actor.GetOrganizationDomains(targetedOrg.GUID)
+	domains, warnings, err := cmd.Actor.GetOrganizationDomains(targetedOrg.GUID, cmd.Labels)
 	cmd.UI.DisplayWarnings(warnings)
 	if err != nil {
 		return err
@@ -73,12 +50,13 @@ func (cmd DomainsCommand) Execute(args []string) error {
 	return nil
 }
 
-func (cmd DomainsCommand) displayDomainsTable(domains []v7action.Domain) {
+func (cmd DomainsCommand) displayDomainsTable(domains []resources.Domain) {
 	var domainsTable = [][]string{
 		{
 			cmd.UI.TranslateText("name"),
 			cmd.UI.TranslateText("availability"),
 			cmd.UI.TranslateText("internal"),
+			cmd.UI.TranslateText("protocols"),
 		},
 	}
 
@@ -100,6 +78,7 @@ func (cmd DomainsCommand) displayDomainsTable(domains []v7action.Domain) {
 			domain.Name,
 			availability,
 			internal,
+			strings.Join(domain.Protocols, ","),
 		})
 	}
 

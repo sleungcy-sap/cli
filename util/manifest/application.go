@@ -21,9 +21,11 @@ type Application struct {
 	// guaranteed, although CLI only ships strings).
 	EnvironmentVariables    map[string]string
 	HealthCheckHTTPEndpoint string
-	HealthCheckTimeout      uint64
-	// HealthCheckType attribute defines the number of seconds that is allocated
+	// HealthCheckTimeout attribute defines the number of seconds that is allocated
 	// for starting an application.
+	HealthCheckTimeout uint64
+	// HealthCheckType specifies the mechanism used to determine if the application
+	// is healthy (e.g., an open port or an HTTP endpoint).
 	HealthCheckType string
 	Hostname        string
 	Instances       types.NullInt
@@ -148,7 +150,7 @@ func (app *Application) UnmarshalYAML(unmarshaller func(interface{}) error) erro
 	}
 
 	// "null" values are identical to non-existant values in YAML. In order to
-	// detect if an explicit null is given, a manual existance check is required.
+	// detect if an explicit null is given, a manual existence check is required.
 	exists := map[string]interface{}{}
 	err = unmarshaller(&exists)
 	if err != nil {

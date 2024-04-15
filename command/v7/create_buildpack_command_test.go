@@ -5,12 +5,14 @@ import (
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/actor/v7action"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/command/commandfakes"
 	"code.cloudfoundry.org/cli/command/flag"
 	"code.cloudfoundry.org/cli/command/translatableerror"
 	. "code.cloudfoundry.org/cli/command/v7"
 	"code.cloudfoundry.org/cli/command/v7/v7fakes"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	"code.cloudfoundry.org/cli/util/configv3"
 	"code.cloudfoundry.org/cli/util/ui"
@@ -26,7 +28,7 @@ var _ = Describe("create buildpack Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeCreateBuildpackActor
+		fakeActor       *v7fakes.FakeActor
 		executeErr      error
 		args            []string
 		binaryName      string
@@ -38,7 +40,7 @@ var _ = Describe("create buildpack Command", func() {
 		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeCreateBuildpackActor)
+		fakeActor = new(v7fakes.FakeActor)
 		args = nil
 		buildpackName = "some-buildpack"
 		buildpackPath = "/path/to/buildpack.zip"
@@ -49,10 +51,12 @@ var _ = Describe("create buildpack Command", func() {
 				Path:      flag.PathWithExistenceCheckOrURL(buildpackPath),
 				Position:  7,
 			},
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
+			BaseCommand: BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		binaryName = "faceman"
@@ -80,7 +84,7 @@ var _ = Describe("create buildpack Command", func() {
 
 	When("the environment is setup correctly", func() {
 		BeforeEach(func() {
-			fakeConfig.CurrentUserReturns(configv3.User{Name: "the-user"}, nil)
+			fakeActor.GetCurrentUserReturns(configv3.User{Name: "the-user"}, nil)
 		})
 
 		It("should print text indicating it is creating a buildpack", func() {
@@ -108,7 +112,7 @@ var _ = Describe("create buildpack Command", func() {
 			When("creating the buildpack fails", func() {
 				BeforeEach(func() {
 					fakeActor.CreateBuildpackReturns(
-						v7action.Buildpack{},
+						resources.Buildpack{},
 						v7action.Warnings{"warning-1"},
 						actionerror.BuildpackNameTakenError{Name: "this-error-occurred"},
 					)
@@ -122,7 +126,7 @@ var _ = Describe("create buildpack Command", func() {
 			When("The disabled flag is set", func() {
 				BeforeEach(func() {
 					cmd.Disable = true
-					buildpack := v7action.Buildpack{
+					buildpack := resources.Buildpack{
 						Name:    buildpackName,
 						Enabled: types.NullBool{Value: false, IsSet: true},
 					}
@@ -138,7 +142,7 @@ var _ = Describe("create buildpack Command", func() {
 
 			When("creating buildpack succeeds", func() {
 				BeforeEach(func() {
-					buildpack := v7action.Buildpack{
+					buildpack := resources.Buildpack{
 						Name:     buildpackName,
 						Position: types.NullInt{Value: 1, IsSet: true},
 						Enabled:  types.NullBool{Value: true, IsSet: true},
@@ -172,7 +176,22 @@ var _ = Describe("create buildpack Command", func() {
 					Expect(path).To(Equal(buildpackPath))
 				})
 
-				When("Uploading the buildpack fails due to an error", func() {
+				When("uploading the buildpack fails due to an auth token expired error", func() {
+					BeforeEach(func() {
+						fakeActor.UploadBuildpackReturns(
+							ccv3.JobURL(""),
+							v7action.Warnings{"some-create-bp-with-auth-warning"},
+							ccerror.InvalidAuthTokenError{Message: "token expired"},
+						)
+					})
+
+					It("alerts the user and retries the upload", func() {
+						Expect(testUI.Err).To(Say("Failed to upload buildpack due to auth token expiration, retrying..."))
+						Expect(fakeActor.UploadBuildpackCallCount()).To(Equal(2))
+					})
+				})
+
+				When("Uploading the buildpack fails due to a generic error", func() {
 					BeforeEach(func() {
 						fakeActor.UploadBuildpackReturns(
 							ccv3.JobURL(""),

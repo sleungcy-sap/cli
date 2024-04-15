@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"code.cloudfoundry.org/cli/cf/util/testhelpers/matchers"
 	. "code.cloudfoundry.org/cli/command/flag"
 	flags "github.com/jessevdk/go-flags"
 	. "github.com/onsi/ginkgo"
@@ -13,47 +14,20 @@ import (
 )
 
 var _ = Describe("path types", func() {
+	type completable interface {
+		Complete(string) []flags.Completion
+	}
+
 	var (
 		currentDir string
 		tempDir    string
 	)
 
-	BeforeEach(func() {
-		var err error
-		currentDir, err = os.Getwd()
-		Expect(err).ToNot(HaveOccurred())
-
-		tempDir, err = ioutil.TempDir("", "")
-		Expect(err).ToNot(HaveOccurred())
-
-		err = os.Chdir(tempDir)
-		Expect(err).ToNot(HaveOccurred())
-
-		for _, filename := range []string{"abc", "abd", "~abd", "tfg", "ABCD"} {
-			err = ioutil.WriteFile(filename, []byte{}, 0400)
-			Expect(err).ToNot(HaveOccurred())
-		}
-
-		for _, dir := range []string{"~add", "add", "aee"} {
-			err := os.Mkdir(dir, 0700)
-			Expect(err).ToNot(HaveOccurred())
-		}
-	})
-
-	AfterEach(func() {
-		err := os.Chdir(currentDir)
-		Expect(err).ToNot(HaveOccurred())
-		err = os.RemoveAll(tempDir)
-		Expect(err).ToNot(HaveOccurred())
-	})
-
-	Describe("Path", func() {
-		var path Path
-
+	testComplete := func(subject completable) {
 		Describe("Complete", func() {
 			When("the prefix is empty", func() {
 				It("returns all files and directories", func() {
-					matches := path.Complete("")
+					matches := subject.Complete("")
 					Expect(matches).To(ConsistOf(
 						flags.Completion{Item: "abc"},
 						flags.Completion{Item: "abd"},
@@ -70,7 +44,7 @@ var _ = Describe("path types", func() {
 			When("the prefix is not empty", func() {
 				When("there are matching paths", func() {
 					It("returns the matching paths", func() {
-						matches := path.Complete("a")
+						matches := subject.Complete("a")
 						Expect(matches).To(ConsistOf(
 							flags.Completion{Item: "abc"},
 							flags.Completion{Item: "abd"},
@@ -80,14 +54,14 @@ var _ = Describe("path types", func() {
 					})
 
 					It("is case sensitive", func() {
-						matches := path.Complete("A")
+						matches := subject.Complete("A")
 						Expect(matches).To(ConsistOf(
 							flags.Completion{Item: "ABCD"},
 						))
 					})
 
 					It("finds files starting with '~'", func() {
-						matches := path.Complete("~")
+						matches := subject.Complete("~")
 						Expect(matches).To(ConsistOf(
 							flags.Completion{Item: "~abd"},
 							flags.Completion{Item: fmt.Sprintf("~add%c", os.PathSeparator)},
@@ -97,7 +71,7 @@ var _ = Describe("path types", func() {
 
 				When("there are no matching paths", func() {
 					It("returns no matches", func() {
-						Expect(path.Complete("z")).To(BeEmpty())
+						Expect(subject.Complete("z")).To(BeEmpty())
 					})
 				})
 			})
@@ -141,7 +115,7 @@ var _ = Describe("path types", func() {
 					})
 
 					It("returns matching paths in $HOME", func() {
-						matches := path.Complete(fmt.Sprintf("~%c", os.PathSeparator))
+						matches := subject.Complete(fmt.Sprintf("~%c", os.PathSeparator))
 						Expect(matches).To(ConsistOf(
 							flags.Completion{Item: fmt.Sprintf("~%cabc", os.PathSeparator)},
 							flags.Completion{Item: fmt.Sprintf("~%cdef", os.PathSeparator)},
@@ -191,7 +165,7 @@ var _ = Describe("path types", func() {
 					})
 
 					It("returns matching paths in $HOME", func() {
-						matches := path.Complete(fmt.Sprintf("~%ca", os.PathSeparator))
+						matches := subject.Complete(fmt.Sprintf("~%ca", os.PathSeparator))
 						Expect(matches).To(ConsistOf(
 							flags.Completion{Item: fmt.Sprintf("~%cabc", os.PathSeparator)},
 							flags.Completion{Item: fmt.Sprintf("~%cadir%c", os.PathSeparator, os.PathSeparator)},
@@ -200,6 +174,40 @@ var _ = Describe("path types", func() {
 				})
 			})
 		})
+	}
+
+	BeforeEach(func() {
+		var err error
+		currentDir, err = os.Getwd()
+		Expect(err).ToNot(HaveOccurred())
+
+		tempDir, err = ioutil.TempDir("", "")
+		Expect(err).ToNot(HaveOccurred())
+
+		err = os.Chdir(tempDir)
+		Expect(err).ToNot(HaveOccurred())
+
+		for _, filename := range []string{"abc", "abd", "~abd", "tfg", "ABCD"} {
+			err = ioutil.WriteFile(filename, []byte{}, 0400)
+			Expect(err).ToNot(HaveOccurred())
+		}
+
+		for _, dir := range []string{"~add", "add", "aee"} {
+			err := os.Mkdir(dir, 0700)
+			Expect(err).ToNot(HaveOccurred())
+		}
+	})
+
+	AfterEach(func() {
+		err := os.Chdir(currentDir)
+		Expect(err).ToNot(HaveOccurred())
+		err = os.RemoveAll(tempDir)
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	Describe("Path", func() {
+		var path Path
+		testComplete(path)
 	})
 
 	Describe("PathWithExistenceCheck", func() {
@@ -209,8 +217,7 @@ var _ = Describe("path types", func() {
 			pathWithExistenceCheck = PathWithExistenceCheck("")
 		})
 
-		// The Complete method is not tested because it shares the same code as
-		// Path.Complete().
+		testComplete(pathWithExistenceCheck)
 
 		Describe("UnmarshalFlag", func() {
 			When("the path does not exist", func() {
@@ -224,10 +231,61 @@ var _ = Describe("path types", func() {
 			})
 
 			When("the path exists", func() {
+				When("the path is relative", func() {
+					It("expands the path", func() {
+						fullPath := filepath.Join(tempDir, "abc")
+						err := pathWithExistenceCheck.UnmarshalFlag("abc")
+						Expect(err).ToNot(HaveOccurred())
+						Expect(string(pathWithExistenceCheck)).To(matchers.MatchPath(fullPath))
+					})
+				})
+
+				When("the path is absolute", func() {
+					It("preserves the path", func() {
+						err := pathWithExistenceCheck.UnmarshalFlag(filepath.Join(tempDir, "abc"))
+						Expect(err).ToNot(HaveOccurred())
+						Expect(pathWithExistenceCheck).To(BeEquivalentTo(filepath.Join(tempDir, "abc")))
+					})
+				})
+			})
+		})
+	})
+
+	Describe("ManifestPathWithExistenceCheck", func() {
+		var manifestPathWithExistenceCheck ManifestPathWithExistenceCheck
+
+		BeforeEach(func() {
+			manifestPathWithExistenceCheck = ManifestPathWithExistenceCheck("")
+		})
+
+		testComplete(manifestPathWithExistenceCheck)
+
+		Describe("UnmarshalFlag", func() {
+			When("the path does not exist", func() {
+				It("returns a path does not exist error", func() {
+					err := manifestPathWithExistenceCheck.UnmarshalFlag("./some-dir/some-file")
+					Expect(err).To(MatchError(&flags.Error{
+						Type:    flags.ErrRequired,
+						Message: "The specified path './some-dir/some-file' does not exist.",
+					}))
+				})
+			})
+
+			When("the path is a directory, and exists, but does not contain a manifest.{yml,yaml} file", func() {
+				It("returns a path does not exist error", func() {
+					err := manifestPathWithExistenceCheck.UnmarshalFlag(tempDir)
+					Expect(err).To(MatchError(&flags.Error{
+						Type:    flags.ErrRequired,
+						Message: "The specified directory '" + tempDir + "' does not contain a file named 'manifest.yml'.",
+					}))
+				})
+			})
+
+			When("the path exists", func() {
 				It("sets the path", func() {
-					err := pathWithExistenceCheck.UnmarshalFlag("abc")
+					err := manifestPathWithExistenceCheck.UnmarshalFlag("abc")
 					Expect(err).ToNot(HaveOccurred())
-					Expect(pathWithExistenceCheck).To(BeEquivalentTo("abc"))
+					Expect(manifestPathWithExistenceCheck).To(BeEquivalentTo("abc"))
 				})
 			})
 		})
@@ -237,11 +295,10 @@ var _ = Describe("path types", func() {
 		var jsonOrFile JSONOrFileWithValidation
 
 		BeforeEach(func() {
-			jsonOrFile = JSONOrFileWithValidation(nil)
+			jsonOrFile = JSONOrFileWithValidation{}
 		})
 
-		// The Complete method is not tested because it shares the same code as
-		// Path.Complete().
+		testComplete(jsonOrFile)
 
 		Describe("UnmarshalFlag", func() {
 			When("the file exists", func() {
@@ -252,11 +309,14 @@ var _ = Describe("path types", func() {
 						tempPath = tempFile(`{"this is":"valid JSON"}`)
 					})
 
-					It("sets the path", func() {
+					It("reads and unmarshals the JSON from the file", func() {
 						err := jsonOrFile.UnmarshalFlag(tempPath)
 						Expect(err).ToNot(HaveOccurred())
-						Expect(jsonOrFile).To(BeEquivalentTo(map[string]interface{}{
-							"this is": "valid JSON",
+						Expect(jsonOrFile).To(Equal(JSONOrFileWithValidation{
+							IsSet: true,
+							Value: map[string]interface{}{
+								"this is": "valid JSON",
+							},
 						}))
 					})
 				})
@@ -287,11 +347,14 @@ var _ = Describe("path types", func() {
 			})
 
 			When("the JSON is valid", func() {
-				It("sets the path", func() {
+				It("reads and unmarshals the JSON", func() {
 					err := jsonOrFile.UnmarshalFlag(`{"this is":"valid JSON"}`)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(jsonOrFile).To(BeEquivalentTo(map[string]interface{}{
-						"this is": "valid JSON",
+					Expect(jsonOrFile).To(Equal(JSONOrFileWithValidation{
+						IsSet: true,
+						Value: map[string]interface{}{
+							"this is": "valid JSON",
+						},
 					}))
 				})
 			})
@@ -305,8 +368,7 @@ var _ = Describe("path types", func() {
 			pathWithExistenceCheckOrURL = PathWithExistenceCheckOrURL("")
 		})
 
-		// The Complete method is not tested because it shares the same code as
-		// Path.Complete().
+		testComplete(pathWithExistenceCheckOrURL)
 
 		Describe("UnmarshalFlag", func() {
 			When("the path is a URL", func() {

@@ -3,15 +3,15 @@ package v7_test
 import (
 	"errors"
 
-	"code.cloudfoundry.org/cli/types"
-
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/command/commandfakes"
 	"code.cloudfoundry.org/cli/command/flag"
-	"code.cloudfoundry.org/cli/command/v7"
+	v7 "code.cloudfoundry.org/cli/command/v7"
 	"code.cloudfoundry.org/cli/command/v7/v7fakes"
+	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/types"
 	"code.cloudfoundry.org/cli/util/configv3"
 	"code.cloudfoundry.org/cli/util/ui"
 	. "github.com/onsi/ginkgo"
@@ -25,7 +25,7 @@ var _ = Describe("app Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeAppActor
+		fakeActor       *v7fakes.FakeActor
 		binaryName      string
 		executeErr      error
 		app             string
@@ -35,7 +35,7 @@ var _ = Describe("app Command", func() {
 		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeAppActor)
+		fakeActor = new(v7fakes.FakeActor)
 
 		binaryName = "faceman"
 		fakeConfig.BinaryNameReturns(binaryName)
@@ -43,11 +43,12 @@ var _ = Describe("app Command", func() {
 
 		cmd = v7.AppCommand{
 			RequiredArgs: flag.AppName{AppName: app},
-
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
+			BaseCommand: v7.BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		fakeConfig.TargetedOrganizationReturns(configv3.Organization{
@@ -59,7 +60,7 @@ var _ = Describe("app Command", func() {
 			GUID: "some-space-guid",
 		})
 
-		fakeConfig.CurrentUserReturns(configv3.User{Name: "steve"}, nil)
+		fakeActor.GetCurrentUserReturns(configv3.User{Name: "steve"}, nil)
 	})
 
 	JustBeforeEach(func() {
@@ -86,7 +87,7 @@ var _ = Describe("app Command", func() {
 
 		BeforeEach(func() {
 			expectedErr = errors.New("some current user error")
-			fakeConfig.CurrentUserReturns(configv3.User{}, expectedErr)
+			fakeActor.GetCurrentUserReturns(configv3.User{}, expectedErr)
 		})
 
 		It("return an error", func() {
@@ -102,7 +103,7 @@ var _ = Describe("app Command", func() {
 		When("no errors occur", func() {
 			BeforeEach(func() {
 				fakeActor.GetApplicationByNameAndSpaceReturns(
-					v7action.Application{GUID: "some-guid"},
+					resources.Application{GUID: "some-guid"},
 					v7action.Warnings{"warning-1", "warning-2"},
 					nil)
 			})
@@ -125,7 +126,7 @@ var _ = Describe("app Command", func() {
 			When("the error is translatable", func() {
 				BeforeEach(func() {
 					fakeActor.GetApplicationByNameAndSpaceReturns(
-						v7action.Application{},
+						resources.Application{},
 						v7action.Warnings{"warning-1", "warning-2"},
 						actionerror.ApplicationNotFoundError{Name: "some-app"})
 				})
@@ -144,7 +145,7 @@ var _ = Describe("app Command", func() {
 				BeforeEach(func() {
 					expectedErr = errors.New("get app summary error")
 					fakeActor.GetApplicationByNameAndSpaceReturns(
-						v7action.Application{},
+						resources.Application{},
 						v7action.Warnings{"warning-1", "warning-2"},
 						expectedErr)
 				})
@@ -165,7 +166,7 @@ var _ = Describe("app Command", func() {
 
 			BeforeEach(func() {
 				expectedErr = actionerror.ApplicationNotFoundError{Name: app}
-				fakeActor.GetApplicationSummaryByNameAndSpaceReturns(v7action.ApplicationSummary{}, v7action.Warnings{"warning-1", "warning-2"}, expectedErr)
+				fakeActor.GetDetailedAppSummaryReturns(v7action.DetailedApplicationSummary{}, v7action.Warnings{"warning-1", "warning-2"}, expectedErr)
 			})
 
 			It("returns the error and prints warnings", func() {
@@ -180,14 +181,30 @@ var _ = Describe("app Command", func() {
 
 		When("getting the application summary is successful", func() {
 			BeforeEach(func() {
-				summary := v7action.ApplicationSummary{
-					Application: v7action.Application{
-						Name:  "some-app",
-						State: constant.ApplicationStarted,
+				summary := v7action.DetailedApplicationSummary{
+					ApplicationSummary: v7action.ApplicationSummary{
+						Application: resources.Application{
+							Name:  "some-app",
+							State: constant.ApplicationStarted,
+						},
+						ProcessSummaries: v7action.ProcessSummaries{
+							{
+								Process: resources.Process{
+									Type:    constant.ProcessTypeWeb,
+									Command: *types.NewFilteredString("some-command-1"),
+								},
+							},
+							{
+								Process: resources.Process{
+									Type:    "console",
+									Command: *types.NewFilteredString("some-command-2"),
+								},
+							},
+						},
 					},
-					CurrentDroplet: v7action.Droplet{
+					CurrentDroplet: resources.Droplet{
 						Stack: "cflinuxfs2",
-						Buildpacks: []v7action.DropletBuildpack{
+						Buildpacks: []resources.DropletBuildpack{
 							{
 								Name:         "ruby_buildpack",
 								DetectOutput: "some-detect-output",
@@ -198,22 +215,8 @@ var _ = Describe("app Command", func() {
 							},
 						},
 					},
-					ProcessSummaries: v7action.ProcessSummaries{
-						{
-							Process: v7action.Process{
-								Type:    constant.ProcessTypeWeb,
-								Command: *types.NewFilteredString("some-command-1"),
-							},
-						},
-						{
-							Process: v7action.Process{
-								Type:    "console",
-								Command: *types.NewFilteredString("some-command-2"),
-							},
-						},
-					},
 				}
-				fakeActor.GetApplicationSummaryByNameAndSpaceReturns(summary, v7action.Warnings{"warning-1", "warning-2"}, nil)
+				fakeActor.GetDetailedAppSummaryReturns(summary, v7action.Warnings{"warning-1", "warning-2"}, nil)
 			})
 
 			It("prints the application summary and outputs warnings", func() {
@@ -227,8 +230,8 @@ var _ = Describe("app Command", func() {
 				Expect(testUI.Err).To(Say("warning-1"))
 				Expect(testUI.Err).To(Say("warning-2"))
 
-				Expect(fakeActor.GetApplicationSummaryByNameAndSpaceCallCount()).To(Equal(1))
-				appName, spaceGUID, withObfuscatedValues, _ := fakeActor.GetApplicationSummaryByNameAndSpaceArgsForCall(0)
+				Expect(fakeActor.GetDetailedAppSummaryCallCount()).To(Equal(1))
+				appName, spaceGUID, withObfuscatedValues := fakeActor.GetDetailedAppSummaryArgsForCall(0)
 				Expect(appName).To(Equal("some-app"))
 				Expect(spaceGUID).To(Equal("some-space-guid"))
 				Expect(withObfuscatedValues).To(BeFalse())

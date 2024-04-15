@@ -1,6 +1,13 @@
 package v7action_test
 
 import (
+	"errors"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	. "code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/actor/v7action/v7actionfakes"
@@ -8,14 +15,8 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
-	"errors"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 var _ = Describe("Buildpack", func() {
@@ -25,14 +26,14 @@ var _ = Describe("Buildpack", func() {
 	)
 
 	BeforeEach(func() {
-		actor, fakeCloudControllerClient, _, _, _ = NewTestActor()
+		actor, fakeCloudControllerClient, _, _, _, _, _ = NewTestActor()
 	})
 
 	Describe("GetBuildpackByNameAndStack", func() {
 		var (
 			buildpackName  = "buildpack-1"
 			buildpackStack = "stack-name"
-			buildpack      Buildpack
+			buildpack      resources.Buildpack
 			warnings       Warnings
 			executeErr     error
 		)
@@ -104,7 +105,7 @@ var _ = Describe("Buildpack", func() {
 
 			It("returns the nil stack buildpack and any warnings", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
-				Expect(buildpack).To(Equal(Buildpack{Name: "buildpack-2", GUID: "buildpack-2-guid", Stack: "", Position: types.NullInt{Value: 2, IsSet: true}}))
+				Expect(buildpack).To(Equal(resources.Buildpack{Name: "buildpack-2", GUID: "buildpack-2-guid", Stack: "", Position: types.NullInt{Value: 2, IsSet: true}}))
 				Expect(warnings).To(ConsistOf("some-warning-1", "some-warning-2"))
 			})
 		})
@@ -119,7 +120,7 @@ var _ = Describe("Buildpack", func() {
 					nil)
 			})
 
-			It("returns warnings and a BuilpackNotFoundError", func() {
+			It("returns warnings and a BuildpackNotFoundError", func() {
 				Expect(executeErr).To(MatchError(actionerror.BuildpackNotFoundError{BuildpackName: buildpackName, StackName: buildpackStack}))
 				Expect(warnings).To(ConsistOf("some-warning-1", "some-warning-2"))
 			})
@@ -141,7 +142,7 @@ var _ = Describe("Buildpack", func() {
 				It("Returns the proper buildpack", func() {
 					Expect(executeErr).ToNot(HaveOccurred())
 					Expect(warnings).To(ConsistOf("some-warning-1", "some-warning-2"))
-					Expect(buildpack).To(Equal(Buildpack{Name: "my-buildpack", GUID: "some-guid"}))
+					Expect(buildpack).To(Equal(resources.Buildpack{Name: "my-buildpack", GUID: "some-guid"}))
 				})
 
 				It("Does not pass a stack query to the client", func() {
@@ -171,7 +172,7 @@ var _ = Describe("Buildpack", func() {
 				It("Returns the proper buildpack", func() {
 					Expect(executeErr).ToNot(HaveOccurred())
 					Expect(warnings).To(ConsistOf("some-warning-1", "some-warning-2"))
-					Expect(buildpack).To(Equal(Buildpack{Name: "my-buildpack", GUID: "some-guid", Stack: "good-stack"}))
+					Expect(buildpack).To(Equal(resources.Buildpack{Name: "my-buildpack", GUID: "some-guid", Stack: "good-stack"}))
 				})
 
 				It("Does pass a stack query to the client", func() {
@@ -194,13 +195,39 @@ var _ = Describe("Buildpack", func() {
 
 	Describe("GetBuildpacks", func() {
 		var (
-			buildpacks []Buildpack
-			warnings   Warnings
-			executeErr error
+			buildpacks    []resources.Buildpack
+			warnings      Warnings
+			executeErr    error
+			labelSelector string
 		)
 
 		JustBeforeEach(func() {
-			buildpacks, warnings, executeErr = actor.GetBuildpacks()
+			buildpacks, warnings, executeErr = actor.GetBuildpacks(labelSelector)
+		})
+
+		It("calls CloudControllerClient.GetBuildpacks()", func() {
+			Expect(fakeCloudControllerClient.GetBuildpacksCallCount()).To(Equal(1))
+		})
+
+		When("a label selector is not provided", func() {
+			BeforeEach(func() {
+				labelSelector = ""
+			})
+			It("only passes through a OrderBy query to the CloudControllerClient", func() {
+				positionQuery := ccv3.Query{Key: ccv3.OrderBy, Values: []string{ccv3.PositionOrder}}
+				Expect(fakeCloudControllerClient.GetBuildpacksArgsForCall(0)).To(ConsistOf(positionQuery))
+			})
+		})
+
+		When("a label selector is provided", func() {
+			BeforeEach(func() {
+				labelSelector = "some-label-selector"
+			})
+
+			It("passes the labels selector through", func() {
+				labelQuery := ccv3.Query{Key: ccv3.LabelSelectorFilter, Values: []string{labelSelector}}
+				Expect(fakeCloudControllerClient.GetBuildpacksArgsForCall(0)).To(ContainElement(labelQuery))
+			})
 		})
 
 		When("getting buildpacks fails", func() {
@@ -233,15 +260,9 @@ var _ = Describe("Buildpack", func() {
 			It("returns the buildpacks and warnings", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 				Expect(warnings).To(ConsistOf("some-warning-1", "some-warning-2"))
-				Expect(buildpacks).To(Equal([]Buildpack{
+				Expect(buildpacks).To(Equal([]resources.Buildpack{
 					{Name: "buildpack-1", Position: types.NullInt{Value: 1, IsSet: true}},
 					{Name: "buildpack-2", Position: types.NullInt{Value: 2, IsSet: true}},
-				}))
-
-				Expect(fakeCloudControllerClient.GetBuildpacksCallCount()).To(Equal(1))
-				Expect(fakeCloudControllerClient.GetBuildpacksArgsForCall(0)).To(ConsistOf(ccv3.Query{
-					Key:    ccv3.OrderBy,
-					Values: []string{ccv3.PositionOrder},
 				}))
 			})
 		})
@@ -249,10 +270,10 @@ var _ = Describe("Buildpack", func() {
 
 	Describe("CreateBuildpack", func() {
 		var (
-			buildpack  Buildpack
+			buildpack  resources.Buildpack
 			warnings   Warnings
 			executeErr error
-			bp         Buildpack
+			bp         resources.Buildpack
 		)
 
 		JustBeforeEach(func() {
@@ -270,15 +291,15 @@ var _ = Describe("Buildpack", func() {
 			It("returns warnings and error", func() {
 				Expect(executeErr).To(MatchError("some-error"))
 				Expect(warnings).To(ConsistOf("some-warning-1", "some-warning-2"))
-				Expect(buildpack).To(Equal(Buildpack{}))
+				Expect(buildpack).To(Equal(resources.Buildpack{}))
 			})
 		})
 
 		When("creating a buildpack is successful", func() {
-			var returnBuildpack Buildpack
+			var returnBuildpack resources.Buildpack
 			BeforeEach(func() {
-				bp = Buildpack{Name: "some-name", Stack: "some-stack"}
-				returnBuildpack = Buildpack{GUID: "some-guid", Name: "some-name", Stack: "some-stack"}
+				bp = resources.Buildpack{Name: "some-name", Stack: "some-stack"}
+				returnBuildpack = resources.Buildpack{GUID: "some-guid", Name: "some-name", Stack: "some-stack"}
 				fakeCloudControllerClient.CreateBuildpackReturns(
 					resources.Buildpack(returnBuildpack),
 					ccv3.Warnings{"some-warning-1", "some-warning-2"},
@@ -298,13 +319,13 @@ var _ = Describe("Buildpack", func() {
 
 	Describe("UpdateBuildpackByNameAndStack", func() {
 		var (
-			buildpackName  = "my-buidpack"
+			buildpackName  = "my-buildpack"
 			buildpackStack = "my-stack"
-			buildpack      = Buildpack{
+			buildpack      = resources.Buildpack{
 				Stack: "new-stack",
 			}
 
-			retBuildpack Buildpack
+			retBuildpack resources.Buildpack
 			warnings     Warnings
 			executeErr   error
 		)
@@ -314,10 +335,10 @@ var _ = Describe("Buildpack", func() {
 		})
 
 		When("it is successful", func() {
-			var updatedBuildpack Buildpack
+			var updatedBuildpack resources.Buildpack
 			BeforeEach(func() {
 				foundBuildpack := resources.Buildpack{GUID: "a guid", Stack: ""}
-				updatedBuildpack = Buildpack{GUID: "a guid", Stack: "new-stack"}
+				updatedBuildpack = resources.Buildpack{GUID: "a guid", Stack: "new-stack"}
 				fakeCloudControllerClient.GetBuildpacksReturns([]resources.Buildpack{foundBuildpack}, ccv3.Warnings{"warning-1"}, nil)
 				fakeCloudControllerClient.UpdateBuildpackReturns(resources.Buildpack(updatedBuildpack), ccv3.Warnings{"warning-2"}, nil)
 			})
@@ -355,7 +376,7 @@ var _ = Describe("Buildpack", func() {
 			It("returns the error and warnings", func() {
 				Expect(executeErr).To(HaveOccurred())
 				Expect(warnings).To(ConsistOf("warning-1"))
-				Expect(retBuildpack).To(Equal(Buildpack{}))
+				Expect(retBuildpack).To(Equal(resources.Buildpack{}))
 			})
 		})
 
@@ -369,7 +390,7 @@ var _ = Describe("Buildpack", func() {
 			It("returns the error and warnings", func() {
 				Expect(executeErr).To(HaveOccurred())
 				Expect(warnings).To(ConsistOf("warning-1", "warning-2"))
-				Expect(retBuildpack).To(Equal(Buildpack{}))
+				Expect(retBuildpack).To(Equal(resources.Buildpack{}))
 			})
 		})
 

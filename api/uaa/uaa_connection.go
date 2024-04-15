@@ -2,7 +2,6 @@ package uaa
 
 import (
 	"bytes"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"io/ioutil"
@@ -10,6 +9,9 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+	"errors"
+
+	"code.cloudfoundry.org/cli/util"
 )
 
 // UAAConnection represents the connection to UAA
@@ -26,9 +28,7 @@ func NewConnection(skipSSLValidation bool, disableKeepAlives bool, dialTimeout t
 		}).DialContext,
 		DisableKeepAlives: disableKeepAlives,
 		Proxy:             http.ProxyFromEnvironment,
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: skipSSLValidation,
-		},
+		TLSClientConfig:   util.NewTLSConfig(nil, skipSSLValidation),
 	}
 
 	return &UAAConnection{
@@ -101,7 +101,7 @@ func (connection *UAAConnection) populateResponse(response *http.Response, passe
 func (connection *UAAConnection) processRequestErrors(request *http.Request, err error) error {
 	switch e := err.(type) {
 	case *url.Error:
-		if _, ok := e.Err.(x509.UnknownAuthorityError); ok {
+		if errors.As(err, &x509.UnknownAuthorityError{}) {
 			return UnverifiedServerError{
 				URL: request.URL.String(),
 			}

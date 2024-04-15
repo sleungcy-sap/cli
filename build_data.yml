@@ -1,0 +1,3 @@
+build-version: 9.0.0-beta
+capi-version-min: v16.11.0
+capi-version-max: v99.99.99

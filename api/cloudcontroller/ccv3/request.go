@@ -20,7 +20,8 @@ type requestOptions struct {
 
 	// RequestName is the name of the request (see routes)
 	RequestName string
-
+	// Header contains custom headers to pass to the request.
+	Header http.Header
 	// Method is the HTTP method.
 	Method string
 	// URL is the request path.
@@ -31,10 +32,9 @@ type requestOptions struct {
 
 // newHTTPRequest returns a constructed HTTP.Request with some defaults.
 // Defaults are applied when Request options are not filled in.
-func (client *Client) newHTTPRequest(passedRequest requestOptions) (*cloudcontroller.Request, error) {
+func (requester *RealRequester) newHTTPRequest(passedRequest requestOptions) (*cloudcontroller.Request, error) {
 	var request *http.Request
 	var err error
-
 	if passedRequest.URL != "" {
 		request, err = http.NewRequest(
 			passedRequest.Method,
@@ -42,7 +42,7 @@ func (client *Client) newHTTPRequest(passedRequest requestOptions) (*cloudcontro
 			passedRequest.Body,
 		)
 	} else {
-		request, err = client.router.CreateRequest(
+		request, err = requester.router.CreateRequest(
 			passedRequest.RequestName,
 			map[string]string(passedRequest.URIParams),
 			passedRequest.Body,
@@ -57,10 +57,19 @@ func (client *Client) newHTTPRequest(passedRequest requestOptions) (*cloudcontro
 	}
 
 	request.Header = http.Header{}
-	request.Header.Set("Accept", "application/json")
-	request.Header.Set("User-Agent", client.userAgent)
+	if passedRequest.Header != nil {
+		request.Header = passedRequest.Header
+	}
 
-	if passedRequest.Body != nil {
+	if request.Header.Get("User-Agent") == "" {
+		request.Header.Set("User-Agent", requester.userAgent)
+	}
+
+	if request.Header.Get("Accept") == "" {
+		request.Header.Set("Accept", "application/json")
+	}
+
+	if request.Header.Get("Content-Type") == "" {
 		request.Header.Set("Content-Type", "application/json")
 	}
 

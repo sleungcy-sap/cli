@@ -6,33 +6,43 @@ import (
 	"code.cloudfoundry.org/cli/resources"
 )
 
-type Stack resources.Stack
-
-func (actor *Actor) GetStackByName(stackName string) (Stack, Warnings, error) {
+func (actor *Actor) GetStackByName(stackName string) (resources.Stack, Warnings, error) {
 	stacks, warnings, err := actor.CloudControllerClient.GetStacks(
 		ccv3.Query{Key: ccv3.NameFilter, Values: []string{stackName}},
+		ccv3.Query{Key: ccv3.PerPage, Values: []string{"1"}},
+		ccv3.Query{Key: ccv3.Page, Values: []string{"1"}},
 	)
 
 	if err != nil {
-		return Stack{}, Warnings(warnings), err
+		return resources.Stack{}, Warnings(warnings), err
 	}
 
 	if len(stacks) == 0 {
-		return Stack{}, Warnings(warnings), actionerror.StackNotFoundError{Name: stackName}
+		return resources.Stack{}, Warnings(warnings), actionerror.StackNotFoundError{Name: stackName}
 	}
 
-	return Stack(stacks[0]), Warnings(warnings), nil
+	return resources.Stack(stacks[0]), Warnings(warnings), nil
 }
 
-func (actor Actor) GetStacks() ([]Stack, Warnings, error) {
-	ccv3Stacks, warnings, err := actor.CloudControllerClient.GetStacks()
+func (actor Actor) GetStacks(labelSelector string) ([]resources.Stack, Warnings, error) {
+	var (
+		stacks   []resources.Stack
+		warnings ccv3.Warnings
+		err      error
+	)
+	if len(labelSelector) > 0 {
+		queries := []ccv3.Query{
+			ccv3.Query{Key: ccv3.LabelSelectorFilter, Values: []string{labelSelector}},
+		}
+
+		stacks, warnings, err = actor.CloudControllerClient.GetStacks(queries...)
+	} else {
+		stacks, warnings, err = actor.CloudControllerClient.GetStacks()
+	}
+
 	if err != nil {
 		return nil, Warnings(warnings), err
 	}
 
-	var stacks []Stack
-	for _, stack := range ccv3Stacks {
-		stacks = append(stacks, Stack(stack))
-	}
 	return stacks, Warnings(warnings), nil
 }

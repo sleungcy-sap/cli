@@ -13,7 +13,6 @@ import (
 	"code.cloudfoundry.org/cli/util/clissh/ssherror"
 	"code.cloudfoundry.org/cli/util/download"
 	"code.cloudfoundry.org/cli/util/manifest"
-	"code.cloudfoundry.org/cli/util/manifestparser"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -48,17 +47,13 @@ var _ = Describe("ConvertToTranslatableError", func() {
 			actionerror.AppNotFoundInManifestError{Name: "some-app"},
 			AppNotFoundInManifestError{Name: "some-app"}),
 
-		Entry("manifestparse.AppNotInManifestError -> AppNotFoundInManifestError",
-			manifestparser.AppNotInManifestError{Name: "some-app"},
-			AppNotFoundInManifestError{Name: "some-app"}),
-
 		Entry("actionerror.AssignDropletError -> AssignDropletError",
 			actionerror.AssignDropletError{Message: "some-message"},
 			AssignDropletError{Message: "some-message"}),
 
 		Entry("actionerror.ServicePlanNotFoundError -> ServicePlanNotFoundError",
-			actionerror.ServicePlanNotFoundError{PlanName: "some-plan", ServiceName: "some-service"},
-			ServicePlanNotFoundError{PlanName: "some-plan", ServiceName: "some-service"}),
+			actionerror.ServicePlanNotFoundError{PlanName: "some-plan", OfferingName: "some-service"},
+			ServicePlanNotFoundError{PlanName: "some-plan", OfferingName: "some-service"}),
 
 		Entry("actionerror.BuildpackNotFoundError -> BuildpackNotFoundError",
 			actionerror.BuildpackNotFoundError{},
@@ -157,10 +152,6 @@ var _ = Describe("ConvertToTranslatableError", func() {
 			actionerror.NonexistentAppPathError{Path: "some-path"},
 			FileNotFoundError{Path: "some-path"}),
 
-		Entry("manifestparser.InvalidManifestApplicationPathError -> FileNotFoundError",
-			manifestparser.InvalidManifestApplicationPathError{Path: "some-path"},
-			FileNotFoundError{Path: "some-path"}),
-
 		Entry("actionerror.NoOrganizationTargetedError -> NoOrganizationTargetedError",
 			actionerror.NoOrganizationTargetedError{BinaryName: "faceman"},
 			NoOrganizationTargetedError{BinaryName: "faceman"}),
@@ -177,9 +168,9 @@ var _ = Describe("ConvertToTranslatableError", func() {
 			actionerror.OrganizationNotFoundError{Name: "some-org"},
 			OrganizationNotFoundError{Name: "some-org"}),
 
-		Entry("actionerror.OrganizationQuotaNotFoundForNameError -> OrganizationQuotaNotFoundForNameError",
-			actionerror.OrganizationQuotaNotFoundForNameError{Name: "some-quota"},
-			OrganizationQuotaNotFoundForNameError{Name: "some-quota"}),
+		Entry("actionerror.QuotaNotFoundForNameError -> QuotaNotFoundForNameError",
+			actionerror.QuotaNotFoundForNameError{Name: "some-quota"},
+			QuotaNotFoundForNameError{Name: "some-quota"}),
 
 		Entry("actionerror.PasswordGrantTypeLogoutRequiredError -> PasswordGrantTypeLogoutRequiredError",
 			actionerror.PasswordGrantTypeLogoutRequiredError{},
@@ -235,6 +226,14 @@ var _ = Describe("ConvertToTranslatableError", func() {
 			actionerror.RepositoryNotRegisteredError{Name: "some-repo"},
 			RepositoryNotRegisteredError{Name: "some-repo"}),
 
+		Entry("actionerror.RevisionNotFoundErrors-> RevisionNotFoundError",
+			actionerror.RevisionNotFoundError{Version: 1},
+			RevisionNotFoundError{Version: 1}),
+
+		Entry("actionerror.RevisionAmbiguousError-> RevisionAmbiguousError",
+			actionerror.RevisionAmbiguousError{Version: 1},
+			RevisionAmbiguousError{Version: 1}),
+
 		Entry("actionerror.RouteInDifferentSpaceError -> RouteInDifferentSpaceError",
 			actionerror.RouteInDifferentSpaceError{Route: "some-route"},
 			RouteInDifferentSpaceError{Route: "some-route"}),
@@ -271,10 +270,6 @@ var _ = Describe("ConvertToTranslatableError", func() {
 		Entry("actionerror.SpaceNotFoundError -> SpaceNotFoundError",
 			actionerror.SpaceNotFoundError{Name: "some-space"},
 			SpaceNotFoundError{Name: "some-space"}),
-
-		Entry("actionerror.SpaceQuotaNotFoundByNameError -> SpaceQuotaNotFoundByNameError",
-			actionerror.SpaceQuotaNotFoundByNameError{Name: "some-space"},
-			SpaceQuotaNotFoundByNameError{Name: "some-space"}),
 
 		Entry("actionerror.StackNotFoundError -> StackNotFoundError",
 			actionerror.StackNotFoundError{Name: "some-stack-name", GUID: "some-stack-guid"},
@@ -335,6 +330,10 @@ var _ = Describe("ConvertToTranslatableError", func() {
 			ccerror.JobTimeoutError{JobGUID: "some-job-guid"},
 			JobTimeoutError{JobGUID: "some-job-guid"}),
 
+		Entry("ccerror.JobFailedNoErrorError -> JobFailedNoErrorError",
+			ccerror.JobFailedNoErrorError{JobGUID: "some-job-guid"},
+			JobFailedNoErrorError{JobGUID: "some-job-guid"}),
+
 		Entry("ccerror.MultiError -> MultiError",
 			ccerror.MultiError{ResponseCode: 418, Errors: []ccerror.V3Error{
 				{
@@ -361,7 +360,7 @@ var _ = Describe("ConvertToTranslatableError", func() {
 
 		Entry("ccerror.UnverifiedServerError -> InvalidSSLCertError",
 			ccerror.UnverifiedServerError{URL: "some-url"},
-			InvalidSSLCertError{URL: "some-url"}),
+			InvalidSSLCertError{URL: "some-url", SuggestedCommand: "api"}),
 
 		Entry("ccerror.UnprocessableEntityError with droplet message -> RunTaskError",
 			ccerror.UnprocessableEntityError{Message: "The request is semantically invalid: Task must have a droplet. Specify droplet or assign current droplet to app."},
@@ -389,7 +388,7 @@ var _ = Describe("ConvertToTranslatableError", func() {
 		// Manifest Errors
 		Entry("manifest.ManifestCreationError -> ManifestCreationError",
 			manifest.ManifestCreationError{Err: errors.New("some-error")},
-			ManifestCreationError{Err: errors.New("some-error")}),
+			FileCreationError{Err: errors.New("some-error")}),
 
 		Entry("manifest.InheritanceFieldError -> TriggerLegacyPushError",
 			manifest.InheritanceFieldError{},
@@ -402,14 +401,6 @@ var _ = Describe("ConvertToTranslatableError", func() {
 		Entry("manifest.InterpolationError -> InterpolationError",
 			manifest.InterpolationError{Err: errors.New("an-error")},
 			InterpolationError{Err: errors.New("an-error")}),
-
-		Entry("manifestparser.InterpolationError -> InterpolationError",
-			manifestparser.InterpolationError{Err: errors.New("an-error")},
-			InterpolationError{Err: errors.New("an-error")}),
-
-		Entry("manifestparser.InvalidYAMLError -> InvalidYAMLError",
-			manifestparser.InvalidYAMLError{Err: errors.New("an-error")},
-			InvalidYAMLError{Err: errors.New("an-error")}),
 
 		// Plugin Errors
 		Entry("pluginerror.RawHTTPStatusError -> DownloadPluginHTTPError",

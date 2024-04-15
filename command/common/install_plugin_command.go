@@ -5,6 +5,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/actor/pluginaction"
@@ -19,7 +20,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//go:generate counterfeiter . InstallPluginActor
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . InstallPluginActor
 
 type InstallPluginActor interface {
 	CreateExecutableCopy(path string, tempPluginDir string) (string, error)
@@ -74,12 +75,39 @@ func (cmd *InstallPluginCommand) Setup(config command.Config, ui command.UI) err
 	return nil
 }
 
-func (cmd InstallPluginCommand) Execute([]string) error {
+func (cmd InstallPluginCommand) Execute([]string) (err error) {
 	log.WithField("PluginHome", cmd.Config.PluginHome()).Info("making plugin dir")
 
-	tempPluginDir, err := ioutil.TempDir(cmd.Config.PluginHome(), "temp")
+	var tempPluginDir string
+	tempPluginDir, err = ioutil.TempDir(cmd.Config.PluginHome(), "temp")
 	log.WithField("tempPluginDir", tempPluginDir).Debug("making tempPluginDir dir")
-	defer os.RemoveAll(tempPluginDir)
+
+	defer func() {
+		removed := false
+		var removeErr error
+		for i := 0; i < 50; i++ {
+			removeErr = os.RemoveAll(tempPluginDir)
+			if removeErr == nil {
+				removed = true
+				break
+			}
+
+			if os.IsNotExist(err) {
+				removed = true
+				break
+			}
+
+			if _, isPathError := removeErr.(*os.PathError); isPathError {
+				time.Sleep(50 * time.Millisecond)
+			} else {
+				err = removeErr
+			}
+		}
+
+		if !removed {
+			err = removeErr
+		}
+	}()
 
 	if err != nil {
 		return err
@@ -132,6 +160,7 @@ func (cmd InstallPluginCommand) Execute([]string) error {
 	}
 
 	log.Info("install plugin")
+
 	return cmd.installPlugin(plugin, executablePath)
 }
 
@@ -150,6 +179,7 @@ func (cmd InstallPluginCommand) installPlugin(plugin configv3.Plugin, pluginPath
 		"Name":    plugin.Name,
 		"Version": plugin.Version.String(),
 	})
+
 	return nil
 }
 
@@ -377,7 +407,7 @@ func (cmd InstallPluginCommand) installPluginPrompt(template string, templateVal
 	}
 
 	if !really {
-		log.Debug("plugin confirmation - 'no' inputed")
+		log.Debug("plugin confirmation - 'no' inputted")
 		return cancelInstall{}
 	}
 

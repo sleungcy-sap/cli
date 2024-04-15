@@ -1,12 +1,12 @@
 package v7pushaction_test
 
 import (
-	"code.cloudfoundry.org/cli/actor/sharedaction"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
-	"code.cloudfoundry.org/cli/util/manifestparser"
 	"errors"
 	"io/ioutil"
 	"os"
+
+	"code.cloudfoundry.org/cli/actor/sharedaction"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 
 	. "code.cloudfoundry.org/cli/actor/v7pushaction"
 	"code.cloudfoundry.org/cli/actor/v7pushaction/v7pushactionfakes"
@@ -20,24 +20,36 @@ var _ = Describe("SetupAllResourcesForPushPlan", func() {
 		actor           *Actor
 		fakeSharedActor *v7pushactionfakes.FakeSharedActor
 
-		pushPlan    PushPlan
-		overrides   FlagOverrides
-		manifestApp manifestparser.Application
+		pushPlan  PushPlan
+		overrides FlagOverrides
 
 		expectedPushPlan PushPlan
 		executeErr       error
 	)
 
 	BeforeEach(func() {
-		actor, _, _, fakeSharedActor = getTestPushActor()
+		actor, _, fakeSharedActor = getTestPushActor()
 
 		pushPlan = PushPlan{}
 		overrides = FlagOverrides{}
-		manifestApp = manifestparser.Application{}
 	})
 
 	JustBeforeEach(func() {
-		expectedPushPlan, executeErr = actor.SetupAllResourcesForPushPlan(pushPlan, overrides, manifestApp)
+		expectedPushPlan, executeErr = actor.SetupAllResourcesForPushPlan(pushPlan, overrides)
+	})
+
+	When("the plan has a droplet path", func() {
+		BeforeEach(func() {
+			pushPlan.DropletPath = "some-droplet.tgz"
+		})
+
+		It("skips settings the resources", func() {
+			Expect(executeErr).ToNot(HaveOccurred())
+			Expect(pushPlan.AllResources).To(BeEmpty())
+
+			Expect(fakeSharedActor.GatherArchiveResourcesCallCount()).To(Equal(0))
+			Expect(fakeSharedActor.GatherDirectoryResourcesCallCount()).To(Equal(0))
+		})
 	})
 
 	When("the application is a docker app", func() {

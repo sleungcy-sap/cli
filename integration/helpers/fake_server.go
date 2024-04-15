@@ -11,26 +11,39 @@ import (
 )
 
 const (
-	DefaultV2Version string = "2.131.0"
-	DefaultV3Version string = "3.66.0"
+	DefaultV2Version         string = "2.131.0"
+	DefaultV3Version         string = "3.66.0"
+	DefaultAuthorizationPath string = ""
 )
 
-func StartAndTargetServerWithAPIVersions(v2Version string, v3Version string) *Server {
-	server := StartServerWithAPIVersions(v2Version, v3Version)
+// StartAndTargetMockServerWithAPIVersions starts and targets a server with the given V2 and V3
+// API versions.
+func StartAndTargetMockServerWithAPIVersions(v2Version string, v3Version string) *Server {
+	server := StartMockServerWithAPIVersions(v2Version, v3Version)
 	Eventually(CF("api", server.URL(), "--skip-ssl-validation")).Should(Exit(0))
 
 	return server
 }
 
-func StartServerWithMinimumCLIVersion(minCLIVersion string) *Server {
-	return startServerWithVersions(DefaultV2Version, DefaultV3Version, &minCLIVersion)
+// StartMockServerWithMinimumCLIVersion starts a server with the default V2 and V3
+// API versions and the given minimum CLI version.
+func StartMockServerWithMinimumCLIVersion(minCLIVersion string) *Server {
+	return startServerWithVersions(DefaultV2Version, DefaultV3Version, &minCLIVersion, DefaultAuthorizationPath)
 }
 
-func StartServerWithAPIVersions(v2Version string, v3Version string) *Server {
-	return startServerWithVersions(v2Version, v3Version, nil)
+// StartMockServerWithAPIVersions starts a server with the given V2 and V3
+// API versions
+func StartMockServerWithAPIVersions(v2Version string, v3Version string) *Server {
+	return startServerWithVersions(v2Version, v3Version, nil, DefaultAuthorizationPath)
 }
 
-func startServerWithVersions(v2Version string, v3Version string, minimumCLIVersion *string) *Server {
+// StartMockServerWithAPIVersions starts a server with the given V2 and V3
+// API versions
+func StartMockServerWithCustomAuthorizationEndpoint(authorizationPath string) *Server {
+	return startServerWithVersions(DefaultV2Version, DefaultV3Version, nil, authorizationPath)
+}
+
+func startServerWithVersions(v2Version string, v3Version string, minimumCLIVersion *string, authorizationPath string) *Server {
 	server := NewTLSServer()
 
 	rootResponse := fmt.Sprintf(`{
@@ -57,10 +70,16 @@ func startServerWithVersions(v2Version string, v3Version string, minimumCLIVersi
          "href": "%[1]s/networking/v1/external"
       },
       "uaa": {
+         "href": "SHOULD-NOT-BE-USED-FOR-LOGGING-IN.com"
+      },
+      "login": {
          "href": "%[1]s"
       },
       "logging": {
          "href": "wss://unused:443"
+      },
+      "log_cache": {
+         "href": "%[1]s"
       },
       "app_ssh": {
          "href": "unused:2222",
@@ -78,25 +97,16 @@ func startServerWithVersions(v2Version string, v3Version string, minimumCLIVersi
 		MinCLIVersion         *string `json:"min_cli_version"`
 	}{
 		APIVersion:            v2Version,
-		AuthorizationEndpoint: server.URL(),
+		AuthorizationEndpoint: server.URL() + authorizationPath,
 		MinCLIVersion:         minimumCLIVersion}
 
 	server.RouteToHandler(http.MethodGet, "/v2/info", RespondWithJSONEncoded(http.StatusOK, v2InfoResponse))
 
-	v3Response := fmt.Sprintf(`{"links": {
-			"organizations": {
-				"href": "%s/v3/organizations"
-			}
-		}}`, server.URL())
-	server.RouteToHandler(http.MethodGet, "/v3", func(res http.ResponseWriter, req *http.Request) {
-		res.WriteHeader(http.StatusOK)
-		res.Write([]byte(v3Response))
-	})
-
-	server.RouteToHandler(http.MethodGet, "/login", func(res http.ResponseWriter, req *http.Request) {
+	server.RouteToHandler(http.MethodGet, authorizationPath+"/login", func(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusOK)
 		res.Write([]byte(`{"links":{}}`))
 	})
+
 	server.RouteToHandler(http.MethodGet, "/", func(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusOK)
 		res.Write([]byte(rootResponse))
@@ -105,6 +115,9 @@ func startServerWithVersions(v2Version string, v3Version string, minimumCLIVersi
 	return server
 }
 
+// AddMfa adds a mock handler to the given server which returns a login response and a 200 status code
+// on GET requests to the /login endpoint. It adds another mock handler to validate the given password and MFA token
+// upon POST requests to /oauth/token.
 func AddMfa(server *Server, password string, mfaToken string) {
 	getLoginResponse := fmt.Sprintf(`{
     "app": {
@@ -173,6 +186,8 @@ func makeMFAValidator(password string, mfaToken string) http.HandlerFunc {
 	}
 }
 
+// AddLoginRoutes adds a mock handler to the given server which returns an access token and a 200 status code
+// on POST requests to /oauth/token.
 func AddLoginRoutes(s *Server) {
 	s.RouteToHandler("POST", "/oauth/token", RespondWith(http.StatusOK,
 		fmt.Sprintf(`{
@@ -183,6 +198,6 @@ func AddLoginRoutes(s *Server) {
 			"refresh_token": "some-refresh-token",
 			"scope": "openid routing.router_groups.write scim.read cloud_controller.admin uaa.user routing.router_groups.read cloud_controller.read password.write cloud_controller.write network.admin doppler.firehose scim.write",
 			"token_type": "bearer"
-		 }`, BuildTokenString(time.Now()))),
+		 }`, BuildTokenString(time.Now().Add(599*time.Second)))),
 	)
 }

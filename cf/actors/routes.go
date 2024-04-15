@@ -13,7 +13,7 @@ import (
 	"code.cloudfoundry.org/cli/util/randomword"
 )
 
-//go:generate counterfeiter . RouteActor
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . RouteActor
 
 const tcp = "tcp"
 
@@ -213,7 +213,7 @@ func (routeActor routeActor) FindAndBindRoute(routeName string, app models.Appli
 	}
 
 	if appParamsFromContext.UseRandomRoute && domain.RouterGroupType != tcp {
-		hostname = randomword.Generator{}.Babble()
+		hostname = randomword.NewGenerator().Babble()
 	}
 
 	replaceHostname(domain.RouterGroupType, appParamsFromContext.Hosts, &hostname)

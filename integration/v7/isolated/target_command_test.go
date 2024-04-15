@@ -1,6 +1,7 @@
 package isolated
 
 import (
+	. "code.cloudfoundry.org/cli/cf/util/testhelpers/matchers"
 	"code.cloudfoundry.org/cli/integration/helpers"
 	"code.cloudfoundry.org/cli/util/configv3"
 	. "github.com/onsi/ginkgo"
@@ -24,25 +25,34 @@ var _ = Describe("target command", func() {
 	})
 
 	Context("help", func() {
-		It("displays help", func() {
-			session := helpers.CF("target", "--help")
-			Eventually(session).Should(Say("NAME:"))
-			Eventually(session).Should(Say("   target - Set or view the targeted org or space"))
-			Eventually(session).Should(Say("USAGE:"))
-			Eventually(session).Should(Say(`   cf target \[-o ORG\] \[-s SPACE\]`))
-			Eventually(session).Should(Say("ALIAS:"))
-			Eventually(session).Should(Say("   t"))
-			Eventually(session).Should(Say("OPTIONS:"))
-			Eventually(session).Should(Say("   -o      Organization"))
-			Eventually(session).Should(Say("   -s      Space"))
-			Eventually(session).Should(Say("SEE ALSO:"))
-			Eventually(session).Should(Say("   create-org, create-space, login, orgs, spaces"))
-			Eventually(session).Should(Exit(0))
+		When("--help flag is set", func() {
+			It("appears in cf help -a", func() {
+				session := helpers.CF("help", "-a")
+				Eventually(session).Should(Exit(0))
+				Expect(session).To(HaveCommandInCategoryWithDescription("target", "GETTING STARTED", "Set or view the targeted org or space"))
+			})
+
+			It("displays help", func() {
+				session := helpers.CF("target", "--help")
+				Eventually(session).Should(Say("NAME:"))
+				Eventually(session).Should(Say("   target - Set or view the targeted org or space"))
+				Eventually(session).Should(Say("USAGE:"))
+				Eventually(session).Should(Say(`   cf target \[-o ORG\] \[-s SPACE\]`))
+				Eventually(session).Should(Say("ALIAS:"))
+				Eventually(session).Should(Say("   t"))
+				Eventually(session).Should(Say("OPTIONS:"))
+				Eventually(session).Should(Say("   -o      Organization"))
+				Eventually(session).Should(Say("   -s      Space"))
+				Eventually(session).Should(Say("SEE ALSO:"))
+				Eventually(session).Should(Say("   create-org, create-space, login, orgs, spaces"))
+				Eventually(session).Should(Exit(0))
+			})
 		})
 	})
 
 	When("both the access and refresh tokens are invalid", func() {
 		BeforeEach(func() {
+			helpers.SkipIfClientCredentialsTestMode()
 			helpers.SetConfig(func(conf *configv3.Config) {
 				conf.SetAccessToken("bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImtleS0xIiwidHlwIjoiSldUIn0.eyJqdGkiOiJlNzQyMjg1NjNjZjc0ZGQ0YTU5YTA1NTUyMWVlYzlhNCIsInN1YiI6IjhkN2IxZjRlLTJhNGQtNGQwNy1hYWE0LTdjOTVlZDFhN2YzNCIsInNjb3BlIjpbInJvdXRpbmcucm91dGVyX2dyb3Vwcy5yZWFkIiwiY2xvdWRfY29udHJvbGxlci5yZWFkIiwicGFzc3dvcmQud3JpdGUiLCJjbG91ZF9jb250cm9sbGVyLndyaXRlIiwib3BlbmlkIiwicm91dGluZy5yb3V0ZXJfZ3JvdXBzLndyaXRlIiwiZG9wcGxlci5maXJlaG9zZSIsInNjaW0ud3JpdGUiLCJzY2ltLnJlYWQiLCJjbG91ZF9jb250cm9sbGVyLmFkbWluIiwidWFhLnVzZXIiXSwiY2xpZW50X2lkIjoiY2YiLCJjaWQiOiJjZiIsImF6cCI6ImNmIiwiZ3JhbnRfdHlwZSI6InBhc3N3b3JkIiwidXNlcl9pZCI6IjhkN2IxZjRlLTJhNGQtNGQwNy1hYWE0LTdjOTVlZDFhN2YzNCIsIm9yaWdpbiI6InVhYSIsInVzZXJfbmFtZSI6ImFkbWluIiwiZW1haWwiOiJhZG1pbiIsInJldl9zaWciOiI2ZjZkM2Y1YyIsImlhdCI6MTQ4Njc2NDQxNywiZXhwIjoxNDg2NzY1MDE3LCJpc3MiOiJodHRwczovL3VhYS5ib3NoLWxpdGUuY29tL29hdXRoL3Rva2VuIiwiemlkIjoidWFhIiwiYXVkIjpbImNsb3VkX2NvbnRyb2xsZXIiLCJzY2ltIiwicGFzc3dvcmQiLCJjZiIsInVhYSIsIm9wZW5pZCIsImRvcHBsZXIiLCJyb3V0aW5nLnJvdXRlcl9ncm91cHMiXX0.AhQI_-u9VzkQ1Z7yzibq7dBWbb5ucTDtwaXjeCf4rakl7hJvQYWI1meO9PSUI8oVbArBgOu0aOU6mfzDE8dSyZ1qAD0mhL5_c2iLGXdqUaPlXrX9vxuJZh_8vMTlxAnJ02c6ixbWaPWujvEIuiLb-QWa0NTbR9RDNyw1MbOQkdQ")
 
@@ -78,7 +88,7 @@ var _ = Describe("target command", func() {
 					helpers.LogoutCF()
 					cmd := append([]string{"target"}, args...)
 					session := helpers.CF(cmd...)
-					Eventually(session.Err).Should(Say("Not logged in. Use 'cf login' to log in."))
+					Eventually(session.Err).Should(Say("Not logged in. Use 'cf login' or 'cf login --sso' to log in."))
 					Eventually(session).Should(Say("FAILED"))
 					Eventually(session).Should(Exit(1))
 				},
@@ -96,8 +106,8 @@ var _ = Describe("target command", func() {
 			It("displays current target information", func() {
 				username, _ := helpers.GetCredentials()
 				session := helpers.CF("target")
-				Eventually(session).Should(Say(`api endpoint:\s+%s`, apiURL))
-				Eventually(session).Should(Say(`api version:\s+3.[\d.]+`))
+				Eventually(session).Should(Say(`API endpoint:\s+%s`, apiURL))
+				Eventually(session).Should(Say(`API version:\s+3.[\d.]+`))
 				Eventually(session).Should(Say(`user:\s+%s`, username))
 				Eventually(session).Should(Say("No org or space targeted, use 'cf target -o ORG -s SPACE'"))
 				Eventually(session).Should(Exit(0))
@@ -113,8 +123,8 @@ var _ = Describe("target command", func() {
 			It("displays current target information", func() {
 				username, _ := helpers.GetCredentials()
 				session := helpers.CF("target")
-				Eventually(session).Should(Say(`api endpoint:\s+%s`, apiURL))
-				Eventually(session).Should(Say(`api version:\s+3.[\d.]+`))
+				Eventually(session).Should(Say(`API endpoint:\s+%s`, apiURL))
+				Eventually(session).Should(Say(`API version:\s+3.[\d.]+`))
 				Eventually(session).Should(Say(`user:\s+%s`, username))
 				Eventually(session).Should(Say(`org:\s+%s`, ReadOnlyOrg))
 				Eventually(session).Should(Say(`space:\s+%s`, ReadOnlySpace))
@@ -162,8 +172,8 @@ var _ = Describe("target command", func() {
 				It("only targets the org and exits 0", func() {
 					username, _ := helpers.GetCredentials()
 					session := helpers.CF("target", "-o", orgName)
-					Eventually(session).Should(Say(`api endpoint:\s+%s`, apiURL))
-					Eventually(session).Should(Say(`api version:\s+3.[\d.]+`))
+					Eventually(session).Should(Say(`API endpoint:\s+%s`, apiURL))
+					Eventually(session).Should(Say(`API version:\s+3.[\d.]+`))
 					Eventually(session).Should(Say(`user:\s+%s`, username))
 					Eventually(session).Should(Say(`org:\s+%s`, orgName))
 					Eventually(session).Should(Say("No space targeted, use 'cf target -s SPACE"))
@@ -180,8 +190,8 @@ var _ = Describe("target command", func() {
 				It("targets the org and space and exits 0", func() {
 					username, _ := helpers.GetCredentials()
 					session := helpers.CF("target", "-o", orgName)
-					Eventually(session).Should(Say(`api endpoint:\s+%s`, apiURL))
-					Eventually(session).Should(Say(`api version:\s+3.[\d.]+`))
+					Eventually(session).Should(Say(`API endpoint:\s+%s`, apiURL))
+					Eventually(session).Should(Say(`API version:\s+3.[\d.]+`))
 					Eventually(session).Should(Say(`user:\s+%s`, username))
 					Eventually(session).Should(Say(`org:\s+%s`, orgName))
 					Eventually(session).Should(Say(`space:\s+%s`, spaceName))
@@ -199,8 +209,8 @@ var _ = Describe("target command", func() {
 				It("targets the org only and exits 0", func() {
 					username, _ := helpers.GetCredentials()
 					session := helpers.CF("target", "-o", orgName)
-					Eventually(session).Should(Say(`api endpoint:\s+%s`, apiURL))
-					Eventually(session).Should(Say(`api version:\s+3.[\d.]+`))
+					Eventually(session).Should(Say(`API endpoint:\s+%s`, apiURL))
+					Eventually(session).Should(Say(`API version:\s+3.[\d.]+`))
 					Eventually(session).Should(Say(`user:\s+%s`, username))
 					Eventually(session).Should(Say(`org:\s+%s`, orgName))
 					Eventually(session).Should(Say("No space targeted, use 'cf target -s SPACE"))
@@ -234,8 +244,8 @@ var _ = Describe("target command", func() {
 				It("targets the space and exits 0", func() {
 					username, _ := helpers.GetCredentials()
 					session := helpers.CF("target", "-s", ReadOnlySpace)
-					Eventually(session).Should(Say(`api endpoint:\s+%s`, apiURL))
-					Eventually(session).Should(Say(`api version:\s+3.[\d.]+`))
+					Eventually(session).Should(Say(`API endpoint:\s+%s`, apiURL))
+					Eventually(session).Should(Say(`API version:\s+3.[\d.]+`))
 					Eventually(session).Should(Say(`user:\s+%s`, username))
 					Eventually(session).Should(Say(`org:\s+%s`, ReadOnlyOrg))
 					Eventually(session).Should(Say(`space:\s+%s`, ReadOnlySpace))
@@ -308,8 +318,8 @@ var _ = Describe("target command", func() {
 				It("targets the org and space and exits 0", func() {
 					username, _ := helpers.GetCredentials()
 					session := helpers.CF("target", "-o", orgName, "-s", spaceName)
-					Eventually(session).Should(Say(`api endpoint:\s+%s`, apiURL))
-					Eventually(session).Should(Say(`api version:\s+3.[\d.]+`))
+					Eventually(session).Should(Say(`API endpoint:\s+%s`, apiURL))
+					Eventually(session).Should(Say(`API version:\s+3.[\d.]+`))
 					Eventually(session).Should(Say(`user:\s+%s`, username))
 					Eventually(session).Should(Say(`org:\s+%s`, orgName))
 					Eventually(session).Should(Say(`space:\s+%s`, spaceName))

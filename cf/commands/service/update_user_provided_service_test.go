@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/cli/cf/models"
 	"code.cloudfoundry.org/cli/cf/requirements"
 	"code.cloudfoundry.org/cli/cf/requirements/requirementsfakes"
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 
 	"code.cloudfoundry.org/cli/cf/api/apifakes"
 	testconfig "code.cloudfoundry.org/cli/cf/util/testhelpers/configuration"
@@ -275,7 +275,7 @@ var _ = Describe("UpdateUserProvidedService", func() {
 					flagContext.Parse("service-instance", "-t", "tag1, tag2, tag3, tag4")
 				})
 
-				It("sucessfully updates the service instance and passes the tags as json", func() {
+				It("successfully updates the service instance and passes the tags as json", func() {
 					Expect(runCLIErr).NotTo(HaveOccurred())
 					Expect(serviceInstanceRepo.UpdateCallCount()).To(Equal(1))
 					serviceInstanceFields := serviceInstanceRepo.UpdateArgsForCall(0)

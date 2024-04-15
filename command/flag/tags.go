@@ -2,21 +2,21 @@ package flag
 
 import (
 	"strings"
+
+	"code.cloudfoundry.org/cli/types"
 )
 
-type Tags []string
+type Tags types.OptionalStringSlice
 
 func (t *Tags) UnmarshalFlag(value string) error {
-	resultTags := []string{}
-
 	tags := strings.Split(value, ",")
 	for _, tag := range tags {
 		trimmed := strings.TrimSpace(tag)
 		if trimmed != "" {
-			resultTags = append(resultTags, trimmed)
+			t.Value = append(t.Value, trimmed)
 		}
 	}
 
-	*t = Tags(resultTags)
+	t.IsSet = true
 	return nil
 }

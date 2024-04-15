@@ -22,7 +22,7 @@ func (InvalidChoiceError) Error() string {
 	return "Some error"
 }
 
-//go:generate counterfeiter . Resolver
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Resolver
 
 type Resolver interface {
 	Resolve(dst interface{}) error
@@ -40,7 +40,7 @@ func (ui *UI) DisplayBoolPrompt(defaultResponse bool, template string, templateV
 	response := defaultResponse
 	interactivePrompt := ui.Interactor.NewInteraction(ui.TranslateText(template, templateValues...))
 	interactivePrompt.SetIn(ui.In)
-	interactivePrompt.SetOut(ui.OutForInteration)
+	interactivePrompt.SetOut(ui.OutForInteraction)
 	err := interactivePrompt.Resolve(&response)
 	if isInterrupt(err) {
 		ui.Exiter.Exit(sigIntExitCode)
@@ -53,7 +53,7 @@ func (ui *UI) DisplayOptionalTextPrompt(defaultValue string, template string, te
 	interactivePrompt := ui.Interactor.NewInteraction(ui.TranslateText(template, templateValues...))
 	var value = defaultValue
 	interactivePrompt.SetIn(ui.In)
-	interactivePrompt.SetOut(ui.OutForInteration)
+	interactivePrompt.SetOut(ui.OutForInteraction)
 	err := interactivePrompt.Resolve(&value)
 	if isInterrupt(err) {
 		ui.Exiter.Exit(sigIntExitCode)
@@ -70,7 +70,7 @@ func (ui *UI) DisplayPasswordPrompt(template string, templateValues ...map[strin
 	var password interact.Password
 	interactivePrompt := ui.Interactor.NewInteraction(ui.TranslateText(template, templateValues...))
 	interactivePrompt.SetIn(ui.In)
-	interactivePrompt.SetOut(ui.OutForInteration)
+	interactivePrompt.SetOut(ui.OutForInteraction)
 	err := interactivePrompt.Resolve(interact.Required(&password))
 	if isInterrupt(err) {
 		ui.Exiter.Exit(sigIntExitCode)
@@ -85,13 +85,14 @@ func (ui *UI) DisplayTextMenu(choices []string, promptTemplate string, templateV
 		t := fmt.Sprintf("%d. %s", i+1, c)
 		ui.DisplayText(t)
 	}
+	ui.DisplayNewline()
 
 	translatedPrompt := ui.TranslateText(promptTemplate, templateValues...)
 
 	interactivePrompt := ui.Interactor.NewInteraction(translatedPrompt)
 
 	interactivePrompt.SetIn(ui.In)
-	interactivePrompt.SetOut(ui.OutForInteration)
+	interactivePrompt.SetOut(ui.OutForInteraction)
 
 	var value string = "enter to skip"
 	err := interactivePrompt.Resolve(&value)
@@ -127,7 +128,7 @@ func (ui *UI) DisplayTextPrompt(template string, templateValues ...map[string]in
 	interactivePrompt := ui.Interactor.NewInteraction(ui.TranslateText(template, templateValues...))
 	var value string
 	interactivePrompt.SetIn(ui.In)
-	interactivePrompt.SetOut(ui.OutForInteration)
+	interactivePrompt.SetOut(ui.OutForInteraction)
 	err := interactivePrompt.Resolve(interact.Required(&value))
 	if isInterrupt(err) {
 		ui.Exiter.Exit(sigIntExitCode)

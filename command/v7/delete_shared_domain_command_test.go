@@ -1,12 +1,15 @@
 package v7_test
 
 import (
-	"code.cloudfoundry.org/cli/actor/v7action"
 	"errors"
+
+	"code.cloudfoundry.org/cli/actor/v7action"
+	"code.cloudfoundry.org/cli/resources"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/command/commandfakes"
 	"code.cloudfoundry.org/cli/command/flag"
+	"code.cloudfoundry.org/cli/command/translatableerror"
 	. "code.cloudfoundry.org/cli/command/v7"
 	"code.cloudfoundry.org/cli/command/v7/v7fakes"
 	"code.cloudfoundry.org/cli/util/configv3"
@@ -22,7 +25,7 @@ var _ = Describe("delete-shared-domain Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeDeleteSharedDomainActor
+		fakeActor       *v7fakes.FakeActor
 		input           *Buffer
 		binaryName      string
 		executeErr      error
@@ -34,7 +37,7 @@ var _ = Describe("delete-shared-domain Command", func() {
 		testUI = ui.NewTestUI(input, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeDeleteSharedDomainActor)
+		fakeActor = new(v7fakes.FakeActor)
 
 		binaryName = "faceman"
 		fakeConfig.BinaryNameReturns(binaryName)
@@ -43,10 +46,12 @@ var _ = Describe("delete-shared-domain Command", func() {
 		cmd = DeleteSharedDomainCommand{
 			RequiredArgs: flag.Domain{Domain: domain},
 
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
+			BaseCommand: BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		fakeConfig.TargetedOrganizationReturns(configv3.Organization{
@@ -54,7 +59,7 @@ var _ = Describe("delete-shared-domain Command", func() {
 			GUID: "some-org-guid",
 		})
 
-		fakeConfig.CurrentUserReturns(configv3.User{Name: "steve"}, nil)
+		fakeActor.GetCurrentUserReturns(configv3.User{Name: "steve"}, nil)
 	})
 
 	JustBeforeEach(func() {
@@ -81,7 +86,7 @@ var _ = Describe("delete-shared-domain Command", func() {
 
 		BeforeEach(func() {
 			expectedErr = errors.New("some current user error")
-			fakeConfig.CurrentUserReturns(configv3.User{}, expectedErr)
+			fakeActor.GetCurrentUserReturns(configv3.User{}, expectedErr)
 		})
 
 		It("return an error", func() {
@@ -99,21 +104,54 @@ var _ = Describe("delete-shared-domain Command", func() {
 				_, err := input.Write([]byte("y\n"))
 				Expect(err).ToNot(HaveOccurred())
 
-				fakeActor.DeleteSharedDomainReturns(v7action.Warnings{"some-warning"}, nil)
+				fakeActor.GetDomainByNameReturns(resources.Domain{Name: "some-domain.com", GUID: "some-guid"}, v7action.Warnings{"some-warning1"}, nil)
+
+				fakeActor.DeleteDomainReturns(v7action.Warnings{"some-warning2"}, nil)
 			})
 
 			It("delegates to the Actor", func() {
-				actualName := fakeActor.DeleteSharedDomainArgsForCall(0)
-				Expect(actualName).To(Equal(domain))
+				domain := fakeActor.DeleteDomainArgsForCall(0)
+				Expect(domain).To(Equal(resources.Domain{Name: "some-domain.com", GUID: "some-guid"}))
 			})
 
 			It("deletes the shared domain", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 
-				Expect(testUI.Err).To(Say("some-warning"))
+				Expect(testUI.Err).To(Say("some-warning1"))
+				Expect(testUI.Err).To(Say("some-warning2"))
 				Expect(testUI.Out).To(Say(`Deleting domain some-domain.com as steve\.\.\.`))
 				Expect(testUI.Out).To(Say("OK"))
 				Expect(testUI.Out).NotTo(Say("Domain some-domain does not exist"))
+			})
+
+			When("GetDomainByName() errors", func() {
+				BeforeEach(func() {
+					fakeActor.GetDomainByNameReturns(resources.Domain{Name: "some-domain.com", GUID: "some-guid"}, v7action.Warnings{"some-warning"}, errors.New("get-domain-by-name-errors"))
+				})
+
+				It("returns an error", func() {
+					Expect(fakeActor.GetDomainByNameCallCount()).To(Equal(1))
+					actualDomainName := fakeActor.GetDomainByNameArgsForCall(0)
+					Expect(actualDomainName).To(Equal(domain))
+
+					Expect(fakeActor.DeleteDomainCallCount()).To(Equal(0))
+
+					Expect(testUI.Err).To(Say("some-warning"))
+					Expect(executeErr).To(MatchError(errors.New("get-domain-by-name-errors")))
+				})
+			})
+
+			When("the domain is private, not shared", func() {
+				BeforeEach(func() {
+					fakeActor.GetDomainByNameReturns(resources.Domain{Name: "some-domain.com", GUID: "some-guid", OrganizationGUID: "private-org-guid"}, v7action.Warnings{"some-warning"}, nil)
+				})
+				It("returns an informative error message and does not delete the domain", func() {
+					Expect(executeErr).To(HaveOccurred())
+					Expect(executeErr).To(MatchError(translatableerror.NotSharedDomainError{DomainName: "some-domain.com"}))
+					Expect(testUI.Out).To(Say(`Deleting domain some-domain.com as steve\.\.\.`))
+					Expect(testUI.Err).To(Say("some-warning"))
+					Expect(fakeActor.DeleteDomainCallCount()).To(Equal(0))
+				})
 			})
 		})
 
@@ -127,7 +165,7 @@ var _ = Describe("delete-shared-domain Command", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 
 				Expect(testUI.Out).To(Say("'some-domain.com' has not been deleted."))
-				Expect(fakeActor.DeleteSharedDomainCallCount()).To(Equal(0))
+				Expect(fakeActor.DeleteDomainCallCount()).To(Equal(0))
 			})
 		})
 
@@ -141,7 +179,7 @@ var _ = Describe("delete-shared-domain Command", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 
 				Expect(testUI.Out).To(Say(`\'some-domain.com\' has not been deleted.`))
-				Expect(fakeActor.DeleteSharedDomainCallCount()).To(Equal(0))
+				Expect(fakeActor.DeleteDomainCallCount()).To(Equal(0))
 			})
 		})
 
@@ -158,7 +196,7 @@ var _ = Describe("delete-shared-domain Command", func() {
 				Expect(testUI.Out).To(Say(`invalid input \(not y, n, yes, or no\)`))
 				Expect(testUI.Out).To(Say(`Really delete the shared domain some-domain.com\? \[yN\]`))
 
-				Expect(fakeActor.DeleteSharedDomainCallCount()).To(Equal(0))
+				Expect(fakeActor.DeleteDomainCallCount()).To(Equal(0))
 			})
 		})
 	})
@@ -171,10 +209,10 @@ var _ = Describe("delete-shared-domain Command", func() {
 		When("deleting the shared domain errors", func() {
 			Context("generic error", func() {
 				BeforeEach(func() {
-					fakeActor.DeleteSharedDomainReturns(v7action.Warnings{"some-warning"}, errors.New("some-error"))
+					fakeActor.DeleteDomainReturns(v7action.Warnings{"some-warning"}, errors.New("some-error"))
 				})
 
-				It("displays all warnings, and returns the erorr", func() {
+				It("displays all warnings, and returns the error", func() {
 					Expect(testUI.Err).To(Say("some-warning"))
 					Expect(testUI.Out).To(Say(`Deleting domain some-domain.com as steve\.\.\.`))
 					Expect(testUI.Out).ToNot(Say("OK"))
@@ -185,7 +223,7 @@ var _ = Describe("delete-shared-domain Command", func() {
 
 		When("the shared domain doesn't exist", func() {
 			BeforeEach(func() {
-				fakeActor.DeleteSharedDomainReturns(v7action.Warnings{"some-warning"}, actionerror.DomainNotFoundError{Name: "some-domain.com"})
+				fakeActor.GetDomainByNameReturns(resources.Domain{}, v7action.Warnings{"some-warning"}, actionerror.DomainNotFoundError{Name: "some-domain.com"})
 			})
 
 			It("displays all warnings, that the domain wasn't found, and does not error", func() {
@@ -193,14 +231,14 @@ var _ = Describe("delete-shared-domain Command", func() {
 
 				Expect(testUI.Err).To(Say("some-warning"))
 				Expect(testUI.Out).To(Say(`Deleting domain some-domain.com as steve\.\.\.`))
-				Expect(testUI.Out).To(Say("Domain some-domain.com does not exist"))
+				Expect(testUI.Err).To(Say(`Domain 'some-domain\.com' does not exist\.`))
 				Expect(testUI.Out).To(Say("OK"))
 			})
 		})
 
 		When("the shared domain exists", func() {
 			BeforeEach(func() {
-				fakeActor.DeleteSharedDomainReturns(v7action.Warnings{"some-warning"}, nil)
+				fakeActor.DeleteDomainReturns(v7action.Warnings{"some-warning"}, nil)
 			})
 
 			It("displays all warnings, and does not error", func() {
@@ -209,7 +247,7 @@ var _ = Describe("delete-shared-domain Command", func() {
 				Expect(testUI.Err).To(Say("some-warning"))
 				Expect(testUI.Out).To(Say(`Deleting domain some-domain.com as steve\.\.\.`))
 				Expect(testUI.Out).To(Say("OK"))
-				Expect(testUI.Out).NotTo(Say("Domain some-domain.com does not exist"))
+				Expect(testUI.Err).NotTo(Say(`Domain 'some-domain\.com' does not exist\.`))
 			})
 		})
 	})

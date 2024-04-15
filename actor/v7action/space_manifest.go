@@ -3,19 +3,23 @@ package v7action
 import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
-	"strconv"
+	"code.cloudfoundry.org/cli/resources"
 )
 
-func (actor Actor) SetSpaceManifest(spaceGUID string, rawManifest []byte, noRoute bool) (Warnings, error) {
+func (actor Actor) DiffSpaceManifest(spaceGUID string, rawManifest []byte) (resources.ManifestDiff, Warnings, error) {
+	diff, warnings, err := actor.CloudControllerClient.GetSpaceManifestDiff(
+		spaceGUID,
+		rawManifest,
+	)
+
+	return diff, Warnings(warnings), err
+}
+
+func (actor Actor) SetSpaceManifest(spaceGUID string, rawManifest []byte) (Warnings, error) {
 	var allWarnings Warnings
 	jobURL, applyManifestWarnings, err := actor.CloudControllerClient.UpdateSpaceApplyManifest(
 		spaceGUID,
 		rawManifest,
-		ccv3.Query{
-			Key:    ccv3.NoRouteFilter,
-			Values: []string{strconv.FormatBool(noRoute)},
-		},
 	)
 	allWarnings = append(allWarnings, applyManifestWarnings...)
 	if err != nil {

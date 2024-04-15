@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
+	"sort"
+	"strings"
 
-	. "code.cloudfoundry.org/cli/util/configv3"
+	"code.cloudfoundry.org/cli/util/configv3"
+	"gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -23,37 +26,52 @@ var _ = Describe("Config", func() {
 	})
 
 	Describe("WriteConfig", func() {
-		var config *Config
+		var (
+			config *configv3.Config
+			file   []byte
+		)
 
 		BeforeEach(func() {
-			config = &Config{
-				ConfigFile: JSONConfig{
+			config = &configv3.Config{
+				ConfigFile: configv3.JSONConfig{
 					ConfigVersion: 3,
 					Target:        "foo.com",
 					ColorEnabled:  "true",
 				},
-				ENV: EnvOverride{
+				ENV: configv3.EnvOverride{
 					CFColor: "false",
 				},
 			}
+			err := config.WriteConfig()
+			Expect(err).ToNot(HaveOccurred())
+
+			file, err = ioutil.ReadFile(filepath.Join(homeDir, ".cf", "config.json"))
+			Expect(err).ToNot(HaveOccurred())
 		})
 
-		When("no errors are encountered", func() {
-			It("writes ConfigFile to homeDir/.cf/config.json", func() {
-				err := WriteConfig(config)
-				Expect(err).ToNot(HaveOccurred())
+		It("writes ConfigFile to homeDir/.cf/config.json", func() {
+			var writtenCFConfig configv3.JSONConfig
+			err := json.Unmarshal(file, &writtenCFConfig)
+			Expect(err).ToNot(HaveOccurred())
 
-				file, err := ioutil.ReadFile(filepath.Join(homeDir, ".cf", "config.json"))
-				Expect(err).ToNot(HaveOccurred())
+			Expect(writtenCFConfig.ConfigVersion).To(Equal(config.ConfigFile.ConfigVersion))
+			Expect(writtenCFConfig.Target).To(Equal(config.ConfigFile.Target))
+			Expect(writtenCFConfig.ColorEnabled).To(Equal(config.ConfigFile.ColorEnabled))
+		})
 
-				var writtenCFConfig JSONConfig
-				err = json.Unmarshal(file, &writtenCFConfig)
-				Expect(err).ToNot(HaveOccurred())
+		It("writes the top-level keys in alphabetical order", func() {
+			// we use yaml.MapSlice here to preserve the original order
+			// https://github.com/golang/go/issues/27179
+			var ms yaml.MapSlice
+			err := yaml.Unmarshal(file, &ms)
+			Expect(err).ToNot(HaveOccurred())
 
-				Expect(writtenCFConfig.ConfigVersion).To(Equal(config.ConfigFile.ConfigVersion))
-				Expect(writtenCFConfig.Target).To(Equal(config.ConfigFile.Target))
-				Expect(writtenCFConfig.ColorEnabled).To(Equal(config.ConfigFile.ColorEnabled))
-			})
+			keys := make([]string, len(ms))
+			for i, item := range ms {
+				keys[i] = item.Key.(string)
+			}
+			caseInsensitive := func(i, j int) bool { return strings.ToLower(keys[i]) < strings.ToLower(keys[j]) }
+			Expect(sort.SliceIsSorted(keys, caseInsensitive)).To(BeTrue())
 		})
 	})
 })

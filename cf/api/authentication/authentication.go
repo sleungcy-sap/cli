@@ -1,7 +1,6 @@
 package authentication
 
 import (
-	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -15,9 +14,10 @@ import (
 	"code.cloudfoundry.org/cli/cf/errors"
 	. "code.cloudfoundry.org/cli/cf/i18n"
 	"code.cloudfoundry.org/cli/cf/net"
+	"code.cloudfoundry.org/cli/util"
 )
 
-//go:generate counterfeiter . TokenRefresher
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . TokenRefresher
 
 const accessTokenExpirationMargin = time.Minute
 
@@ -25,7 +25,7 @@ type TokenRefresher interface {
 	RefreshAuthToken() (updatedToken string, apiErr error)
 }
 
-//go:generate counterfeiter . Repository
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Repository
 
 type Repository interface {
 	net.RequestDumperInterface
@@ -61,10 +61,8 @@ func (uaa UAARepository) Authorize(token string) (string, error) {
 		},
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
-			DisableKeepAlives: true,
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: uaa.config.IsSSLDisabled(),
-			},
+			DisableKeepAlives:   true,
+			TLSClientConfig:     util.NewTLSConfig(nil, uaa.config.IsSSLDisabled()),
 			Proxy:               http.ProxyFromEnvironment,
 			TLSHandshakeTimeout: 10 * time.Second,
 		},
@@ -195,8 +193,8 @@ func (uaa UAARepository) RefreshToken(t string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	expiration, _ := token.Claims().Expiration()
-	if expiration.Sub(time.Now()) > accessTokenExpirationMargin {
+	expiration, ok := token.Claims().Expiration()
+	if ok && expiration.Sub(time.Now()) > accessTokenExpirationMargin {
 		return t, nil
 	}
 

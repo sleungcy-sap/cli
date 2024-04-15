@@ -7,41 +7,56 @@ import (
 	"net/http"
 	"net/url"
 
+	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/api/uaa/internal"
 )
 
 // User represents an UAA user account.
 type User struct {
-	ID       string   `json:"id"`
-	Username string   `json:"userName,omitempty"`
-	Password string   `json:"password,omitempty"`
-	Origin   string   `json:"origin,omitempty"`
-	Name     UserName `json:"name"`
-	Emails   []Email  `json:"emails"`
-	Groups   []Group  `json:"groups,omitempty"`
+	ID     string
+	Origin string
 }
 
-type UserName struct {
+// newUserRequestBody represents the body of the request.
+type newUserRequestBody struct {
+	Username string   `json:"userName"`
+	Password string   `json:"password"`
+	Origin   string   `json:"origin"`
+	Name     userName `json:"name"`
+	Emails   []email  `json:"emails"`
+}
+
+type userName struct {
 	FamilyName string `json:"familyName"`
 	GivenName  string `json:"givenName"`
 }
 
-type Email struct {
+type email struct {
 	Value   string `json:"value"`
 	Primary bool   `json:"primary"`
 }
 
+// newUserResponse represents the HTTP JSON response.
+type newUserResponse struct {
+	ID     string `json:"id"`
+	Origin string `json:"origin"`
+}
+
+type paginatedUsersResponse struct {
+	Resources []newUserResponse `json:"resources"`
+}
+
 // CreateUser creates a new UAA user account with the provided password.
 func (client *Client) CreateUser(user string, password string, origin string) (User, error) {
-	userRequest := User{
+	userRequest := newUserRequestBody{
 		Username: user,
 		Password: password,
 		Origin:   origin,
-		Name: UserName{
+		Name: userName{
 			FamilyName: user,
 			GivenName:  user,
 		},
-		Emails: []Email{
+		Emails: []email{
 			{
 				Value:   user,
 				Primary: true,
@@ -65,7 +80,7 @@ func (client *Client) CreateUser(user string, password string, origin string) (U
 		return User{}, err
 	}
 
-	var userResponse User
+	var userResponse newUserResponse
 	response := Response{
 		Result: &userResponse,
 	}
@@ -78,183 +93,120 @@ func (client *Client) CreateUser(user string, password string, origin string) (U
 	return User(userResponse), nil
 }
 
-// CreateUser creates a new UAA user account with the provided object.
-func (client *Client) CreateUserFromObject(user User) (User, error) {
-	bodyBytes, err := json.Marshal(user)
-	if err != nil {
-		return User{}, err
-	}
-	request, err := client.newRequest(requestOptions{
-		RequestName: internal.PostUserRequest,
-		Header: http.Header{
-			"Content-Type": {"application/json"},
-		},
-		Body: bytes.NewBuffer(bodyBytes),
-	})
-	if err != nil {
-		return User{}, err
-	}
-
-	var userResponse User
-	response := Response{
-		Result: &userResponse,
-	}
-
-	err = client.connection.Make(request, &response)
-	if err != nil {
-		return User{}, err
-	}
-
-	return User(userResponse), nil
-}
-
-// DeleteUser delete an UAA user account.
-func (client *Client) DeleteUser(guid string) error {
-	request, err := client.newRequest(requestOptions{
+func (client *Client) DeleteUser(userGuid string) (User, error) {
+	deleteRequest, err := client.newRequest(requestOptions{
 		RequestName: internal.DeleteUserRequest,
 		Header: http.Header{
 			"Content-Type": {"application/json"},
 		},
-		URIParams: internal.Params{"user_guid": guid},
+		URIParams: map[string]string{"user_guid": userGuid},
 	})
+
 	if err != nil {
-		return err
+		return User{}, err
 	}
 
-	var userResponse User
-	response := Response{
-		Result: &userResponse,
+	var deleteUserResponse newUserResponse
+	deleteResponse := Response{
+		Result: &deleteUserResponse,
 	}
 
-	err = client.connection.Make(request, &response)
+	err = client.connection.Make(deleteRequest, &deleteResponse)
 	if err != nil {
-		return err
+		return User{}, err
 	}
 
-	return nil
+	return User(deleteUserResponse), nil
 }
 
-// GetUser get an UAA user account by its id.
-func (client *Client) GetUser(guid string) (User, error) {
+// ListUsers gets a list of users from UAA with the given username and (if provided) origin.
+// NOTE: that this is a paginated response and we are only currently returning the first page
+// of users. This will mean, if no origin is passed and there are more than 100 users with
+// the given username, only the first 100 will be returned. For our current purposes, this is
+// more than enough, but it would be a problem if we ever need to get all users with a username.
+func (client Client) ListUsers(userName, origin string) ([]User, error) {
+	filter := fmt.Sprintf(`userName eq "%s"`, userName)
+
+	if origin != "" {
+		filter = fmt.Sprintf(`%s and origin eq "%s"`, filter, origin)
+	}
+
 	request, err := client.newRequest(requestOptions{
-		RequestName: internal.GetUserRequest,
-		Header: http.Header{
-			"Content-Type": {"application/json"},
-		},
-		URIParams: internal.Params{"user_guid": guid},
-	})
-	if err != nil {
-		return User{}, err
-	}
-
-	var userResponse User
-	response := Response{
-		Result: &userResponse,
-	}
-
-	err = client.connection.Make(request, &response)
-	if err != nil {
-		return User{}, err
-	}
-
-	return User(userResponse), nil
-}
-
-// UpdateUser update a UAA user account.
-func (client *Client) UpdateUser(user User) (User, error) {
-	bodyBytes, err := json.Marshal(user)
-	if err != nil {
-		return User{}, err
-	}
-	fmt.Println(string(bodyBytes))
-	request, err := client.newRequest(requestOptions{
-		RequestName: internal.PutUserRequest,
-		Header: http.Header{
-			"Content-Type": {"application/json"},
-			"If-Match":     {"*"},
-		},
-		Body:      bytes.NewBuffer(bodyBytes),
-		URIParams: internal.Params{"user_guid": user.ID},
-	})
-	if err != nil {
-		return User{}, err
-	}
-
-	var userResponse User
-	response := Response{
-		Result: &userResponse,
-	}
-
-	err = client.connection.Make(request, &response)
-	if err != nil {
-		return User{}, err
-	}
-
-	return User(userResponse), nil
-}
-
-// GetUsers get all UAA user account by its username.
-func (client *Client) GetUsersByUsername(username string) ([]User, error) {
-	request, err := client.newRequest(requestOptions{
-		RequestName: internal.GetUsersRequest,
+		RequestName: internal.ListUsersRequest,
 		Header: http.Header{
 			"Content-Type": {"application/json"},
 		},
 		Query: url.Values{
-			"attributes": []string{"id,userName"},
-			"filter":     []string{fmt.Sprintf(`userName Eq "%s"`, username)},
+			"filter": {filter},
 		},
 	})
 	if err != nil {
-		return []User{}, err
+		return nil, err
 	}
 
-	var usersResources struct {
-		Users []User `json:"resources"`
-	}
+	var usersResponse paginatedUsersResponse
 	response := Response{
-		Result: &usersResources,
+		Result: &usersResponse,
 	}
 
 	err = client.connection.Make(request, &response)
 	if err != nil {
-		return []User{}, err
+		return nil, err
 	}
-	return usersResources.Users, err
+
+	var users []User
+	for _, user := range usersResponse.Resources {
+		users = append(users, User(user))
+	}
+
+	return users, nil
 }
 
-// ChangeUserPassword change an user password by its id.
-func (client *Client) ChangeUserPassword(guid, oldPass, newPass string) error {
-	changePassRequest := struct {
-		OldPassword string `json:"oldPassword"`
-		Password    string `json:"password"`
-	}{
-		OldPassword: oldPass,
-		Password:    newPass,
+func (client *Client) UpdatePassword(userGUID string, oldPassword string, newPassword string) error {
+	requestBody := map[string]interface{}{
+		"oldPassword": oldPassword,
+		"password":    newPassword,
 	}
-	bodyBytes, err := json.Marshal(changePassRequest)
+
+	bodyBytes, err := json.Marshal(requestBody)
 	if err != nil {
 		return err
 	}
+
 	request, err := client.newRequest(requestOptions{
-		RequestName: internal.PutUserPasswordRequest,
+		RequestName: internal.UpdatePasswordRequest,
+		Header:      http.Header{"Content-Type": {"application/json"}},
+		URIParams:   map[string]string{"user_guid": userGUID},
+		Body:        bytes.NewBuffer(bodyBytes),
+	})
+	if err != nil {
+		return err
+	}
+
+	return client.connection.Make(request, &Response{})
+}
+
+func (client Client) ValidateClientUser(clientID string) error {
+	request, err := client.newRequest(requestOptions{
+		RequestName: internal.GetClientUser,
 		Header: http.Header{
 			"Content-Type": {"application/json"},
 		},
-		URIParams: internal.Params{"user_guid": guid},
-		Body:      bytes.NewBuffer(bodyBytes),
+		URIParams: map[string]string{"client_id": clientID},
 	})
 	if err != nil {
 		return err
 	}
+	err = client.connection.Make(request, &Response{})
 
-	response := Response{
+	if errType, ok := err.(RawHTTPStatusError); ok {
+		switch errType.StatusCode {
+		case http.StatusNotFound:
+			return actionerror.UserNotFoundError{Username: clientID}
+		case http.StatusForbidden:
+			return InsufficientScopeError{}
+		}
 	}
 
-	err = client.connection.Make(request, &response)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }

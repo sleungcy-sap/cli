@@ -30,6 +30,7 @@ type ServiceCredentialBinding struct {
 	// LastOperation is the last operation on the service credential binding
 	LastOperation LastOperation `jsonry:"last_operation"`
 	// Parameters can be specified when creating a binding
+	
 	// Omit empty to fix errors with user-provided services
 	Parameters types.OptionalObject `jsonry:"parameters,omitempty"`
 }

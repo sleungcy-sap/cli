@@ -21,7 +21,7 @@ var _ = Describe("env Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeEnvActor
+		fakeActor       *v7fakes.FakeActor
 		binaryName      string
 		executeErr      error
 		appName         string
@@ -31,13 +31,15 @@ var _ = Describe("env Command", func() {
 		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeEnvActor)
+		fakeActor = new(v7fakes.FakeActor)
 
 		cmd = EnvCommand{
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
+			BaseCommand: BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		binaryName = "faceman"
@@ -74,7 +76,7 @@ var _ = Describe("env Command", func() {
 
 		When("getting the current user returns an error", func() {
 			BeforeEach(func() {
-				fakeConfig.CurrentUserReturns(configv3.User{}, errors.New("some-error"))
+				fakeActor.GetCurrentUserReturns(configv3.User{}, errors.New("some-error"))
 			})
 
 			It("returns the error", func() {
@@ -84,13 +86,13 @@ var _ = Describe("env Command", func() {
 
 		When("getting the current user succeeds", func() {
 			BeforeEach(func() {
-				fakeConfig.CurrentUserReturns(configv3.User{Name: "banana"}, nil)
+				fakeActor.GetCurrentUserReturns(configv3.User{Name: "banana"}, nil)
 			})
 
 			When("getting the environment returns env vars for all groups", func() {
 				BeforeEach(func() {
 					envGroups := v7action.EnvironmentVariableGroups{
-						System:               map[string]interface{}{"system-name": map[string]interface{}{"mysql": []string{"system-value"}}},
+						System:               map[string]interface{}{"system-name": map[string]interface{}{"mysql": []string{"system-value"}, "password": "test<3"}},
 						Application:          map[string]interface{}{"application-name": "application-value"},
 						EnvironmentVariables: map[string]interface{}{"user-name": "user-value"},
 						Running:              map[string]interface{}{"running-name": "running-value"},
@@ -103,12 +105,12 @@ var _ = Describe("env Command", func() {
 					Expect(executeErr).ToNot(HaveOccurred())
 
 					Expect(testUI.Out).To(Say(`Getting env variables for app some-app in org some-org / space some-space as banana\.\.\.`))
-					Expect(testUI.Out).To(Say("OK"))
 					Expect(testUI.Out).To(Say("System-Provided:"))
 					Expect(testUI.Out).To(Say("system-name: {"))
 					Expect(testUI.Out).To(Say(`"mysql": \[`))
 					Expect(testUI.Out).To(Say(`"system-value"`))
-					Expect(testUI.Out).To(Say(`\]`))
+					Expect(testUI.Out).To(Say(`\],`))
+					Expect(testUI.Out).To(Say(`"password": "test<3"`))
 					Expect(testUI.Out).To(Say("}"))
 					Expect(testUI.Out).To(Say(`application-name: "application-value"`))
 
@@ -196,7 +198,6 @@ var _ = Describe("env Command", func() {
 					Expect(executeErr).ToNot(HaveOccurred())
 
 					Expect(testUI.Out).To(Say(`Getting env variables for app some-app in org some-org / space some-space as banana\.\.\.`))
-					Expect(testUI.Out).To(Say("OK"))
 
 					Expect(testUI.Out).To(Say("No system-provided env variables have been set"))
 
@@ -226,7 +227,6 @@ var _ = Describe("env Command", func() {
 				It("returns the error", func() {
 					Expect(executeErr).To(Equal(expectedErr))
 					Expect(testUI.Out).To(Say(`Getting env variables for app some-app in org some-org / space some-space as banana\.\.\.`))
-					Expect(testUI.Out).To(Say("OK"))
 
 					Expect(testUI.Err).To(Say("get-warning-1"))
 					Expect(testUI.Err).To(Say("get-warning-2"))

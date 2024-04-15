@@ -5,14 +5,23 @@ import "fmt"
 // RouteNotFoundError is returned when a route cannot be found
 type RouteNotFoundError struct {
 	Host       string
-	DomainGUID string
+	DomainName string
 	Path       string
 	Port       int
 }
 
 func (e RouteNotFoundError) Error() string {
-	if e.Path != "" {
-		return fmt.Sprintf("Route with host %s, domain guid %s, and path %s not found", e.Host, e.DomainGUID, e.Path)
+	switch e.Port {
+	case 0:
+		return fmt.Sprintf("Route with host '%s', domain '%s', and path '%s' not found.", e.Host, e.DomainName, e.path())
+	default:
+		return fmt.Sprintf("Route with domain '%s' and port %d not found.", e.DomainName, e.Port)
 	}
-	return fmt.Sprintf("Route with host %s and domain guid %s not found", e.Host, e.DomainGUID)
+}
+
+func (e RouteNotFoundError) path() string {
+	if e.Path == "" {
+		return "/"
+	}
+	return e.Path
 }

@@ -1,16 +1,28 @@
 package v7pushaction_test
 
 import (
+	"errors"
+	"fmt"
+
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/actor/sharedaction"
 	"code.cloudfoundry.org/cli/actor/v7action"
 	. "code.cloudfoundry.org/cli/actor/v7pushaction"
 	"code.cloudfoundry.org/cli/actor/v7pushaction/v7pushactionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
-	"errors"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+func buildEmptyV3Resource(name string) sharedaction.V3Resource {
+	return sharedaction.V3Resource{
+		FilePath:    name,
+		Checksum:    ccv3.Checksum{Value: fmt.Sprintf("checksum-%s", name)},
+		SizeInBytes: 0,
+	}
+}
 
 var _ = Describe("CreateBitsPackageForApplication", func() {
 	var (
@@ -29,22 +41,21 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 	)
 
 	BeforeEach(func() {
-		actor, _, fakeV7Actor, fakeSharedActor = getTestPushActor()
+		actor, fakeV7Actor, fakeSharedActor = getTestPushActor()
 
 		fakeProgressBar = new(v7pushactionfakes.FakeProgressBar)
 
 		fakeSharedActor.ReadArchiveReturns(new(v7pushactionfakes.FakeReadCloser), 0, nil)
 
 		paramPlan = PushPlan{
-			Application: v7action.Application{
+			Application: resources.Application{
 				GUID: "some-app-guid",
 			},
-			DockerImageCredentialsNeedsUpdate: false,
 		}
 	})
 
 	JustBeforeEach(func() {
-		events = EventFollower(func(eventStream chan<- Event) {
+		events = EventFollower(func(eventStream chan<- *PushEvent) {
 			returnedPushPlan, warnings, executeErr = actor.CreateBitsPackageForApplication(paramPlan, eventStream, fakeProgressBar)
 		})
 	})
@@ -52,6 +63,10 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 	Describe("package upload", func() {
 		When("resource match errors ", func() {
 			BeforeEach(func() {
+				paramPlan.AllResources = []sharedaction.V3Resource{
+					buildV3Resource("some-filename"),
+				}
+
 				fakeV7Actor.ResourceMatchReturns(
 					nil,
 					v7action.Warnings{"some-resource-match-warning"},
@@ -71,6 +86,28 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 				unmatches []sharedaction.V3Resource
 			)
 
+			When("all resources are empty", func() {
+				BeforeEach(func() {
+					emptyFiles := []sharedaction.V3Resource{
+						buildEmptyV3Resource("empty-filename-1"),
+						buildEmptyV3Resource("empty-filename-2"),
+					}
+
+					paramPlan = PushPlan{
+						Application: resources.Application{
+							Name: "some-app",
+							GUID: "some-app-guid",
+						},
+						BitsPath:     "/some-bits-path",
+						AllResources: emptyFiles,
+					}
+				})
+
+				It("skips resource matching", func() {
+					Expect(fakeV7Actor.ResourceMatchCallCount()).To(Equal(0))
+				})
+			})
+
 			When("there are unmatched resources", func() {
 				BeforeEach(func() {
 					matches = []sharedaction.V3Resource{
@@ -82,7 +119,7 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 					}
 
 					paramPlan = PushPlan{
-						Application: v7action.Application{
+						Application: resources.Application{
 							Name: "some-app",
 							GUID: "some-app-guid",
 						},
@@ -128,7 +165,7 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 					BeforeEach(func() {
 						fakeSharedActor.ZipDirectoryResourcesReturns("/some/archive/path", nil)
 						fakeV7Actor.UpdateApplicationReturns(
-							v7action.Application{
+							resources.Application{
 								Name: "some-app",
 								GUID: paramPlan.Application.GUID,
 							},
@@ -143,7 +180,7 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 
 					When("the package creation is successful", func() {
 						BeforeEach(func() {
-							fakeV7Actor.CreateBitsPackageByApplicationReturns(v7action.Package{GUID: "some-guid"}, v7action.Warnings{"some-create-package-warning"}, nil)
+							fakeV7Actor.CreateBitsPackageByApplicationReturns(resources.Package{GUID: "some-guid"}, v7action.Warnings{"some-create-package-warning"}, nil)
 						})
 
 						It("reads the archive", func() {
@@ -161,14 +198,14 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 								Expect(fakeV7Actor.UploadBitsPackageCallCount()).To(Equal(1))
 								pkg, resource, _, size := fakeV7Actor.UploadBitsPackageArgsForCall(0)
 
-								Expect(pkg).To(Equal(v7action.Package{GUID: "some-guid"}))
+								Expect(pkg).To(Equal(resources.Package{GUID: "some-guid"}))
 								Expect(resource).To(Equal(matches))
 								Expect(size).To(BeNumerically("==", 6))
 							})
 
 							When("the upload is successful", func() {
 								BeforeEach(func() {
-									fakeV7Actor.UploadBitsPackageReturns(v7action.Package{GUID: "some-guid"}, v7action.Warnings{"some-upload-package-warning"}, nil)
+									fakeV7Actor.UploadBitsPackageReturns(resources.Package{GUID: "some-guid"}, v7action.Warnings{"some-upload-package-warning"}, nil)
 								})
 
 								It("returns an upload complete event and warnings", func() {
@@ -182,7 +219,7 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 
 										BeforeEach(func() {
 											someErr = errors.New("I AM A BANANA")
-											fakeV7Actor.UploadBitsPackageReturns(v7action.Package{}, v7action.Warnings{"upload-warnings-1", "upload-warnings-2"}, ccerror.PipeSeekError{Err: someErr})
+											fakeV7Actor.UploadBitsPackageReturns(resources.Package{}, v7action.Warnings{"upload-warnings-1", "upload-warnings-2"}, ccerror.PipeSeekError{Err: someErr})
 										})
 
 										It("should send a RetryUpload event and retry uploading", func() {
@@ -203,7 +240,7 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 
 									When("the upload error is not a retryable error", func() {
 										BeforeEach(func() {
-											fakeV7Actor.UploadBitsPackageReturns(v7action.Package{}, v7action.Warnings{"upload-warnings-1", "upload-warnings-2"}, errors.New("dios mio"))
+											fakeV7Actor.UploadBitsPackageReturns(resources.Package{}, v7action.Warnings{"upload-warnings-1", "upload-warnings-2"}, errors.New("dios mio"))
 										})
 
 										It("sends warnings and errors, then stops", func() {
@@ -229,7 +266,7 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 
 						When("the package creation errors", func() {
 							BeforeEach(func() {
-								fakeV7Actor.CreateBitsPackageByApplicationReturns(v7action.Package{}, v7action.Warnings{"package-creation-warning"}, errors.New("the package"))
+								fakeV7Actor.CreateBitsPackageByApplicationReturns(resources.Package{}, v7action.Warnings{"package-creation-warning"}, errors.New("the package"))
 							})
 
 							It("it returns errors and warnings", func() {
@@ -261,7 +298,7 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 					}
 
 					paramPlan = PushPlan{
-						Application: v7action.Application{
+						Application: resources.Application{
 							Name: "some-app",
 							GUID: "some-app-guid",
 						},
@@ -278,7 +315,7 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 
 				When("package upload succeeds", func() {
 					BeforeEach(func() {
-						fakeV7Actor.UploadBitsPackageReturns(v7action.Package{GUID: "some-guid"}, v7action.Warnings{"upload-warning"}, nil)
+						fakeV7Actor.UploadBitsPackageReturns(resources.Package{GUID: "some-guid"}, v7action.Warnings{"upload-warning"}, nil)
 					})
 
 					It("Uploads the package without a zip", func() {
@@ -299,7 +336,7 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 				When("package upload fails", func() {
 					BeforeEach(func() {
 						fakeV7Actor.UploadBitsPackageReturns(
-							v7action.Package{},
+							resources.Package{},
 							v7action.Warnings{"upload-warning"},
 							errors.New("upload-error"),
 						)
@@ -342,7 +379,7 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 			}
 
 			paramPlan = PushPlan{
-				Application: v7action.Application{
+				Application: resources.Application{
 					Name: "some-app",
 					GUID: "some-app-guid",
 				},
@@ -362,7 +399,7 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 
 		When("the the polling is successful", func() {
 			BeforeEach(func() {
-				fakeV7Actor.PollPackageReturns(v7action.Package{GUID: "some-package-guid"}, v7action.Warnings{"some-poll-package-warning"}, nil)
+				fakeV7Actor.PollPackageReturns(resources.Package{GUID: "some-package-guid"}, v7action.Warnings{"some-poll-package-warning"}, nil)
 			})
 
 			It("returns warnings", func() {
@@ -380,7 +417,7 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 
 			BeforeEach(func() {
 				someErr = errors.New("I AM A BANANA")
-				fakeV7Actor.PollPackageReturns(v7action.Package{}, v7action.Warnings{"some-poll-package-warning"}, someErr)
+				fakeV7Actor.PollPackageReturns(resources.Package{}, v7action.Warnings{"some-poll-package-warning"}, someErr)
 			})
 
 			It("returns errors and warnings", func() {

@@ -3,42 +3,17 @@ package v7
 import (
 	"sort"
 
-	"code.cloudfoundry.org/cli/actor/sharedaction"
-	"code.cloudfoundry.org/cli/actor/v7action"
-	"code.cloudfoundry.org/cli/command"
-	"code.cloudfoundry.org/cli/command/v7/shared"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/util/sorting"
 	"code.cloudfoundry.org/cli/util/ui"
 )
 
-//go:generate counterfeiter . StacksActor
-
-type StacksActor interface {
-	GetStacks() ([]v7action.Stack, v7action.Warnings, error)
-}
-
 type StacksCommand struct {
-	usage           interface{} `usage:"CF_NAME stacks"`
-	relatedCommands interface{} `related_commands:"app, push"`
+	BaseCommand
 
-	UI          command.UI
-	Config      command.Config
-	SharedActor command.SharedActor
-	Actor       StacksActor
-}
-
-func (cmd *StacksCommand) Setup(config command.Config, ui command.UI) error {
-	cmd.UI = ui
-	cmd.Config = config
-	cmd.SharedActor = sharedaction.NewActor(config)
-
-	ccClient, _, err := shared.NewClients(config, ui, true, "")
-	if err != nil {
-		return err
-	}
-	cmd.Actor = v7action.NewActor(ccClient, config, nil, nil)
-
-	return nil
+	usage           interface{} `usage:"CF_NAME stacks [--labels SELECTOR]\n\nEXAMPLES:\n   CF_NAME stacks\n   CF_NAME stacks --labels 'environment in (production,staging),tier in (backend)'\n   CF_NAME stacks --labels 'env=dev,!chargeback-code,tier in (backend,worker)'"`
+	relatedCommands interface{} `related_commands:"create-buildpack, delete-buildpack, rename-buildpack, stack, update-buildpack"`
+	Labels          string      `long:"labels" description:"Selector to filter stacks by labels"`
 }
 
 func (cmd StacksCommand) Execute(args []string) error {
@@ -47,7 +22,7 @@ func (cmd StacksCommand) Execute(args []string) error {
 		return err
 	}
 
-	user, err := cmd.Config.CurrentUser()
+	user, err := cmd.Actor.GetCurrentUser()
 	if err != nil {
 		return err
 	}
@@ -57,7 +32,7 @@ func (cmd StacksCommand) Execute(args []string) error {
 	})
 	cmd.UI.DisplayNewline()
 
-	stacks, warnings, err := cmd.Actor.GetStacks()
+	stacks, warnings, err := cmd.Actor.GetStacks(cmd.Labels)
 	cmd.UI.DisplayWarnings(warnings)
 	if err != nil {
 		return err
@@ -70,7 +45,7 @@ func (cmd StacksCommand) Execute(args []string) error {
 	return nil
 }
 
-func (cmd StacksCommand) displayTable(stacks []v7action.Stack) {
+func (cmd StacksCommand) displayTable(stacks []resources.Stack) {
 	if len(stacks) > 0 {
 		var keyValueTable = [][]string{
 			{"name", "description"},

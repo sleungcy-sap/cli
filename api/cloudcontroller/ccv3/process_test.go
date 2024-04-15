@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	. "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -22,157 +23,112 @@ var _ = Describe("Process", func() {
 	BeforeEach(func() {
 		client, _ = NewTestClient()
 	})
+	Describe("GetProcess", func() {
+		var (
+			process  resources.Process
+			warnings []string
+			err      error
+		)
+		JustBeforeEach(func() {
+			process, warnings, err = client.GetProcess("some-process-guid")
+		})
 
-	Describe("Process", func() {
-		Describe("MarshalJSON", func() {
-			var (
-				process      resources.Process
-				processBytes []byte
-				err          error
-			)
-
+		When("the process exists", func() {
 			BeforeEach(func() {
-				process = resources.Process{}
-			})
 
-			JustBeforeEach(func() {
-				processBytes, err = process.MarshalJSON()
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			When("instances is provided", func() {
-				BeforeEach(func() {
-					process = resources.Process{
-						Instances: types.NullInt{Value: 0, IsSet: true},
+				response := `{
+					"guid": "process-1-guid",
+					"type": "some-type",
+					"command": "start-command-1",
+					"instances": 22,
+					"memory_in_mb": 32,
+					"disk_in_mb": 1024,
+					"log_rate_limit_in_bytes_per_second": 512, 
+					"relationships": {
+						"app": {
+							"data": {
+								"guid": "some-app-guid"
+							}
+						}
+					},
+					"health_check": {
+						"type": "http",
+						"data": {
+							"timeout": 90,
+							"endpoint": "/health",
+							"invocation_timeout": 42
+						}
 					}
-				})
-
-				It("sets the instances to be set", func() {
-					Expect(string(processBytes)).To(MatchJSON(`{"instances": 0}`))
-				})
+				}`
+				server.AppendHandlers(
+					CombineHandlers(
+						VerifyRequest(http.MethodGet, "/v3/processes/some-process-guid"),
+						RespondWith(http.StatusOK, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
+					),
+				)
 			})
 
-			When("memory is provided", func() {
-				BeforeEach(func() {
-					process = resources.Process{
-						MemoryInMB: types.NullUint64{Value: 0, IsSet: true},
-					}
-				})
-
-				It("sets the memory to be set", func() {
-					Expect(string(processBytes)).To(MatchJSON(`{"memory_in_mb": 0}`))
-				})
-			})
-
-			When("disk is provided", func() {
-				BeforeEach(func() {
-					process = resources.Process{
-						DiskInMB: types.NullUint64{Value: 0, IsSet: true},
-					}
-				})
-
-				It("sets the disk to be set", func() {
-					Expect(string(processBytes)).To(MatchJSON(`{"disk_in_mb": 0}`))
-				})
-			})
-
-			When("health check type http is provided", func() {
-				BeforeEach(func() {
-					process = resources.Process{
-						HealthCheckType:     constant.HTTP,
-						HealthCheckEndpoint: "some-endpoint",
-					}
-				})
-
-				It("sets the health check type to http and has an endpoint", func() {
-					Expect(string(processBytes)).To(MatchJSON(`{"health_check":{"type":"http", "data": {"endpoint": "some-endpoint"}}}`))
-				})
-			})
-
-			When("health check type port is provided", func() {
-				BeforeEach(func() {
-					process = resources.Process{
-						HealthCheckType: constant.Port,
-					}
-				})
-
-				It("sets the health check type to port", func() {
-					Expect(string(processBytes)).To(MatchJSON(`{"health_check":{"type":"port", "data": {}}}`))
-				})
-			})
-
-			When("health check type process is provided", func() {
-				BeforeEach(func() {
-					process = resources.Process{
-						HealthCheckType: constant.Process,
-					}
-				})
-
-				It("sets the health check type to process", func() {
-					Expect(string(processBytes)).To(MatchJSON(`{"health_check":{"type":"process", "data": {}}}`))
-				})
-			})
-
-			When("process has no fields provided", func() {
-				BeforeEach(func() {
-					process = resources.Process{}
-				})
-
-				It("sets the health check type to process", func() {
-					Expect(string(processBytes)).To(MatchJSON(`{}`))
-				})
+			It("returns the process and all warnings", func() {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(warnings).To(ConsistOf("this is a warning"))
+				Expect(process).To(MatchAllFields(Fields{
+					"GUID":                         Equal("process-1-guid"),
+					"Type":                         Equal("some-type"),
+					"AppGUID":                      Equal("some-app-guid"),
+					"Command":                      Equal(types.FilteredString{IsSet: true, Value: "start-command-1"}),
+					"Instances":                    Equal(types.NullInt{Value: 22, IsSet: true}),
+					"MemoryInMB":                   Equal(types.NullUint64{Value: 32, IsSet: true}),
+					"DiskInMB":                     Equal(types.NullUint64{Value: 1024, IsSet: true}),
+					"LogRateLimitInBPS":            Equal(types.NullInt{Value: 512, IsSet: true}),
+					"HealthCheckType":              Equal(constant.HTTP),
+					"HealthCheckEndpoint":          Equal("/health"),
+					"HealthCheckInvocationTimeout": BeEquivalentTo(42),
+					"HealthCheckTimeout":           BeEquivalentTo(90),
+				}))
 			})
 		})
 
-		Describe("UnmarshalJSON", func() {
-			var (
-				process      resources.Process
-				processBytes []byte
-				err          error
-			)
+		When("the cloud controller returns errors and warnings", func() {
 			BeforeEach(func() {
-				processBytes = []byte("{}")
+				response := `{
+					"errors": [
+						{
+							"code": 10008,
+							"detail": "The request is semantically invalid: command presence",
+							"title": "CF-UnprocessableEntity"
+						},
+						{
+							"code": 10009,
+							"detail": "Some CC Error",
+							"title": "CF-SomeNewError"
+						}
+					]
+				}`
+				server.AppendHandlers(
+					CombineHandlers(
+						VerifyRequest(http.MethodGet, "/v3/processes/some-process-guid"),
+						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
+					),
+				)
 			})
 
-			JustBeforeEach(func() {
-				err = json.Unmarshal(processBytes, &process)
-				Expect(err).ToNot(HaveOccurred())
-			})
-			When("health check type http is provided", func() {
-				BeforeEach(func() {
-					processBytes = []byte(`{"health_check":{"type":"http", "data": {"endpoint": "some-endpoint"}}}`)
-				})
-
-				It("sets the health check type to http and has an endpoint", func() {
-					Expect(process).To(MatchFields(IgnoreExtras, Fields{
-						"HealthCheckType":     Equal(constant.HTTP),
-						"HealthCheckEndpoint": Equal("some-endpoint"),
-					}))
-				})
-			})
-
-			When("health check type port is provided", func() {
-				BeforeEach(func() {
-					processBytes = []byte(`{"health_check":{"type":"port", "data": {"endpoint": null}}}`)
-				})
-
-				It("sets the health check type to port", func() {
-					Expect(process).To(MatchFields(IgnoreExtras, Fields{
-						"HealthCheckType": Equal(constant.Port),
-					}))
-				})
-			})
-
-			When("health check type process is provided", func() {
-				BeforeEach(func() {
-					processBytes = []byte(`{"health_check":{"type":"process", "data": {"endpoint": null}}}`)
-				})
-
-				It("sets the health check type to process", func() {
-					Expect(process).To(MatchFields(IgnoreExtras, Fields{
-						"HealthCheckType": Equal(constant.Process),
-					}))
-				})
+			It("returns the error and all warnings", func() {
+				Expect(err).To(MatchError(ccerror.MultiError{
+					ResponseCode: http.StatusTeapot,
+					Errors: []ccerror.V3Error{
+						{
+							Code:   10008,
+							Detail: "The request is semantically invalid: command presence",
+							Title:  "CF-UnprocessableEntity",
+						},
+						{
+							Code:   10009,
+							Detail: "Some CC Error",
+							Title:  "CF-SomeNewError",
+						},
+					},
+				}))
+				Expect(warnings).To(ConsistOf("this is a warning"))
 			})
 		})
 	})
@@ -183,15 +139,17 @@ var _ = Describe("Process", func() {
 		When("providing all scale options", func() {
 			BeforeEach(func() {
 				passedProcess = resources.Process{
-					Type:       constant.ProcessTypeWeb,
-					Instances:  types.NullInt{Value: 2, IsSet: true},
-					MemoryInMB: types.NullUint64{Value: 100, IsSet: true},
-					DiskInMB:   types.NullUint64{Value: 200, IsSet: true},
+					Type:              constant.ProcessTypeWeb,
+					Instances:         types.NullInt{Value: 2, IsSet: true},
+					MemoryInMB:        types.NullUint64{Value: 100, IsSet: true},
+					DiskInMB:          types.NullUint64{Value: 200, IsSet: true},
+					LogRateLimitInBPS: types.NullInt{Value: 256, IsSet: true},
 				}
 				expectedBody := `{
 					"instances": 2,
 					"memory_in_mb": 100,
-					"disk_in_mb": 200
+					"disk_in_mb": 200,
+					"log_rate_limit_in_bytes_per_second": 256
 				}`
 				response := `{
 					"guid": "some-process-guid"
@@ -216,15 +174,17 @@ var _ = Describe("Process", func() {
 		When("providing all scale options with 0 values", func() {
 			BeforeEach(func() {
 				passedProcess = resources.Process{
-					Type:       constant.ProcessTypeWeb,
-					Instances:  types.NullInt{Value: 0, IsSet: true},
-					MemoryInMB: types.NullUint64{Value: 0, IsSet: true},
-					DiskInMB:   types.NullUint64{Value: 0, IsSet: true},
+					Type:              constant.ProcessTypeWeb,
+					Instances:         types.NullInt{Value: 0, IsSet: true},
+					MemoryInMB:        types.NullUint64{Value: 0, IsSet: true},
+					DiskInMB:          types.NullUint64{Value: 0, IsSet: true},
+					LogRateLimitInBPS: types.NullInt{Value: 0, IsSet: true},
 				}
 				expectedBody := `{
 					"instances": 0,
 					"memory_in_mb": 0,
-					"disk_in_mb": 0
+					"disk_in_mb": 0,
+					"log_rate_limit_in_bytes_per_second": 0
 				}`
 				response := `{
 					"guid": "some-process-guid"
@@ -344,6 +304,14 @@ var _ = Describe("Process", func() {
 					"instances": 22,
 					"memory_in_mb": 32,
 					"disk_in_mb": 1024,
+					"log_rate_limit_in_bytes_per_second": 64,
+					"relationships": {
+						"app": {
+							"data": {
+								"guid": "some-app-guid"
+							}
+						}
+					},
 					"health_check": {
 						"type": "http",
 						"data": {
@@ -367,10 +335,12 @@ var _ = Describe("Process", func() {
 				Expect(process).To(MatchAllFields(Fields{
 					"GUID":                         Equal("process-1-guid"),
 					"Type":                         Equal("some-type"),
+					"AppGUID":                      Equal("some-app-guid"),
 					"Command":                      Equal(types.FilteredString{IsSet: true, Value: "start-command-1"}),
 					"Instances":                    Equal(types.NullInt{Value: 22, IsSet: true}),
 					"MemoryInMB":                   Equal(types.NullUint64{Value: 32, IsSet: true}),
 					"DiskInMB":                     Equal(types.NullUint64{Value: 1024, IsSet: true}),
+					"LogRateLimitInBPS":            Equal(types.NullInt{Value: 64, IsSet: true}),
 					"HealthCheckType":              Equal(constant.HTTP),
 					"HealthCheckEndpoint":          Equal("/health"),
 					"HealthCheckInvocationTimeout": BeEquivalentTo(42),
@@ -465,6 +435,7 @@ var _ = Describe("Process", func() {
 								"type": "web",
 								"command": "[PRIVATE DATA HIDDEN IN LISTS]",
 								"memory_in_mb": 32,
+								"log_rate_limit_in_bytes_per_second": 64,
 								"health_check": {
                   "type": "port",
                   "data": {
@@ -478,6 +449,7 @@ var _ = Describe("Process", func() {
 								"type": "worker",
 								"command": "[PRIVATE DATA HIDDEN IN LISTS]",
 								"memory_in_mb": 64,
+								"log_rate_limit_in_bytes_per_second": 128,
 								"health_check": {
                   "type": "http",
                   "data": {
@@ -499,6 +471,7 @@ var _ = Describe("Process", func() {
 								"type": "console",
 								"command": "[PRIVATE DATA HIDDEN IN LISTS]",
 								"memory_in_mb": 128,
+								"log_rate_limit_in_bytes_per_second": 256,
 								"health_check": {
                   "type": "process",
                   "data": {
@@ -533,6 +506,7 @@ var _ = Describe("Process", func() {
 						Type:               constant.ProcessTypeWeb,
 						Command:            types.FilteredString{IsSet: true, Value: "[PRIVATE DATA HIDDEN IN LISTS]"},
 						MemoryInMB:         types.NullUint64{Value: 32, IsSet: true},
+						LogRateLimitInBPS:  types.NullInt{Value: 64, IsSet: true},
 						HealthCheckType:    constant.Port,
 						HealthCheckTimeout: 0,
 					},
@@ -541,6 +515,7 @@ var _ = Describe("Process", func() {
 						Type:                "worker",
 						Command:             types.FilteredString{IsSet: true, Value: "[PRIVATE DATA HIDDEN IN LISTS]"},
 						MemoryInMB:          types.NullUint64{Value: 64, IsSet: true},
+						LogRateLimitInBPS:   types.NullInt{Value: 128, IsSet: true},
 						HealthCheckType:     constant.HTTP,
 						HealthCheckEndpoint: "/health",
 						HealthCheckTimeout:  60,
@@ -550,6 +525,7 @@ var _ = Describe("Process", func() {
 						Type:               "console",
 						Command:            types.FilteredString{IsSet: true, Value: "[PRIVATE DATA HIDDEN IN LISTS]"},
 						MemoryInMB:         types.NullUint64{Value: 128, IsSet: true},
+						LogRateLimitInBPS:  types.NullInt{Value: 256, IsSet: true},
 						HealthCheckType:    constant.Process,
 						HealthCheckTimeout: 90,
 					},
@@ -580,6 +556,181 @@ var _ = Describe("Process", func() {
 			It("returns the error", func() {
 				_, _, err := client.GetApplicationProcesses("some-app-guid")
 				Expect(err).To(MatchError(ccerror.ApplicationNotFoundError{}))
+			})
+		})
+	})
+
+	Describe("GetNewApplicationProcesses", func() {
+		When("the application exists", func() {
+			BeforeEach(func() {
+				response1 := fmt.Sprintf(`
+					{
+						"pagination": {
+							"next": {
+								"href": "%s/v3/apps/some-app-guid/processes?page=2"
+							}
+						},
+						"resources": [
+							{
+								"guid": "old-web-process-guid",
+								"type": "web",
+								"command": "[PRIVATE DATA HIDDEN IN LISTS]",
+								"memory_in_mb": 32,
+								"log_rate_limit_in_bytes_per_second": 64,
+								"health_check": {
+								   "type": "port",
+								   "data": {
+								 		"timeout": null,
+								 		"endpoint": null
+								   }
+								}
+							},
+							{
+								"guid": "new-web-process-guid",
+								"type": "web",
+								"command": "[PRIVATE DATA HIDDEN IN LISTS]",
+								"memory_in_mb": 32,
+								"log_rate_limit_in_bytes_per_second": 64,
+								"health_check": {
+									"type": "port",
+									"data": {
+										"timeout": null,
+										"endpoint": null
+									}
+								}
+							},
+							{
+								"guid": "worker-process-guid",
+								"type": "worker",
+								"command": "[PRIVATE DATA HIDDEN IN LISTS]",
+								"memory_in_mb": 64,
+								"log_rate_limit_in_bytes_per_second": 128,
+								"health_check": {
+									"type": "http",
+									"data": {
+										"timeout": 60,
+										"endpoint": "/health"
+									}
+								}
+							}
+						]
+					}`, server.URL())
+
+				response2 := `
+					{
+						"pagination": {
+							"next": null
+						},
+						"resources": [
+							{
+								"guid": "console-process-guid",
+								"type": "console",
+								"command": "[PRIVATE DATA HIDDEN IN LISTS]",
+								"memory_in_mb": 128,
+								"log_rate_limit_in_bytes_per_second": 256,
+								"health_check": {
+								    "type": "process",
+								    "data": {
+								  		"timeout": 90,
+								  		"endpoint": null
+								    }
+								}
+							}
+						]
+					}`
+
+				deploymentResponse := `
+					{
+						"state": "DEPLOYING",
+						"new_processes": [
+							{
+								"guid": "new-web-process-guid", 
+								"type": "web"
+							}
+						]
+					}
+				`
+
+				server.AppendHandlers(
+					CombineHandlers(
+						VerifyRequest(http.MethodGet, "/v3/deployments/some-deployment-guid"),
+						RespondWith(http.StatusOK, deploymentResponse, http.Header{"X-CF-Warnings": {"warning-1"}}),
+					),
+				)
+				server.AppendHandlers(
+					CombineHandlers(
+						VerifyRequest(http.MethodGet, "/v3/apps/some-app-guid/processes"),
+						RespondWith(http.StatusOK, response1, http.Header{"X-Cf-Warnings": {"warning-2"}}),
+					),
+				)
+				server.AppendHandlers(
+					CombineHandlers(
+						VerifyRequest(http.MethodGet, "/v3/apps/some-app-guid/processes", "page=2"),
+						RespondWith(http.StatusOK, response2, http.Header{"X-Cf-Warnings": {"warning-3"}}),
+					),
+				)
+			})
+
+			It("returns a list of processes associated with the application and all warnings", func() {
+				processes, warnings, err := client.GetNewApplicationProcesses("some-app-guid", "some-deployment-guid")
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(processes).To(ConsistOf(
+					resources.Process{
+						GUID:               "new-web-process-guid",
+						Type:               constant.ProcessTypeWeb,
+						Command:            types.FilteredString{IsSet: true, Value: "[PRIVATE DATA HIDDEN IN LISTS]"},
+						MemoryInMB:         types.NullUint64{Value: 32, IsSet: true},
+						LogRateLimitInBPS:  types.NullInt{Value: 64, IsSet: true},
+						HealthCheckType:    constant.Port,
+						HealthCheckTimeout: 0,
+					},
+					resources.Process{
+						GUID:                "worker-process-guid",
+						Type:                "worker",
+						Command:             types.FilteredString{IsSet: true, Value: "[PRIVATE DATA HIDDEN IN LISTS]"},
+						MemoryInMB:          types.NullUint64{Value: 64, IsSet: true},
+						LogRateLimitInBPS:   types.NullInt{Value: 128, IsSet: true},
+						HealthCheckType:     constant.HTTP,
+						HealthCheckEndpoint: "/health",
+						HealthCheckTimeout:  60,
+					},
+					resources.Process{
+						GUID:               "console-process-guid",
+						Type:               "console",
+						Command:            types.FilteredString{IsSet: true, Value: "[PRIVATE DATA HIDDEN IN LISTS]"},
+						MemoryInMB:         types.NullUint64{Value: 128, IsSet: true},
+						LogRateLimitInBPS:  types.NullInt{Value: 256, IsSet: true},
+						HealthCheckType:    constant.Process,
+						HealthCheckTimeout: 90,
+					},
+				))
+				Expect(warnings).To(ConsistOf("warning-1", "warning-2", "warning-3"))
+			})
+		})
+
+		When("cloud controller returns an error", func() {
+			BeforeEach(func() {
+				response := `{
+					"errors": [
+						{
+							"code": 10010,
+							"detail": "Deployment not found",
+							"title": "CF-ResourceNotFound"
+						}
+					]
+				}`
+				server.AppendHandlers(
+					CombineHandlers(
+						VerifyRequest(http.MethodGet, "/v3/deployments/some-deployment-guid"),
+						RespondWith(http.StatusNotFound, response),
+					),
+				)
+			})
+
+			It("returns the error", func() {
+				_, _, err := client.GetNewApplicationProcesses("some-app-guid", "some-deployment-guid")
+				Expect(err).To(MatchError(ccerror.DeploymentNotFoundError{}))
 			})
 		})
 	})

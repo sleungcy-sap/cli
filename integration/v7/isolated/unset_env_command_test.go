@@ -3,6 +3,8 @@ package isolated
 import (
 	"fmt"
 
+	. "code.cloudfoundry.org/cli/cf/util/testhelpers/matchers"
+
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,6 +29,12 @@ var _ = Describe("unset-env command", func() {
 
 	Describe("help", func() {
 		When("--help flag is set", func() {
+			It("appears in cf help -a", func() {
+				session := helpers.CF("help", "-a")
+				Eventually(session).Should(Exit(0))
+				Expect(session).To(HaveCommandInCategoryWithDescription("unset-env", "APPS", "Remove an env variable from an app"))
+			})
+
 			It("displays command usage to output", func() {
 				session := helpers.CF("unset-env", "--help")
 
@@ -37,7 +45,7 @@ var _ = Describe("unset-env command", func() {
 				Eventually(session).Should(Say("ALIAS:"))
 				Eventually(session).Should(Say("ue"))
 				Eventually(session).Should(Say("SEE ALSO:"))
-				Eventually(session).Should(Say("env, set-env, v3-apps, v3-restart, v3-stage"))
+				Eventually(session).Should(Say("apps, env, restart, set-env, stage"))
 				Eventually(session).Should(Exit(0))
 			})
 		})
@@ -92,7 +100,7 @@ var _ = Describe("unset-env command", func() {
 		When("the app exists", func() {
 			BeforeEach(func() {
 				helpers.WithHelloWorldApp(func(appDir string) {
-					Eventually(helpers.CF("push", appName, "-p", appDir)).Should(Exit(0))
+					Eventually(helpers.CF("push", appName, "-p", appDir, "--no-start")).Should(Exit(0))
 				})
 			})
 
@@ -117,7 +125,7 @@ var _ = Describe("unset-env command", func() {
 
 					Eventually(session).Should(Say(`Removing env variable %s from app %s in org %s / space %s as %s\.\.\.`, envVarName, appName, orgName, spaceName, userName))
 					Eventually(session).Should(Say("OK"))
-					Eventually(session).Should(Say(`TIP: Use 'cf v3-stage %s' to ensure your env variable changes take effect\.`, appName))
+					Eventually(session).Should(Say(`TIP: Use 'cf restage %s' to ensure your env variable changes take effect\.`, appName))
 
 					session = helpers.CF("curl", fmt.Sprintf("v3/apps/%s/environment_variables", helpers.AppGUID(appName)))
 					Eventually(session).ShouldNot(Say(`"%s"`, envVarName))

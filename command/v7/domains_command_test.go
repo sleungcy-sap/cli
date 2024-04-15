@@ -1,8 +1,10 @@
 package v7_test
 
 import (
-	"code.cloudfoundry.org/cli/types"
 	"errors"
+
+	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/types"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/actor/v7action"
@@ -23,7 +25,7 @@ var _ = Describe("domains Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeDomainsActor
+		fakeActor       *v7fakes.FakeActor
 		executeErr      error
 		args            []string
 		binaryName      string
@@ -39,21 +41,23 @@ var _ = Describe("domains Command", func() {
 		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeDomainsActor)
+		fakeActor = new(v7fakes.FakeActor)
 		args = nil
 
 		cmd = DomainsCommand{
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
+			BaseCommand: BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		binaryName = "faceman"
 		fakeConfig.BinaryNameReturns(binaryName)
 	})
 
-	Context("When the environment is not setup correctly", func() {
+	When("the environment is not setup correctly", func() {
 		When("checking target fails", func() {
 			BeforeEach(func() {
 				fakeSharedActor.CheckTargetReturns(actionerror.NotLoggedInError{BinaryName: binaryName})
@@ -85,7 +89,7 @@ var _ = Describe("domains Command", func() {
 
 	Context("When the environment is setup correctly", func() {
 		BeforeEach(func() {
-			fakeConfig.CurrentUserReturns(configv3.User{Name: "banana"}, nil)
+			fakeActor.GetCurrentUserReturns(configv3.User{Name: "banana"}, nil)
 		})
 
 		When("DomainsActor returns an error", func() {
@@ -107,13 +111,13 @@ var _ = Describe("domains Command", func() {
 		})
 
 		When("GetDomains returns some domains", func() {
-			var domains []v7action.Domain
+			var domains []resources.Domain
 
 			BeforeEach(func() {
-				domains = []v7action.Domain{
-					{Name: "domain1", GUID: "domain-guid-1", Internal: types.NullBool{IsSet: true, Value: true}},
-					{Name: "domain3", GUID: "domain-guid-3", Internal: types.NullBool{IsSet: false, Value: false}, OrganizationGUID: "owning-org-guid"},
-					{Name: "domain2", GUID: "domain-guid-2", Internal: types.NullBool{IsSet: true, Value: false}},
+				domains = []resources.Domain{
+					{Name: "domain1", GUID: "domain-guid-1", Internal: types.NullBool{IsSet: true, Value: true}, Protocols: []string{"http"}},
+					{Name: "domain3", GUID: "domain-guid-3", Internal: types.NullBool{IsSet: false, Value: false}, Protocols: []string{"tcp"}, OrganizationGUID: "owning-org-guid"},
+					{Name: "domain2", GUID: "domain-guid-2", Internal: types.NullBool{IsSet: true, Value: false}, Protocols: []string{"http", "tcp"}},
 				}
 
 				fakeActor.GetOrganizationDomainsReturns(
@@ -141,9 +145,9 @@ var _ = Describe("domains Command", func() {
 			It("prints the list of domains in alphabetical order", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 				Expect(testUI.Out).To(Say(tableHeaders))
-				Expect(testUI.Out).To(Say(`domain1\s+shared\s+true`))
-				Expect(testUI.Out).To(Say(`domain2\s+shared`))
-				Expect(testUI.Out).To(Say(`domain3\s+private`))
+				Expect(testUI.Out).To(Say(`domain1\s+shared\s+true\s+http`))
+				Expect(testUI.Out).To(Say(`domain2\s+shared\s+http,tcp`))
+				Expect(testUI.Out).To(Say(`domain3\s+private\s+tcp`))
 			})
 
 			It("prints the flavor text", func() {
@@ -152,10 +156,10 @@ var _ = Describe("domains Command", func() {
 		})
 
 		When("GetDomains returns no domains", func() {
-			var domains []v7action.Domain
+			var domains []resources.Domain
 
 			BeforeEach(func() {
-				domains = []v7action.Domain{}
+				domains = []resources.Domain{}
 
 				fakeActor.GetOrganizationDomainsReturns(
 					domains,
@@ -190,6 +194,17 @@ var _ = Describe("domains Command", func() {
 
 			It("prints the flavor text", func() {
 				Expect(testUI.Out).To(Say("Getting domains in org some-org as banana...\n\n"))
+			})
+		})
+		Context("when a labels flag is set", func() {
+			BeforeEach(func() {
+				cmd.Labels = "fish=moose"
+			})
+
+			It("passes the flag to the API", func() {
+				Expect(fakeActor.GetOrganizationDomainsCallCount()).To(Equal(1))
+				_, labelSelector := fakeActor.GetOrganizationDomainsArgsForCall(0)
+				Expect(labelSelector).To(Equal("fish=moose"))
 			})
 		})
 	})

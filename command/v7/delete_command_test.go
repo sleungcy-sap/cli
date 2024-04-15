@@ -22,7 +22,7 @@ var _ = Describe("delete Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeDeleteActor
+		fakeActor       *v7fakes.FakeActor
 		input           *Buffer
 		binaryName      string
 		executeErr      error
@@ -34,7 +34,7 @@ var _ = Describe("delete Command", func() {
 		testUI = ui.NewTestUI(input, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeDeleteActor)
+		fakeActor = new(v7fakes.FakeActor)
 
 		binaryName = "faceman"
 		fakeConfig.BinaryNameReturns(binaryName)
@@ -43,10 +43,12 @@ var _ = Describe("delete Command", func() {
 		cmd = DeleteCommand{
 			RequiredArgs: flag.AppName{AppName: app},
 
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
+			BaseCommand: BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		fakeConfig.TargetedOrganizationReturns(configv3.Organization{
@@ -59,7 +61,7 @@ var _ = Describe("delete Command", func() {
 			GUID: "some-space-guid",
 		})
 
-		fakeConfig.CurrentUserReturns(configv3.User{Name: "steve"}, nil)
+		fakeActor.GetCurrentUserReturns(configv3.User{Name: "steve"}, nil)
 	})
 
 	JustBeforeEach(func() {
@@ -69,11 +71,44 @@ var _ = Describe("delete Command", func() {
 	When("the -r flag is provided", func() {
 		BeforeEach(func() {
 			cmd.DeleteMappedRoutes = true
-			cmd.Force = true
+			cmd.Force = false
+			_, err := input.Write([]byte("y\n"))
+			Expect(err).ToNot(HaveOccurred())
+
+			fakeActor.DeleteApplicationByNameAndSpaceReturns(v7action.Warnings{"some-warning"}, nil)
 		})
 
-		It("prints a warning", func() {
-			Expect(testUI.Err).To(Say("-r flag not implemented - the mapped routes will not be deleted"))
+		It("asks for a special prompt about deleting associated routes", func() {
+			Expect(executeErr).ToNot(HaveOccurred())
+
+			Expect(testUI.Err).To(Say("some-warning"))
+			Expect(testUI.Out).To(Say(`Deleting the app and associated routes will make apps with this route, in any org, unreachable\.`))
+			Expect(testUI.Out).To(Say(`Deleting app some-app in org some-org / space some-space as steve\.\.\.`))
+			Expect(testUI.Out).To(Say("OK"))
+			Expect(testUI.Out).NotTo(Say(`App 'some-app' does not exist\.`))
+		})
+
+		It("deletes application and mapped routes", func() {
+			actualName, actualSpace, deleteMappedRoutes := fakeActor.DeleteApplicationByNameAndSpaceArgsForCall(0)
+			Expect(actualName).To(Equal(app))
+			Expect(actualSpace).To(Equal(fakeConfig.TargetedSpace().GUID))
+			Expect(deleteMappedRoutes).To(BeTrue())
+		})
+
+		When("the route is mapped to a different app", func() {
+			BeforeEach(func() {
+				fakeActor.DeleteApplicationByNameAndSpaceReturns(v7action.Warnings{"some-warning"}, actionerror.RouteBoundToMultipleAppsError{})
+			})
+
+			It("returns the error", func() {
+				Expect(executeErr).To(MatchError(actionerror.RouteBoundToMultipleAppsError{}))
+			})
+
+			It("defers showing a tip", func() {
+				Expect(testUI.Out).NotTo(Say("TIP"))
+				testUI.FlushDeferred()
+				Expect(testUI.Out).To(Say(`\n\nTIP: Run 'cf delete some-app' to delete the app and 'cf delete-route' to delete the route\.`))
+			})
 		})
 	})
 
@@ -97,7 +132,7 @@ var _ = Describe("delete Command", func() {
 
 		BeforeEach(func() {
 			expectedErr = errors.New("some current user error")
-			fakeConfig.CurrentUserReturns(configv3.User{}, expectedErr)
+			fakeActor.GetCurrentUserReturns(configv3.User{}, expectedErr)
 		})
 
 		It("return an error", func() {
@@ -119,9 +154,10 @@ var _ = Describe("delete Command", func() {
 			})
 
 			It("delegates to the Actor", func() {
-				actualName, actualSpace := fakeActor.DeleteApplicationByNameAndSpaceArgsForCall(0)
+				actualName, actualSpace, deleteMappedRoutes := fakeActor.DeleteApplicationByNameAndSpaceArgsForCall(0)
 				Expect(actualName).To(Equal(app))
 				Expect(actualSpace).To(Equal(fakeConfig.TargetedSpace().GUID))
+				Expect(deleteMappedRoutes).To(BeFalse())
 			})
 
 			It("deletes the app", func() {
@@ -130,7 +166,7 @@ var _ = Describe("delete Command", func() {
 				Expect(testUI.Err).To(Say("some-warning"))
 				Expect(testUI.Out).To(Say(`Deleting app some-app in org some-org / space some-space as steve\.\.\.`))
 				Expect(testUI.Out).To(Say("OK"))
-				Expect(testUI.Out).NotTo(Say("App some-app does not exist"))
+				Expect(testUI.Out).NotTo(Say(`App 'some-app' does not exist\.`))
 			})
 		})
 
@@ -143,7 +179,7 @@ var _ = Describe("delete Command", func() {
 			It("cancels the delete", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 
-				Expect(testUI.Out).To(Say("Delete cancelled"))
+				Expect(testUI.Out).To(Say(`App 'some-app' has not been deleted\.`))
 				Expect(fakeActor.DeleteApplicationByNameAndSpaceCallCount()).To(Equal(0))
 			})
 		})
@@ -157,7 +193,7 @@ var _ = Describe("delete Command", func() {
 			It("cancels the delete", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 
-				Expect(testUI.Out).To(Say("Delete cancelled"))
+				Expect(testUI.Out).To(Say(`App 'some-app' has not been deleted\.`))
 				Expect(fakeActor.DeleteApplicationByNameAndSpaceCallCount()).To(Equal(0))
 			})
 		})
@@ -191,7 +227,7 @@ var _ = Describe("delete Command", func() {
 					fakeActor.DeleteApplicationByNameAndSpaceReturns(v7action.Warnings{"some-warning"}, errors.New("some-error"))
 				})
 
-				It("displays all warnings, and returns the erorr", func() {
+				It("displays all warnings, and returns the error", func() {
 					Expect(testUI.Err).To(Say("some-warning"))
 					Expect(testUI.Out).To(Say(`Deleting app some-app in org some-org / space some-space as steve\.\.\.`))
 					Expect(testUI.Out).ToNot(Say("OK"))
@@ -210,7 +246,7 @@ var _ = Describe("delete Command", func() {
 
 				Expect(testUI.Err).To(Say("some-warning"))
 				Expect(testUI.Out).To(Say(`Deleting app some-app in org some-org / space some-space as steve\.\.\.`))
-				Expect(testUI.Out).To(Say("App some-app does not exist"))
+				Expect(testUI.Err).To(Say(`App 'some-app' does not exist\.`))
 				Expect(testUI.Out).To(Say("OK"))
 			})
 		})
@@ -226,7 +262,7 @@ var _ = Describe("delete Command", func() {
 				Expect(testUI.Err).To(Say("some-warning"))
 				Expect(testUI.Out).To(Say(`Deleting app some-app in org some-org / space some-space as steve\.\.\.`))
 				Expect(testUI.Out).To(Say("OK"))
-				Expect(testUI.Out).NotTo(Say("App some-app does not exist"))
+				Expect(testUI.Err).NotTo(Say(`App 'some-app' does not exist\.`))
 			})
 		})
 	})

@@ -10,28 +10,25 @@ import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/util"
 )
 
-type Buildpack resources.Buildpack
 type JobURL ccv3.JobURL
 
-//go:generate counterfeiter . Downloader
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Downloader
 
 type Downloader interface {
 	Download(url string, tmpDirPath string) (string, error)
 }
 
-func (actor Actor) GetBuildpacks() ([]Buildpack, Warnings, error) {
-	ccv3Buildpacks, warnings, err := actor.CloudControllerClient.GetBuildpacks(ccv3.Query{
-		Key:    ccv3.OrderBy,
-		Values: []string{ccv3.PositionOrder},
-	})
-
-	var buildpacks []Buildpack
-	for _, buildpack := range ccv3Buildpacks {
-		buildpacks = append(buildpacks, Buildpack(buildpack))
+func (actor Actor) GetBuildpacks(labelSelector string) ([]resources.Buildpack, Warnings, error) {
+	queries := []ccv3.Query{ccv3.Query{Key: ccv3.OrderBy, Values: []string{ccv3.PositionOrder}}}
+	if labelSelector != "" {
+		queries = append(queries, ccv3.Query{Key: ccv3.LabelSelectorFilter, Values: []string{labelSelector}})
 	}
+
+	buildpacks, warnings, err := actor.CloudControllerClient.GetBuildpacks(queries...)
 
 	return buildpacks, Warnings(warnings), err
 }
@@ -40,20 +37,20 @@ func (actor Actor) GetBuildpacks() ([]Buildpack, Warnings, error) {
 // stack. If `buildpackStack` is not specified, and there are multiple
 // buildpacks with the same name, it will return the one with no stack, if
 // present.
-func (actor Actor) GetBuildpackByNameAndStack(buildpackName string, buildpackStack string) (Buildpack, Warnings, error) {
+func (actor Actor) GetBuildpackByNameAndStack(buildpackName string, buildpackStack string) (resources.Buildpack, Warnings, error) {
 	var (
-		ccv3Buildpacks []resources.Buildpack
-		warnings       ccv3.Warnings
-		err            error
+		buildpacks []resources.Buildpack
+		warnings   ccv3.Warnings
+		err        error
 	)
 
 	if buildpackStack == "" {
-		ccv3Buildpacks, warnings, err = actor.CloudControllerClient.GetBuildpacks(ccv3.Query{
+		buildpacks, warnings, err = actor.CloudControllerClient.GetBuildpacks(ccv3.Query{
 			Key:    ccv3.NameFilter,
 			Values: []string{buildpackName},
 		})
 	} else {
-		ccv3Buildpacks, warnings, err = actor.CloudControllerClient.GetBuildpacks(
+		buildpacks, warnings, err = actor.CloudControllerClient.GetBuildpacks(
 			ccv3.Query{
 				Key:    ccv3.NameFilter,
 				Values: []string{buildpackName},
@@ -66,40 +63,38 @@ func (actor Actor) GetBuildpackByNameAndStack(buildpackName string, buildpackSta
 	}
 
 	if err != nil {
-		return Buildpack{}, Warnings(warnings), err
+		return resources.Buildpack{}, Warnings(warnings), err
 	}
 
-	if len(ccv3Buildpacks) == 0 {
-		return Buildpack{}, Warnings(warnings), actionerror.BuildpackNotFoundError{BuildpackName: buildpackName, StackName: buildpackStack}
+	if len(buildpacks) == 0 {
+		return resources.Buildpack{}, Warnings(warnings), actionerror.BuildpackNotFoundError{BuildpackName: buildpackName, StackName: buildpackStack}
 	}
 
-	if len(ccv3Buildpacks) > 1 {
-		for _, buildpack := range ccv3Buildpacks {
+	if len(buildpacks) > 1 {
+		for _, buildpack := range buildpacks {
 			if buildpack.Stack == "" {
-				return Buildpack(buildpack), Warnings(warnings), nil
+				return buildpack, Warnings(warnings), nil
 			}
 		}
-		return Buildpack{}, Warnings(warnings), actionerror.MultipleBuildpacksFoundError{BuildpackName: buildpackName}
+		return resources.Buildpack{}, Warnings(warnings), actionerror.MultipleBuildpacksFoundError{BuildpackName: buildpackName}
 	}
 
-	return Buildpack(ccv3Buildpacks[0]), Warnings(warnings), err
+	return buildpacks[0], Warnings(warnings), err
 }
 
-func (actor Actor) CreateBuildpack(buildpack Buildpack) (Buildpack, Warnings, error) {
-	ccv3Buildpack, warnings, err := actor.CloudControllerClient.CreateBuildpack(
-		resources.Buildpack(buildpack),
-	)
+func (actor Actor) CreateBuildpack(buildpack resources.Buildpack) (resources.Buildpack, Warnings, error) {
+	buildpack, warnings, err := actor.CloudControllerClient.CreateBuildpack(buildpack)
 
-	return Buildpack(ccv3Buildpack), Warnings(warnings), err
+	return buildpack, Warnings(warnings), err
 }
 
-func (actor Actor) UpdateBuildpackByNameAndStack(buildpackName string, buildpackStack string, buildpack Buildpack) (Buildpack, Warnings, error) {
+func (actor Actor) UpdateBuildpackByNameAndStack(buildpackName string, buildpackStack string, buildpack resources.Buildpack) (resources.Buildpack, Warnings, error) {
 	var warnings Warnings
 	foundBuildpack, getWarnings, err := actor.GetBuildpackByNameAndStack(buildpackName, buildpackStack)
 	warnings = append(warnings, getWarnings...)
 
 	if err != nil {
-		return Buildpack{}, warnings, err
+		return resources.Buildpack{}, warnings, err
 	}
 
 	buildpack.GUID = foundBuildpack.GUID
@@ -107,10 +102,10 @@ func (actor Actor) UpdateBuildpackByNameAndStack(buildpackName string, buildpack
 	updatedBuildpack, updateWarnings, err := actor.CloudControllerClient.UpdateBuildpack(resources.Buildpack(buildpack))
 	warnings = append(warnings, updateWarnings...)
 	if err != nil {
-		return Buildpack{}, warnings, err
+		return resources.Buildpack{}, warnings, err
 	}
 
-	return Buildpack(updatedBuildpack), warnings, nil
+	return updatedBuildpack, warnings, nil
 }
 
 func (actor Actor) UploadBuildpack(guid string, pathToBuildpackBits string, progressBar SimpleProgressBar) (ccv3.JobURL, Warnings, error) {
@@ -118,6 +113,8 @@ func (actor Actor) UploadBuildpack(guid string, pathToBuildpackBits string, prog
 	if err != nil {
 		return "", Warnings{}, err
 	}
+
+	defer progressBar.Terminate()
 
 	jobURL, warnings, err := actor.CloudControllerClient.UploadBuildpack(guid, pathToBuildpackBits, wrappedReader, size)
 	if err != nil {
@@ -127,9 +124,6 @@ func (actor Actor) UploadBuildpack(guid string, pathToBuildpackBits string, prog
 		}
 		return "", Warnings(warnings), err
 	}
-
-	// TODO: Should we defer the terminate instead?
-	progressBar.Terminate()
 
 	return jobURL, Warnings(warnings), nil
 }

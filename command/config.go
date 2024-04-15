@@ -6,13 +6,14 @@ import (
 	"code.cloudfoundry.org/cli/util/configv3"
 )
 
-//go:generate counterfeiter . Config
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Config
 
 // Config a way of getting basic CF configuration
 type Config interface {
 	AccessToken() string
 	AddPlugin(configv3.Plugin)
 	AddPluginRepository(name string, url string)
+	AuthorizationEndpoint() string
 	APIVersion() string
 	BinaryName() string
 	BinaryVersion() string
@@ -24,14 +25,16 @@ type Config interface {
 	DialTimeout() time.Duration
 	DockerPassword() string
 	Experimental() bool
-	ExperimentalLogin() bool
 	GetPlugin(pluginName string) (configv3.Plugin, bool)
 	GetPluginCaseInsensitive(pluginName string) (configv3.Plugin, bool)
 	HasTargetedOrganization() bool
 	HasTargetedSpace() bool
+	IsTTY() bool
 	Locale() string
+	LogCacheEndpoint() string
 	MinCLIVersion() string
 	NOAARequestRetryCount() int
+	NetworkPolicyV1Endpoint() string
 	OverallPollingTimeout() time.Duration
 	PluginHome() string
 	PluginRepositories() []configv3.PluginRepository
@@ -41,14 +44,18 @@ type Config interface {
 	RemovePlugin(string)
 	RequestRetryCount() int
 	RoutingEndpoint() string
+	SetAsyncTimeout(timeout int)
 	SetAccessToken(token string)
+	SetColorEnabled(enabled string)
+	SetLocale(locale string)
 	SetMinCLIVersion(version string)
 	SetOrganizationInformation(guid string, name string)
 	SetRefreshToken(token string)
 	SetSpaceInformation(guid string, name string, allowSSH bool)
 	V7SetSpaceInformation(guid string, name string)
-	SetTargetInformation(api string, apiVersion string, auth string, minCLIVersion string, doppler string, routing string, skipSSLValidation bool)
+	SetTargetInformation(args configv3.TargetInformationArgs)
 	SetTokenInformation(accessToken string, refreshToken string, sshOAuthClient string)
+	SetTrace(trace string)
 	SetUAAClientCredentials(client string, clientSecret string)
 	SetUAAEndpoint(uaaEndpoint string)
 	SetUAAGrantType(uaaGrantType string)
@@ -61,7 +68,9 @@ type Config interface {
 	TargetedOrganization() configv3.Organization
 	TargetedOrganizationName() string
 	TargetedSpace() configv3.Space
+	TerminalWidth() int
 	UAADisableKeepAlives() bool
+	UAAEndpoint() string
 	UAAGrantType() string
 	UAAOAuthClient() string
 	UAAOAuthClientSecret() string
@@ -70,4 +79,7 @@ type Config interface {
 	UnsetUserInformation()
 	Verbose() (bool, []string)
 	WritePluginConfig() error
+	WriteConfig() error
+	IsCFOnK8s() bool
+	SetKubernetesAuthInfo(authInfo string)
 }

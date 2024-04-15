@@ -3,6 +3,8 @@ package plugin
 import (
 	"fmt"
 
+	"code.cloudfoundry.org/cli/integration/helpers/servicebrokerstub"
+
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -33,7 +35,7 @@ var _ = Describe("plugin API", func() {
 
 	Describe("ApiVersion", func() {
 		It("returns the API version", func() {
-			confirmTestPluginOutput("ApiVersion", `2\.\d+\.\d+`)
+			confirmTestPluginOutput("ApiVersion", `[23]\.\d+\.\d+`)
 		})
 	})
 
@@ -143,25 +145,21 @@ var _ = Describe("plugin API", func() {
 		var (
 			serviceInstance1 string
 			serviceInstance2 string
-			broker           helpers.ServiceBroker
+			broker           *servicebrokerstub.ServiceBrokerStub
 		)
 		BeforeEach(func() {
 			createTargetedOrgAndSpace()
-			domain := helpers.DefaultSharedDomain()
-			service := helpers.PrefixedRandomName("SERVICE")
-			servicePlan := helpers.PrefixedRandomName("SERVICE-PLAN")
 			serviceInstance1 = helpers.PrefixedRandomName("SI1")
 			serviceInstance2 = helpers.PrefixedRandomName("SI2")
 
-			broker = helpers.CreateBroker(domain, service, servicePlan)
+			broker = servicebrokerstub.EnableServiceAccess()
 
-			Eventually(helpers.CF("enable-service-access", service)).Should(Exit(0))
-			Eventually(helpers.CF("create-service", service, servicePlan, serviceInstance1)).Should(Exit(0))
-			Eventually(helpers.CF("create-service", service, servicePlan, serviceInstance2)).Should(Exit(0))
+			Eventually(helpers.CF("create-service", broker.FirstServiceOfferingName(), broker.FirstServicePlanName(), serviceInstance1)).Should(Exit(0))
+			Eventually(helpers.CF("create-service", broker.FirstServiceOfferingName(), broker.FirstServicePlanName(), serviceInstance2)).Should(Exit(0))
 		})
 
 		AfterEach(func() {
-			broker.Destroy()
+			broker.Forget()
 		})
 
 		It("GetService gets the given service instance and GetServices returns a list of services instances", func() {
@@ -196,8 +194,8 @@ var _ = Describe("plugin API", func() {
 
 	Describe("GetSpaceUsers", func() {
 		It("returns the space users", func() {
-			org, space := createTargetedOrgAndSpace()
 			username, _ := helpers.GetCredentials()
+			org, space := createTargetedOrgAndSpace()
 			session := helpers.CF("GetSpaceUsers", org, space)
 			Eventually(session).Should(Say(username))
 			Eventually(session).Should(Exit(0))
@@ -248,6 +246,7 @@ var _ = Describe("plugin API", func() {
 
 	Describe("UserEmail", func() {
 		It("gets the current user's Email", func() {
+			helpers.SkipIfClientCredentialsTestMode()
 			username, _ := helpers.GetCredentials()
 			confirmTestPluginOutput("UserEmail", username)
 		})
@@ -255,6 +254,7 @@ var _ = Describe("plugin API", func() {
 
 	Describe("UserGuid", func() {
 		It("gets the current user's GUID", func() {
+			helpers.SkipIfClientCredentialsTestMode()
 			confirmTestPluginOutput("UserGuid", `[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+`)
 		})
 	})

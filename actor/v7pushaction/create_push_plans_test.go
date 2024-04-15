@@ -1,10 +1,13 @@
 package v7pushaction_test
 
 import (
+	"errors"
 	"fmt"
 
+	"code.cloudfoundry.org/cli/actor/v7action"
 	. "code.cloudfoundry.org/cli/actor/v7pushaction"
 	"code.cloudfoundry.org/cli/actor/v7pushaction/v7pushactionfakes"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/util/manifestparser"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,41 +15,47 @@ import (
 
 var _ = Describe("CreatePushPlans", func() {
 	var (
-		pushActor *Actor
+		pushActor   *Actor
+		fakeV7Actor *v7pushactionfakes.FakeV7Actor
 
-		appNameArg         string
-		spaceGUID          string
-		orgGUID            string
-		fakeManifestParser *v7pushactionfakes.FakeManifestParser
-		flagOverrides      FlagOverrides
+		manifest      manifestparser.Manifest
+		spaceGUID     string
+		orgGUID       string
+		flagOverrides FlagOverrides
 
 		pushPlans  []PushPlan
 		executeErr error
+		warnings   v7action.Warnings
 
 		testUpdatePlanCount int
 	)
 
-	testUpdatePlan := func(pushState PushPlan, overrides FlagOverrides, manifestApp manifestparser.Application) (PushPlan, error) {
+	testUpdatePlan := func(pushState PushPlan, overrides FlagOverrides) (PushPlan, error) {
 		testUpdatePlanCount += 1
-		pushState.Application.Name = manifestApp.Name
 		return pushState, nil
 	}
 
 	BeforeEach(func() {
-		pushActor, _, _, _ = getTestPushActor()
-		pushActor.PushPlanFuncs = []UpdatePushPlanFunc{testUpdatePlan, testUpdatePlan}
+		pushActor, fakeV7Actor, _ = getTestPushActor()
+		pushActor.PreparePushPlanSequence = []UpdatePushPlanFunc{testUpdatePlan, testUpdatePlan}
 
-		appNameArg = "my-app"
+		manifest = manifestparser.Manifest{
+			Applications: []manifestparser.Application{
+				{Name: "name-1", Path: "path1"},
+				{Name: "name-2", Path: "path2", Docker: &manifestparser.Docker{Image: "image", Username: "uname"}},
+			},
+		}
 		orgGUID = "org"
 		spaceGUID = "space"
-		flagOverrides = FlagOverrides{}
-		fakeManifestParser = new(v7pushactionfakes.FakeManifestParser)
+		flagOverrides = FlagOverrides{
+			DockerPassword: "passwd",
+		}
 
 		testUpdatePlanCount = 0
 	})
 
 	JustBeforeEach(func() {
-		pushPlans, executeErr = pushActor.CreatePushPlans(appNameArg, spaceGUID, orgGUID, fakeManifestParser, flagOverrides)
+		pushPlans, warnings, executeErr = pushActor.CreatePushPlans(spaceGUID, orgGUID, manifest, flagOverrides)
 	})
 
 	AssertNoExecuteErr := func() {
@@ -61,89 +70,65 @@ var _ = Describe("CreatePushPlans", func() {
 		})
 	}
 
-	Describe("Manifest", func() {
-		When("There are multiple apps", func() {
-			BeforeEach(func() {
-				fakeManifestParser.AppsReturns([]manifestparser.Application{
-					{
-						ApplicationModel: manifestparser.ApplicationModel{
-							Name: "my-app",
-						},
-						FullUnmarshalledApplication: nil,
-					},
-					{
-						ApplicationModel: manifestparser.ApplicationModel{
-							Name: "spencers-app",
-						},
-						FullUnmarshalledApplication: nil,
-					},
-				}, nil)
+	It("delegates to the V7actor to gets the apps", func() {
+		Expect(fakeV7Actor.GetApplicationsByNamesAndSpaceCallCount()).To(Equal(1))
 
-				fakeManifestParser.ContainsManifestReturns(true)
+		actualAppNames, actualSpaceGUID := fakeV7Actor.GetApplicationsByNamesAndSpaceArgsForCall(0)
+		Expect(actualAppNames).To(ConsistOf("name-1", "name-2"))
+		Expect(actualSpaceGUID).To(Equal(spaceGUID))
+	})
 
-				appNameArg = ""
-			})
-
-			AssertNoExecuteErr()
-			AssertPushPlanLength(2)
-
-			It("it creates pushPlans based on the apps in the manifest", func() {
-				Expect(pushPlans[0].Application.Name).To(Equal("my-app"))
-				Expect(pushPlans[1].Application.Name).To(Equal("spencers-app"))
-			})
+	When("getting the apps fails", func() {
+		BeforeEach(func() {
+			fakeV7Actor.GetApplicationsByNamesAndSpaceReturns(nil, v7action.Warnings{"get-apps-warning"}, errors.New("get-apps-error"))
 		})
 
-		When("There is an appName specified", func() {
-			When("And that appName is NOT present in the manifest", func() {
-				BeforeEach(func() {
-					fakeManifestParser.AppsReturns(nil, manifestparser.AppNotInManifestError{Name: appNameArg})
-
-					fakeManifestParser.ContainsManifestReturns(true)
-
-					appNameArg = "my-app"
-				})
-
-				It("it returns an AppNotInManifestError", func() {
-					Expect(executeErr).To(MatchError(manifestparser.AppNotInManifestError{Name: appNameArg}))
-				})
-			})
-			When("And that appName is present in the manifest", func() {
-				BeforeEach(func() {
-					fakeManifestParser.AppsReturns([]manifestparser.Application{
-						{
-							ApplicationModel: manifestparser.ApplicationModel{
-								Name: "my-app",
-							},
-							FullUnmarshalledApplication: nil,
-						},
-					}, nil)
-
-					fakeManifestParser.ContainsManifestReturns(true)
-
-					appNameArg = "my-app"
-					flagOverrides.DockerImage = "image"
-				})
-
-				AssertNoExecuteErr()
-				AssertPushPlanLength(1)
-
-				It("it creates pushPlans based on the named app in the manifest", func() {
-					Expect(pushPlans[0].Application.Name).To(Equal("my-app"))
-				})
-			})
+		It("returns errors and warnings", func() {
+			Expect(executeErr).To(MatchError("get-apps-error"))
+			Expect(warnings).To(ConsistOf("get-apps-warning"))
 		})
 	})
 
-	Describe("Org and Space GUID", func() {
-		It("creates pushPlans with org and space GUIDs", func() {
+	When("getting the apps succeeds", func() {
+		BeforeEach(func() {
+			fakeV7Actor.GetApplicationsByNamesAndSpaceReturns(
+				[]resources.Application{
+					{Name: "name-1", GUID: "app-guid-1"},
+					{Name: "name-2", GUID: "app-guid-2"},
+				},
+				v7action.Warnings{"get-apps-warning"},
+				nil,
+			)
+		})
+		It("runs through all the update push plan functions", func() {
+			Expect(testUpdatePlanCount).To(Equal(4))
+		})
+
+		AssertNoExecuteErr()
+		AssertPushPlanLength(2)
+
+		It("returns warnings", func() {
+			Expect(warnings).To(ConsistOf("get-apps-warning"))
+		})
+
+		It("it creates pushPlans based on the apps in the manifest", func() {
+			Expect(pushPlans[0].Application.Name).To(Equal("name-1"))
+			Expect(pushPlans[0].Application.GUID).To(Equal("app-guid-1"))
 			Expect(pushPlans[0].SpaceGUID).To(Equal(spaceGUID))
 			Expect(pushPlans[0].OrgGUID).To(Equal(orgGUID))
+			Expect(pushPlans[0].DockerImageCredentials.Path).To(Equal(""))
+			Expect(pushPlans[0].DockerImageCredentials.Username).To(Equal(""))
+			Expect(pushPlans[0].DockerImageCredentials.Password).To(Equal(""))
+			Expect(pushPlans[0].BitsPath).To(Equal("path1"))
+			Expect(pushPlans[1].Application.Name).To(Equal("name-2"))
+			Expect(pushPlans[1].Application.GUID).To(Equal("app-guid-2"))
+			Expect(pushPlans[1].SpaceGUID).To(Equal(spaceGUID))
+			Expect(pushPlans[1].OrgGUID).To(Equal(orgGUID))
+			Expect(pushPlans[1].DockerImageCredentials.Path).To(Equal("image"))
+			Expect(pushPlans[1].DockerImageCredentials.Username).To(Equal("uname"))
+			Expect(pushPlans[1].DockerImageCredentials.Password).To(Equal("passwd"))
+			Expect(pushPlans[1].BitsPath).To(Equal("path2"))
 		})
-	})
 
-	Describe("update push plans", func() {
-		It("runs through all the update push plan functions", func() {
-			Expect(testUpdatePlanCount).To(Equal(2))
-		})
 	})
 })

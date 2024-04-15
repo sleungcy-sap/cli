@@ -1,7 +1,6 @@
 package cloudcontroller
 
 import (
-	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
 	"net"
@@ -10,7 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"errors"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
+	"code.cloudfoundry.org/cli/util"
 )
 
 // Config is for configuring a CloudControllerConnection.
@@ -30,10 +31,8 @@ type CloudControllerConnection struct {
 // configuration.
 func NewConnection(config Config) *CloudControllerConnection {
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: config.SkipSSLValidation,
-		},
-		Proxy: http.ProxyFromEnvironment,
+		TLSClientConfig: util.NewTLSConfig(nil, config.SkipSSLValidation),
+		Proxy:           http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
 			KeepAlive: 30 * time.Second,
 			Timeout:   config.DialTimeout,
@@ -56,6 +55,7 @@ func (connection *CloudControllerConnection) Make(request *Request, passedRespon
 	if err != nil {
 		return connection.processRequestErrors(request.Request, err)
 	}
+	defer response.Body.Close()
 
 	return connection.populateResponse(response, passedResponse)
 }
@@ -65,7 +65,6 @@ func (*CloudControllerConnection) handleStatusCodes(response *http.Response, pas
 		passedResponse.RawResponse = []byte("{}")
 	} else {
 		rawBytes, err := ioutil.ReadAll(response.Body)
-		defer response.Body.Close()
 		if err != nil {
 			return err
 		}
@@ -88,18 +87,17 @@ func (*CloudControllerConnection) handleStatusCodes(response *http.Response, pas
 // response and URI decodes them. The value can contain multiple warnings that
 // are comma separated.
 func (*CloudControllerConnection) handleWarnings(response *http.Response) ([]string, error) {
-	rawWarnings := response.Header.Get("X-Cf-Warnings")
-	if len(rawWarnings) == 0 {
-		return nil, nil
-	}
+	rawWarnings := response.Header["X-Cf-Warnings"]
 
 	var warnings []string
-	for _, rawWarning := range strings.Split(rawWarnings, ",") {
-		warning, err := url.QueryUnescape(rawWarning)
-		if err != nil {
-			return nil, err
+	for _, rawWarningsCommaSeparated := range rawWarnings {
+		for _, rawWarning := range strings.Split(rawWarningsCommaSeparated, ",") {
+			warning, err := url.QueryUnescape(rawWarning)
+			if err != nil {
+				return nil, err
+			}
+			warnings = append(warnings, strings.Trim(warning, " "))
 		}
-		warnings = append(warnings, strings.Trim(warning, " "))
 	}
 
 	return warnings, nil
@@ -136,18 +134,21 @@ func (connection *CloudControllerConnection) populateResponse(response *http.Res
 func (*CloudControllerConnection) processRequestErrors(request *http.Request, err error) error {
 	switch e := err.(type) {
 	case *url.Error:
-		switch urlErr := e.Err.(type) {
-		case x509.UnknownAuthorityError:
+		if errors.As(err, &x509.UnknownAuthorityError{}) {
 			return ccerror.UnverifiedServerError{
 				URL: request.URL.String(),
 			}
-		case x509.HostnameError:
-			return ccerror.SSLValidationHostnameError{
-				Message: urlErr.Error(),
-			}
-		default:
-			return ccerror.RequestError{Err: e}
 		}
+
+		hostnameError := x509.HostnameError{}
+	        if errors.As(err, &hostnameError) {
+			return ccerror.SSLValidationHostnameError{
+				Message: hostnameError.Error(),
+			}
+		}
+
+		return ccerror.RequestError{Err: e}
+
 	default:
 		return err
 	}

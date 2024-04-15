@@ -1,47 +1,20 @@
 package v7pushaction_test
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"errors"
 	"fmt"
 
 	"code.cloudfoundry.org/cli/actor/sharedaction"
-	"code.cloudfoundry.org/cli/actor/v7action"
 	. "code.cloudfoundry.org/cli/actor/v7pushaction"
 	"code.cloudfoundry.org/cli/actor/v7pushaction/v7pushactionfakes"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-func actualizedStreamsDrainedAndClosed(
-	configStream <-chan PushPlan,
-	eventStream <-chan Event,
-	warningsStream <-chan Warnings,
-	errorStream <-chan error,
-) bool {
-	var configStreamClosed, eventStreamClosed, warningsStreamClosed, errorStreamClosed bool
-	for {
-		select {
-		case _, ok := <-configStream:
-			if !ok {
-				configStreamClosed = true
-			}
-		case _, ok := <-eventStream:
-			if !ok {
-				eventStreamClosed = true
-			}
-		case _, ok := <-warningsStream:
-			if !ok {
-				warningsStreamClosed = true
-			}
-		case _, ok := <-errorStream:
-			if !ok {
-				errorStreamClosed = true
-			}
-		}
-		if configStreamClosed && eventStreamClosed && warningsStreamClosed && errorStreamClosed {
-			break
-		}
+func streamsDrainedAndClosed(eventStream <-chan *PushEvent) bool {
+	for range eventStream {
 	}
 	return true
 }
@@ -74,15 +47,12 @@ var _ = Describe("Actualize", func() {
 		warningChangeAppFuncCallCount    int
 		errorChangeAppFuncCallCount      int
 
-		planStream     <-chan PushPlan
-		eventStream    <-chan Event
-		warningsStream <-chan Warnings
-		errorStream    <-chan error
+		eventStream <-chan *PushEvent
 
 		expectedPlan PushPlan
 	)
 
-	successfulChangeAppFunc := func(pushPlan PushPlan, eStream chan<- Event, progressBar ProgressBar) (PushPlan, Warnings, error) {
+	successfulChangeAppFunc := func(pushPlan PushPlan, eStream chan<- *PushEvent, progressBar ProgressBar) (PushPlan, Warnings, error) {
 		defer GinkgoRecover()
 
 		Expect(pushPlan).To(Equal(plan))
@@ -94,20 +64,20 @@ var _ = Describe("Actualize", func() {
 		return pushPlan, nil, nil
 	}
 
-	warningChangeAppFunc := func(pushPlan PushPlan, eventStream chan<- Event, progressBar ProgressBar) (PushPlan, Warnings, error) {
+	warningChangeAppFunc := func(pushPlan PushPlan, eventStream chan<- *PushEvent, progressBar ProgressBar) (PushPlan, Warnings, error) {
 		pushPlan.Application.GUID = "warning-app-guid"
 		warningChangeAppFuncCallCount++
 		return pushPlan, Warnings{"warning-1", "warning-2"}, nil
 	}
 
-	errorChangeAppFunc := func(pushPlan PushPlan, eventStream chan<- Event, progressBar ProgressBar) (PushPlan, Warnings, error) {
+	errorChangeAppFunc := func(pushPlan PushPlan, eventStream chan<- *PushEvent, progressBar ProgressBar) (PushPlan, Warnings, error) {
 		pushPlan.Application.GUID = "error-app-guid"
 		errorChangeAppFuncCallCount++
 		return pushPlan, nil, errors.New("some error")
 	}
 
 	BeforeEach(func() {
-		actor, _, _, _ = getTestPushActor()
+		actor, _, _ = getTestPushActor()
 
 		successfulChangeAppFuncCallCount = 0
 		warningChangeAppFuncCallCount = 0
@@ -115,7 +85,7 @@ var _ = Describe("Actualize", func() {
 
 		fakeProgressBar = new(v7pushactionfakes.FakeProgressBar)
 		plan = PushPlan{
-			Application: v7action.Application{
+			Application: resources.Application{
 				Name: "some-app",
 				GUID: "some-app-guid",
 			},
@@ -126,34 +96,30 @@ var _ = Describe("Actualize", func() {
 	})
 
 	AfterEach(func() {
-		Eventually(actualizedStreamsDrainedAndClosed(planStream, eventStream, warningsStream, errorStream)).Should(BeTrue())
+		Eventually(streamsDrainedAndClosed(eventStream)).Should(BeTrue())
 	})
 
 	JustBeforeEach(func() {
-		planStream, eventStream, warningsStream, errorStream = actor.Actualize(plan, fakeProgressBar)
+		eventStream = actor.Actualize(plan, fakeProgressBar)
 	})
 
-	Describe("ChangeApplicationFuncs", func() {
-		When("none of the ChangeApplicationFuncs return errors", func() {
+	Describe("ChangeApplicationSequence", func() {
+		When("none of the ChangeApplicationSequence return errors", func() {
 			BeforeEach(func() {
-				actor.ChangeApplicationFuncs = []ChangeApplicationFunc{
-					successfulChangeAppFunc,
-					warningChangeAppFunc,
+				actor.ChangeApplicationSequence = func(plan PushPlan) []ChangeApplicationFunc {
+					return []ChangeApplicationFunc{
+						successfulChangeAppFunc,
+						warningChangeAppFunc,
+					}
 				}
-				actor.NoStartFuncs = nil
-				actor.StartFuncs = nil
 			})
 
-			It("iterates over the actor's ChangeApplicationFuncs", func() {
-				Eventually(warningsStream).Should(Receive(BeNil()))
+			It("iterates over the actor's ChangeApplicationSequence", func() {
 				expectedPlan.Application.GUID = "successful-app-guid"
-				Eventually(planStream).Should(Receive(Equal(expectedPlan)))
+				Eventually(eventStream).Should(Receive(Equal(&PushEvent{Plan: expectedPlan})))
 
-				Eventually(warningsStream).Should(Receive(ConsistOf("warning-1", "warning-2")))
 				expectedPlan.Application.GUID = "warning-app-guid"
-				Eventually(planStream).Should(Receive(Equal(expectedPlan)))
-
-				Eventually(eventStream).Should(Receive(Equal(Complete)))
+				Eventually(eventStream).Should(Receive(Equal(&PushEvent{Plan: expectedPlan, Warnings: Warnings{"warning-1", "warning-2"}})))
 
 				Expect(successfulChangeAppFuncCallCount).To(Equal(1))
 				Expect(warningChangeAppFuncCallCount).To(Equal(1))
@@ -161,80 +127,23 @@ var _ = Describe("Actualize", func() {
 			})
 		})
 
-		When("the ChangeApplicationFuncs return errors", func() {
+		When("the ChangeApplicationSequence return errors", func() {
 			BeforeEach(func() {
-				actor.ChangeApplicationFuncs = []ChangeApplicationFunc{
-					errorChangeAppFunc,
-					successfulChangeAppFunc,
+				actor.ChangeApplicationSequence = func(plan PushPlan) []ChangeApplicationFunc {
+					return []ChangeApplicationFunc{
+						errorChangeAppFunc,
+						successfulChangeAppFunc,
+					}
 				}
-				actor.NoStartFuncs = nil
-				actor.StartFuncs = nil
 			})
 
-			It("iterates over the actor's ChangeApplicationFuncs", func() {
-				Eventually(warningsStream).Should(Receive(BeNil()))
-				Eventually(errorStream).Should(Receive(MatchError("some error")))
+			It("iterates over the actor's ChangeApplicationSequence", func() {
+				expectedPlan.Application.GUID = "error-app-guid"
+				Eventually(eventStream).Should(Receive(Equal(&PushEvent{Plan: expectedPlan, Err: errors.New("some error")})))
 
 				Expect(successfulChangeAppFuncCallCount).To(Equal(0))
 				Expect(warningChangeAppFuncCallCount).To(Equal(0))
 				Expect(errorChangeAppFuncCallCount).To(Equal(1))
-
-				Consistently(eventStream).ShouldNot(Receive(Equal(Complete)))
-			})
-		})
-	})
-
-	Describe("no-start", func() {
-		When("it is true", func() {
-			BeforeEach(func() {
-				plan.NoStart = true
-				expectedPlan.NoStart = true
-
-				actor.ChangeApplicationFuncs = nil
-				actor.NoStartFuncs = []ChangeApplicationFunc{
-					successfulChangeAppFunc,
-				}
-				actor.StartFuncs = []ChangeApplicationFunc{
-					errorChangeAppFunc,
-				}
-			})
-
-			It("runs the actor's NoStartFuncs", func() {
-				Eventually(warningsStream).Should(Receive(BeNil()))
-				expectedPlan.Application.GUID = "successful-app-guid"
-				Eventually(planStream).Should(Receive(Equal(expectedPlan)))
-				Consistently(errorStream).ShouldNot(Receive())
-
-				Expect(successfulChangeAppFuncCallCount).To(Equal(1))
-				Expect(warningChangeAppFuncCallCount).To(Equal(0))
-				Expect(errorChangeAppFuncCallCount).To(Equal(0))
-
-				Eventually(eventStream).Should(Receive(Equal(Complete)))
-			})
-		})
-
-		When("it is false", func() {
-			BeforeEach(func() {
-				actor.ChangeApplicationFuncs = nil
-				actor.NoStartFuncs = []ChangeApplicationFunc{
-					errorChangeAppFunc,
-				}
-				actor.StartFuncs = []ChangeApplicationFunc{
-					successfulChangeAppFunc,
-				}
-			})
-
-			It("runs the actor's StartFuncs", func() {
-				Eventually(warningsStream).Should(Receive(BeNil()))
-				expectedPlan.Application.GUID = "successful-app-guid"
-				Eventually(planStream).Should(Receive(Equal(expectedPlan)))
-				Consistently(errorStream).ShouldNot(Receive())
-
-				Expect(successfulChangeAppFuncCallCount).To(Equal(1))
-				Expect(warningChangeAppFuncCallCount).To(Equal(0))
-				Expect(errorChangeAppFuncCallCount).To(Equal(0))
-
-				Eventually(eventStream).Should(Receive(Equal(Complete)))
 			})
 		})
 	})

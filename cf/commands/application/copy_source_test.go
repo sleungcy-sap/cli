@@ -203,7 +203,7 @@ var _ = Describe("CopySource", func() {
 				})
 
 				Describe("when a space is provided, but not an org", func() {
-					It("send the correct target appplication for the current org and target space", func() {
+					It("sends the correct target application for the current org and target space", func() {
 						space := models.Space{}
 						space.Name = "space-name"
 						space.GUID = "model-space-guid"
@@ -222,6 +222,21 @@ var _ = Describe("CopySource", func() {
 						))
 					})
 
+					It("reflects the capitalization of the actual space name", func() {
+						spaceRepo.FindByNameReturns(models.Space{
+							SpaceFields: models.SpaceFields{
+								Name: "SPACE-NAME",
+								GUID: "space-guid",
+							},
+						}, nil)
+
+						ok := runCommand("-s", "space-name", "source-app", "target-app")
+						Expect(ok).To(BeTrue())
+						Expect(ui.Outputs()).To(ContainSubstrings(
+							[]string{"Copying source from app source-app to target app target-app in org my-org / space SPACE-NAME as my-user..."},
+						))
+					})
+
 					Context("Failures", func() {
 						It("when we cannot find the provided space", func() {
 							spaceRepo.FindByNameReturns(models.Space{}, errors.New("Error finding space by name."))
@@ -236,7 +251,7 @@ var _ = Describe("CopySource", func() {
 				})
 
 				Describe("when an org and space name are passed as parameters", func() {
-					It("send the correct target application for the space and org", func() {
+					It("sends the correct target application for the space and org", func() {
 						orgRepo.FindByNameReturns(models.Organization{
 							Spaces: []models.SpaceFields{
 								{
@@ -265,6 +280,39 @@ var _ = Describe("CopySource", func() {
 							[]string{"Copying source from app source-app to target app target-app in org org-name / space space-name as my-user..."},
 							[]string{"Note: this may take some time"},
 							[]string{"OK"},
+						))
+					})
+					It("is case-insensitive for space name", func() {
+						orgRepo.FindByNameReturns(models.Organization{
+							Spaces: []models.SpaceFields{
+								{
+									Name: "SPACE-NAME",
+									GUID: "space-guid",
+								},
+							},
+						}, nil)
+
+						ok := runCommand("-o", "org-name", "-s", "space-name", "source-app", "target-app")
+						Expect(ok).To(BeTrue())
+						Expect(ui.Outputs()).ToNot(ContainSubstrings(
+							[]string{"FAILED"},
+						))
+					})
+
+					It("reflects the capitalization of the actual space name", func() {
+						orgRepo.FindByNameReturns(models.Organization{
+							Spaces: []models.SpaceFields{
+								{
+									Name: "SPACE-NAME",
+									GUID: "space-guid",
+								},
+							},
+						}, nil)
+
+						ok := runCommand("-o", "org-name", "-s", "space-name", "source-app", "target-app")
+						Expect(ok).To(BeTrue())
+						Expect(ui.Outputs()).To(ContainSubstrings(
+							[]string{"Copying source from app source-app to target app target-app in org org-name / space SPACE-NAME as my-user..."},
 						))
 					})
 

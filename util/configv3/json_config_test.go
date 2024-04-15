@@ -1,8 +1,10 @@
 package configv3_test
 
 import (
+	"fmt"
 	"time"
 
+	"code.cloudfoundry.org/cli/util/configv3"
 	. "code.cloudfoundry.org/cli/util/configv3"
 
 	. "github.com/onsi/ginkgo"
@@ -23,7 +25,7 @@ var _ = Describe("JSONConfig", func() {
 
 	Describe("AccessToken", func() {
 		BeforeEach(func() {
-			rawConfig := `{ "AccessToken":"some-token" }`
+			rawConfig := fmt.Sprintf(`{ "AccessToken":"some-token", "ConfigVersion": %d }`, CurrentConfigVersion)
 			setConfig(homeDir, rawConfig)
 
 			var err error
@@ -46,88 +48,6 @@ var _ = Describe("JSONConfig", func() {
 			}
 
 			Expect(config.APIVersion()).To(Equal("2.59.0"))
-		})
-	})
-
-	Describe("CurrentUser", func() {
-		When("using client credentials and the user token is set", func() {
-			It("returns the user", func() {
-				config = &Config{
-					ConfigFile: JSONConfig{
-						AccessToken: AccessTokenForClientUsers,
-					},
-				}
-
-				user, err := config.CurrentUser()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(user).To(Equal(User{
-					Name: "potato-face",
-				}))
-			})
-		})
-
-		When("using user/password and the user token is set", func() {
-			It("returns the user", func() {
-				config = &Config{
-					ConfigFile: JSONConfig{
-						AccessToken: AccessTokenForHumanUsers,
-					},
-				}
-
-				user, err := config.CurrentUser()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(user).To(Equal(User{
-					Name: "admin",
-				}))
-			})
-		})
-
-		When("the user token is blank", func() {
-			It("returns the user", func() {
-				config = new(Config)
-				user, err := config.CurrentUser()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(user).To(Equal(User{}))
-			})
-		})
-	})
-
-	Describe("CurrentUserName", func() {
-		When("using client credentials and the user token is set", func() {
-			It("returns the username", func() {
-				config = &Config{
-					ConfigFile: JSONConfig{
-						AccessToken: AccessTokenForClientUsers,
-					},
-				}
-
-				username, err := config.CurrentUserName()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(username).To(Equal("potato-face"))
-			})
-		})
-
-		When("using user/password and the user token is set", func() {
-			It("returns the username", func() {
-				config = &Config{
-					ConfigFile: JSONConfig{
-						AccessToken: AccessTokenForHumanUsers,
-					},
-				}
-
-				username, err := config.CurrentUserName()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(username).To(Equal("admin"))
-			})
-		})
-
-		When("the user token is blank", func() {
-			It("returns an empty string", func() {
-				config = new(Config)
-				username, err := config.CurrentUserName()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(username).To(BeEmpty())
-			})
 		})
 	})
 
@@ -180,7 +100,7 @@ var _ = Describe("JSONConfig", func() {
 	Describe("OverallPollingTimeout", func() {
 		When("AsyncTimeout is set in config", func() {
 			BeforeEach(func() {
-				rawConfig := `{ "AsyncTimeout":5 }`
+				rawConfig := fmt.Sprintf(`{ "AsyncTimeout":5, "ConfigVersion": %d }`, CurrentConfigVersion)
 				setConfig(homeDir, rawConfig)
 
 				var err error
@@ -197,7 +117,7 @@ var _ = Describe("JSONConfig", func() {
 
 	Describe("RefreshToken", func() {
 		BeforeEach(func() {
-			rawConfig := `{ "RefreshToken":"some-token" }`
+			rawConfig := fmt.Sprintf(`{ "RefreshToken":"some-token", "ConfigVersion": %d }`, CurrentConfigVersion)
 			setConfig(homeDir, rawConfig)
 
 			var err error
@@ -211,11 +131,41 @@ var _ = Describe("JSONConfig", func() {
 		})
 	})
 
+	Describe("SetAsyncTimeout", func() {
+		It("sets the async timeout", func() {
+			config = new(Config)
+			config.SetAsyncTimeout(2)
+			Expect(config.ConfigFile.AsyncTimeout).To(Equal(2))
+		})
+	})
+
+	Describe("SetColorEnabled", func() {
+		It("sets the color enabled field", func() {
+			config = new(Config)
+			config.SetColorEnabled("true")
+			Expect(config.ConfigFile.ColorEnabled).To(Equal("true"))
+		})
+	})
+
 	Describe("SetAccessToken", func() {
 		It("sets the authentication token information", func() {
 			config = new(Config)
 			config.SetAccessToken("I am the access token")
 			Expect(config.ConfigFile.AccessToken).To(Equal("I am the access token"))
+		})
+	})
+
+	Describe("SetLocale", func() {
+		It("sets the locale field", func() {
+			config = new(Config)
+			config.SetLocale("en-US")
+			Expect(config.ConfigFile.Locale).To(Equal("en-US"))
+		})
+
+		It("clears the locale field if requested", func() {
+			config = new(Config)
+			config.SetLocale("CLEAR")
+			Expect(config.ConfigFile.Locale).To(Equal(""))
 		})
 	})
 
@@ -263,21 +213,24 @@ var _ = Describe("JSONConfig", func() {
 					},
 				},
 			}
-			config.SetTargetInformation(
-				"https://api.foo.com",
-				"2.59.31",
-				"https://login.foo.com",
-				"2.0.0",
-				"wws://doppler.foo.com:443",
-				"https://api.foo.com/routing",
-				true,
-			)
+			config.SetTargetInformation(TargetInformationArgs{
+				Api:               "https://api.foo.com",
+				ApiVersion:        "2.59.31",
+				Auth:              "https://login.foo.com",
+				MinCLIVersion:     "2.0.0",
+				Doppler:           "wws://doppler.foo.com:443",
+				LogCache:          "https://log-cache.foo.com",
+				Routing:           "https://api.foo.com/routing",
+				SkipSSLValidation: true,
+				CFOnK8s:           true,
+			})
 
 			Expect(config.ConfigFile.Target).To(Equal("https://api.foo.com"))
 			Expect(config.ConfigFile.APIVersion).To(Equal("2.59.31"))
 			Expect(config.ConfigFile.AuthorizationEndpoint).To(Equal("https://login.foo.com"))
 			Expect(config.ConfigFile.MinCLIVersion).To(Equal("2.0.0"))
 			Expect(config.ConfigFile.DopplerEndpoint).To(Equal("wws://doppler.foo.com:443"))
+			Expect(config.ConfigFile.LogCacheEndpoint).To(Equal("https://log-cache.foo.com"))
 			Expect(config.ConfigFile.RoutingEndpoint).To(Equal("https://api.foo.com/routing"))
 			Expect(config.ConfigFile.SkipSSLValidation).To(BeTrue())
 
@@ -286,6 +239,8 @@ var _ = Describe("JSONConfig", func() {
 			Expect(config.ConfigFile.TargetedSpace.GUID).To(BeEmpty())
 			Expect(config.ConfigFile.TargetedSpace.Name).To(BeEmpty())
 			Expect(config.ConfigFile.TargetedSpace.AllowSSH).To(BeFalse())
+
+			Expect(config.ConfigFile.CFOnK8s.Enabled).To(BeTrue())
 		})
 	})
 
@@ -297,6 +252,14 @@ var _ = Describe("JSONConfig", func() {
 			Expect(config.ConfigFile.AccessToken).To(Equal("I am the access token"))
 			Expect(config.ConfigFile.RefreshToken).To(Equal("I am the refresh token"))
 			Expect(config.ConfigFile.SSHOAuthClient).To(Equal("I am the SSH OAuth client"))
+		})
+	})
+
+	Describe("SetTrace", func() {
+		It("sets the trace field", func() {
+			config = new(Config)
+			config.SetTrace("true")
+			Expect(config.ConfigFile.Trace).To(Equal("true"))
 		})
 	})
 
@@ -327,7 +290,7 @@ var _ = Describe("JSONConfig", func() {
 
 	Describe("SkipSSLValidation", func() {
 		BeforeEach(func() {
-			rawConfig := `{ "SSLDisabled":true }`
+			rawConfig := fmt.Sprintf(`{ "SSLDisabled":true, "ConfigVersion": %d }`, CurrentConfigVersion)
 			setConfig(homeDir, rawConfig)
 
 			var err error
@@ -343,7 +306,7 @@ var _ = Describe("JSONConfig", func() {
 
 	Describe("SSHOAuthClient", func() {
 		BeforeEach(func() {
-			rawConfig := `{ "SSHOAuthClient":"some-ssh-client" }`
+			rawConfig := fmt.Sprintf(`{ "SSHOAuthClient":"some-ssh-client", "ConfigVersion": %d }`, CurrentConfigVersion)
 			setConfig(homeDir, rawConfig)
 
 			var err error
@@ -359,7 +322,7 @@ var _ = Describe("JSONConfig", func() {
 
 	Describe("Target", func() {
 		BeforeEach(func() {
-			rawConfig := `{ "Target":"https://api.foo.com" }`
+			rawConfig := fmt.Sprintf(`{ "Target":"https://api.foo.com", "ConfigVersion": %d }`, CurrentConfigVersion)
 			setConfig(homeDir, rawConfig)
 
 			var err error
@@ -423,7 +386,7 @@ var _ = Describe("JSONConfig", func() {
 
 	Describe("UAAGrantType", func() {
 		BeforeEach(func() {
-			rawConfig := ` { "UAAGrantType": "some-grant-type" }`
+			rawConfig := fmt.Sprintf(`{ "UAAGrantType":"some-grant-type", "ConfigVersion": %d }`, CurrentConfigVersion)
 			setConfig(homeDir, rawConfig)
 
 			var err error
@@ -439,7 +402,7 @@ var _ = Describe("JSONConfig", func() {
 
 	Describe("UAAOAuthClient", func() {
 		BeforeEach(func() {
-			rawConfig := `{ "UAAOAuthClient":"some-client" }`
+			rawConfig := fmt.Sprintf(`{ "UAAOAuthClient":"some-client", "ConfigVersion": %d }`, CurrentConfigVersion)
 			setConfig(homeDir, rawConfig)
 
 			var err error
@@ -455,11 +418,12 @@ var _ = Describe("JSONConfig", func() {
 
 	Describe("UAAOAuthClientSecret", func() {
 		BeforeEach(func() {
-			rawConfig := `
+			rawConfig := fmt.Sprintf(`
 					{
 						"UAAOAuthClient": "some-client-id",
-						"UAAOAuthClientSecret": "some-client-secret"
-					}`
+						"UAAOAuthClientSecret": "some-client-secret",
+						"ConfigVersion": %d
+					}`, CurrentConfigVersion)
 			setConfig(homeDir, rawConfig)
 
 			var err error
@@ -515,6 +479,7 @@ var _ = Describe("JSONConfig", func() {
 			config.SetUAAClientCredentials("some-client", "some-client-secret")
 			config.SetOrganizationInformation("some-org-guid", "some-org")
 			config.SetSpaceInformation("guid-value-1", "my-org-name", true)
+			config.SetKubernetesAuthInfo("some-auth-info")
 		})
 
 		It("resets all user information", func() {
@@ -530,6 +495,48 @@ var _ = Describe("JSONConfig", func() {
 			Expect(config.ConfigFile.UAAGrantType).To(BeEmpty())
 			Expect(config.ConfigFile.UAAOAuthClient).To(Equal(DefaultUAAOAuthClient))
 			Expect(config.ConfigFile.UAAOAuthClientSecret).To(Equal(DefaultUAAOAuthClientSecret))
+			Expect(config.ConfigFile.CFOnK8s.AuthInfo).To(BeEmpty())
+		})
+	})
+
+	When("using CF-on-K8s", func() {
+		var err error
+
+		BeforeEach(func() {
+			rawConfig := fmt.Sprintf(`{ "CFOnK8s": {"Enabled": true, "AuthInfo": "auth-info-name"}, "ConfigVersion": %d }`, CurrentConfigVersion)
+
+			setConfig(homeDir, rawConfig)
+
+			config, err = LoadConfig()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(config).ToNot(BeNil())
+		})
+
+		Describe("CurrentUser", func() {
+			var user configv3.User
+
+			JustBeforeEach(func() {
+				user, err = config.CurrentUser()
+			})
+
+			It("returns a user with the auth-info name", func() {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(user.Name).To(Equal("auth-info-name"))
+				Expect(user.GUID).To(BeEmpty())
+			})
+		})
+
+		Describe("CurrentUserName", func() {
+			var userName string
+
+			JustBeforeEach(func() {
+				userName, err = config.CurrentUserName()
+			})
+
+			It("returns the auth-info name", func() {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(userName).To(Equal("auth-info-name"))
+			})
 		})
 	})
 })

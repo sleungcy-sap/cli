@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"path"
 	"regexp"
+	"strings"
 
+	"code.cloudfoundry.org/cli/resources"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gexec"
@@ -16,6 +18,9 @@ const MinTestPort = 1024
 // MaxTestPort should be defined by the CF router group for integration tests.
 const MaxTestPort = 1034
 
+// FindOrCreateTCPRouterGroup uses the routing API to find a router group with name
+// INTEGRATION-TCP-NODE-<node>, or create one if it does not exist. Returns the name of
+// the router group.
 func FindOrCreateTCPRouterGroup(node int) string {
 	routerGroupName := fmt.Sprintf("INTEGRATION-TCP-NODE-%d", node)
 
@@ -33,6 +38,7 @@ func FindOrCreateTCPRouterGroup(node int) string {
 	return routerGroupName
 }
 
+// Route represents a route.
 type Route struct {
 	Domain string
 	Host   string
@@ -41,6 +47,7 @@ type Route struct {
 	Space  string
 }
 
+// NewRoute constructs a route with given space, domain, hostname, and path.
 func NewRoute(space string, domain string, hostname string, path string) Route {
 	return Route{
 		Space:  space,
@@ -50,6 +57,7 @@ func NewRoute(space string, domain string, hostname string, path string) Route {
 	}
 }
 
+// NewTCPRoute constructs a TCP route with given space, domain, and port.
 func NewTCPRoute(space string, domain string, port int) Route {
 	return Route{
 		Space:  space,
@@ -58,6 +66,7 @@ func NewTCPRoute(space string, domain string, port int) Route {
 	}
 }
 
+// Create creates a route using the 'cf create-route' command.
 func (r Route) Create() {
 	if r.Port != 0 {
 		Eventually(CF("create-route", r.Space, r.Domain, "--port", fmt.Sprint(r.Port))).Should(Exit(0))
@@ -66,6 +75,16 @@ func (r Route) Create() {
 	}
 }
 
+// Create creates a route using the 'cf create-route' command.
+func (r Route) V7Create() {
+	if r.Port != 0 {
+		Eventually(CF("create-route", r.Domain, "--port", fmt.Sprint(r.Port))).Should(Exit(0))
+	} else {
+		Eventually(CF("create-route", r.Domain, "--hostname", r.Host, "--path", r.Path)).Should(Exit(0))
+	}
+}
+
+// Delete deletes a route using the 'cf delete-route' command.
 func (r Route) Delete() {
 	if r.Port != 0 {
 		Eventually(CF("delete-route", r.Domain, "--port", fmt.Sprint(r.Port))).Should(Exit(0))
@@ -74,6 +93,7 @@ func (r Route) Delete() {
 	}
 }
 
+// String stringifies a route (e.g. "host.domain.com:port/path")
 func (r Route) String() string {
 	routeString := r.Domain
 
@@ -90,4 +110,35 @@ func (r Route) String() string {
 	}
 
 	return routeString
+}
+
+func (r Route) GUID() string {
+	var domainReceiver struct {
+		Domains []resources.Domain `json:"resources"`
+	}
+	Curl(&domainReceiver, "/v3/domains?names=%s", r.Domain)
+	Expect(domainReceiver.Domains).To(HaveLen(1))
+
+	query := []string{fmt.Sprintf("domain_guids=%s", domainReceiver.Domains[0].GUID)}
+	if r.Host != "" {
+		query = append(query, fmt.Sprintf("hosts=%s", r.Host))
+	}
+	if r.Path != "" {
+		path := r.Path
+		if !strings.HasPrefix(path, "/") {
+			path = "/" + path
+		}
+		query = append(query, fmt.Sprintf("paths=%s", path))
+	}
+	if r.Port != 0 {
+		query = append(query, fmt.Sprintf("ports=%d", r.Port))
+	}
+
+	var routeReceiver struct {
+		Routes []resources.Route `json:"resources"`
+	}
+	Curl(&routeReceiver, "/v3/routes?%s", strings.Join(query, "&"))
+	Expect(routeReceiver.Routes).To(HaveLen(1))
+
+	return routeReceiver.Routes[0].GUID
 }

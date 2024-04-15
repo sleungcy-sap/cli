@@ -15,7 +15,7 @@ import (
 	"github.com/google/go-querystring/query"
 )
 
-//go:generate counterfeiter . RouteRepository
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . RouteRepository
 
 type RouteRepository interface {
 	ListRoutes(cb func(models.Route) bool) (apiErr error)
@@ -204,5 +204,5 @@ func (repo CloudControllerRouteRepository) Unbind(routeGUID, appGUID string) (ap
 
 func (repo CloudControllerRouteRepository) Delete(routeGUID string) (apiErr error) {
 	path := fmt.Sprintf("/v2/routes/%s", routeGUID)
-	return repo.gateway.DeleteResource(repo.config.APIEndpoint(), path)
+	return repo.gateway.DeleteResourceSynchronously(repo.config.APIEndpoint(), path)
 }

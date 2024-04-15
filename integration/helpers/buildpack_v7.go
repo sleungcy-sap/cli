@@ -1,5 +1,3 @@
-// +build V7
-
 package helpers
 
 import (
@@ -7,6 +5,9 @@ import (
 	"regexp"
 )
 
+// BuildpacksOutputRegex takes a BuildpackFields struct and returns a regex
+// matching a line in the output of 'cf buildpacks' representing the given
+// buildpack.
 func BuildpacksOutputRegex(fields BuildpackFields) string {
 	anyStringRegex := `\S+`
 	optionalStringRegex := `\S*`

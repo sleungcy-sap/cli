@@ -1,17 +1,41 @@
 package shared
 
 import (
+	"code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	ccWrapper "code.cloudfoundry.org/cli/api/cloudcontroller/wrapper"
+	"code.cloudfoundry.org/cli/api/router"
+	routingWrapper "code.cloudfoundry.org/cli/api/router/wrapper"
 	"code.cloudfoundry.org/cli/api/uaa"
 	uaaWrapper "code.cloudfoundry.org/cli/api/uaa/wrapper"
 	"code.cloudfoundry.org/cli/command"
 	"code.cloudfoundry.org/cli/command/translatableerror"
 )
 
-// NewClients creates a new V3 Cloud Controller client and UAA client using the
-// passed in config.
-func NewClients(config command.Config, ui command.UI, targetCF bool, minVersionV3 string) (*ccv3.Client, *uaa.Client, error) {
+func GetNewClientsAndConnectToCF(config command.Config, ui command.UI, minVersionV3 string) (*ccv3.Client, *uaa.Client, *router.Client, error) {
+	var err error
+
+	uaaClient, err := newWrappedUAAClient(config, ui)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	routingClient, err := newWrappedRoutingClient(config, ui, uaaClient)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	ccClient := NewAuthWrappedCloudControllerClient(config, ui, uaaClient)
+
+	ccClient, err = connectToCF(config, ui, ccClient, minVersionV3)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return ccClient, uaaClient, routingClient, err
+}
+
+func NewWrappedCloudControllerClient(config command.Config, ui command.UI, extraWrappers ...ccv3.ConnectionWrapper) *ccv3.Client {
 	ccWrappers := []ccv3.ConnectionWrapper{}
 
 	verbose, location := config.Verbose()
@@ -22,54 +46,36 @@ func NewClients(config command.Config, ui command.UI, targetCF bool, minVersionV
 		ccWrappers = append(ccWrappers, ccWrapper.NewRequestLogger(ui.RequestLoggerFileWriter(location)))
 	}
 
-	authWrapper := ccWrapper.NewUAAAuthentication(nil, config)
-
-	ccWrappers = append(ccWrappers, authWrapper)
+	ccWrappers = append(ccWrappers, extraWrappers...)
 	ccWrappers = append(ccWrappers, ccWrapper.NewRetryRequest(config.RequestRetryCount()))
 
-	ccClient := ccv3.NewClient(ccv3.Config{
+	return ccv3.NewClient(ccv3.Config{
 		AppName:            config.BinaryName(),
 		AppVersion:         config.BinaryVersion(),
 		JobPollingTimeout:  config.OverallPollingTimeout(),
 		JobPollingInterval: config.PollingInterval(),
 		Wrappers:           ccWrappers,
 	})
+}
 
-	if !targetCF {
-		return ccClient, nil, nil
+func NewAuthWrappedCloudControllerClient(config command.Config, ui command.UI, uaaClient *uaa.Client) *ccv3.Client {
+	var authWrapper ccv3.ConnectionWrapper
+	authWrapper = ccWrapper.NewUAAAuthentication(uaaClient, config)
+	if config.IsCFOnK8s() {
+		authWrapper = ccWrapper.NewKubernetesAuthentication(
+			config,
+			v7action.NewDefaultKubernetesConfigGetter(),
+		)
 	}
 
-	if config.Target() == "" {
-		return nil, nil, translatableerror.NoAPISetError{
-			BinaryName: config.BinaryName(),
-		}
-	}
+	return NewWrappedCloudControllerClient(config, ui, authWrapper)
+}
 
-	_, err := ccClient.TargetCF(ccv3.TargetSettings{
-		URL:               config.Target(),
-		SkipSSLValidation: config.SkipSSLValidation(),
-		DialTimeout:       config.DialTimeout(),
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if minVersionV3 != "" {
-		err = command.MinimumCCAPIVersionCheck(ccClient.CloudControllerAPIVersion(), minVersionV3)
-		if err != nil {
-			if _, ok := err.(translatableerror.MinimumCFAPIVersionNotMetError); ok {
-				return nil, nil, translatableerror.V3V2SwitchError{}
-			}
-			return nil, nil, err
-		}
-	}
-
-	if ccClient.UAA() == "" {
-		return nil, nil, translatableerror.UAAEndpointNotFoundError{}
-	}
+func newWrappedUAAClient(config command.Config, ui command.UI) (*uaa.Client, error) {
+	var err error
+	verbose, location := config.Verbose()
 
 	uaaClient := uaa.NewClient(config)
-
 	if verbose {
 		uaaClient.WrapConnection(uaaWrapper.NewRequestLogger(ui.RequestLoggerTerminalDisplay()))
 	}
@@ -81,13 +87,69 @@ func NewClients(config command.Config, ui command.UI, targetCF bool, minVersionV
 	uaaClient.WrapConnection(uaaAuthWrapper)
 	uaaClient.WrapConnection(uaaWrapper.NewRetryRequest(config.RequestRetryCount()))
 
-	err = uaaClient.SetupResources(ccClient.UAA())
+	err = uaaClient.SetupResources(config.UAAEndpoint(), config.AuthorizationEndpoint())
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	uaaAuthWrapper.SetClient(uaaClient)
-	authWrapper.SetClient(uaaClient)
+	return uaaClient, nil
+}
 
-	return ccClient, uaaClient, nil
+func newWrappedRoutingClient(config command.Config, ui command.UI, uaaClient *uaa.Client) (*router.Client, error) {
+	routingConfig := router.Config{
+		AppName:    config.BinaryName(),
+		AppVersion: config.BinaryVersion(),
+		ConnectionConfig: router.ConnectionConfig{
+			DialTimeout:       config.DialTimeout(),
+			SkipSSLValidation: config.SkipSSLValidation(),
+		},
+		RoutingEndpoint: config.RoutingEndpoint(),
+	}
+
+	routingWrappers := []router.ConnectionWrapper{routingWrapper.NewErrorWrapper()}
+
+	verbose, location := config.Verbose()
+
+	if verbose {
+		routingWrappers = append(routingWrappers, routingWrapper.NewRequestLogger(ui.RequestLoggerTerminalDisplay()))
+	}
+
+	if location != nil {
+		routingWrappers = append(routingWrappers, routingWrapper.NewRequestLogger(ui.RequestLoggerFileWriter(location)))
+	}
+
+	authWrapper := routingWrapper.NewUAAAuthentication(uaaClient, config)
+
+	routingWrappers = append(routingWrappers, authWrapper)
+	routingConfig.Wrappers = routingWrappers
+
+	routingClient := router.NewClient(routingConfig)
+
+	return routingClient, nil
+}
+
+func connectToCF(config command.Config, ui command.UI, ccClient *ccv3.Client, minVersionV3 string) (*ccv3.Client, error) {
+	if config.Target() == "" {
+		return nil, translatableerror.NoAPISetError{
+			BinaryName: config.BinaryName(),
+		}
+	}
+
+	ccClient.TargetCF(ccv3.TargetSettings{
+		URL:               config.Target(),
+		SkipSSLValidation: config.SkipSSLValidation(),
+		DialTimeout:       config.DialTimeout(),
+	})
+
+	if minVersionV3 != "" {
+		err := command.MinimumCCAPIVersionCheck(config.APIVersion(), minVersionV3)
+		if err != nil {
+			if _, ok := err.(translatableerror.MinimumCFAPIVersionNotMetError); ok {
+				return nil, translatableerror.V3V2SwitchError{}
+			}
+			return nil, err
+		}
+	}
+
+	return ccClient, nil
 }

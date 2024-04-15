@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/cli/actor/v7action/v7actionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -20,13 +21,13 @@ var _ = Describe("FeatureFlag", func() {
 	)
 
 	BeforeEach(func() {
-		actor, fakeCloudControllerClient, _, _, _ = NewTestActor()
+		actor, fakeCloudControllerClient, _, _, _, _, _ = NewTestActor()
 	})
 
 	Describe("GetFeatureFlagByName", func() {
 		var (
 			featureFlagName = "flag1"
-			featureFlag     FeatureFlag
+			featureFlag     resources.FeatureFlag
 			warnings        Warnings
 			executeErr      error
 		)
@@ -82,14 +83,14 @@ var _ = Describe("FeatureFlag", func() {
 			It("Returns the proper featureFlag", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 				Expect(warnings).To(ConsistOf("this is a warning"))
-				Expect(featureFlag).To(Equal(FeatureFlag{Name: "flag1"}))
+				Expect(featureFlag).To(Equal(resources.FeatureFlag{Name: "flag1"}))
 			})
 		})
 	})
 
 	Describe("GetFeatureFlags", func() {
 		var (
-			featureFlags []FeatureFlag
+			featureFlags []resources.FeatureFlag
 			warnings     Warnings
 			executeErr   error
 		)
@@ -120,11 +121,11 @@ var _ = Describe("FeatureFlag", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 				Expect(warnings).To(ConsistOf(Warnings{"some-cc-warning"}))
 				Expect(featureFlags).To(ConsistOf(
-					FeatureFlag{
+					resources.FeatureFlag{
 						Name:    "flag1",
 						Enabled: false,
 					},
-					FeatureFlag{
+					resources.FeatureFlag{
 						Name:    "flag2",
 						Enabled: true,
 					},

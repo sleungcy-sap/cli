@@ -1,11 +1,13 @@
 package v7_test
 
 import (
+	"errors"
+
 	"code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/command/v7/v7fakes"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
-	"errors"
 
 	"code.cloudfoundry.org/cli/command/translatableerror"
 
@@ -26,7 +28,7 @@ var _ = Describe("UpdateBuildpackCommand", func() {
 		fakeSharedActor *commandfakes.FakeSharedActor
 		testUI          *ui.UI
 		input           *Buffer
-		fakeActor       *v7fakes.FakeUpdateBuildpackActor
+		fakeActor       *v7fakes.FakeActor
 		fakeConfig      *commandfakes.FakeConfig
 		buildpackGUID   = "buildpack-guid"
 		buildpackName   = "some-bp"
@@ -40,16 +42,18 @@ var _ = Describe("UpdateBuildpackCommand", func() {
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
 		input = NewBuffer()
 		testUI = ui.NewTestUI(input, NewBuffer(), NewBuffer())
-		fakeActor = new(v7fakes.FakeUpdateBuildpackActor)
+		fakeActor = new(v7fakes.FakeActor)
 		fakeConfig = new(commandfakes.FakeConfig)
 		buildpackGUID = "some guid"
 
 		cmd = UpdateBuildpackCommand{
 			RequiredArgs: flag.BuildpackName{Buildpack: buildpackName},
-			UI:           testUI,
-			SharedActor:  fakeSharedActor,
-			Actor:        fakeActor,
-			Config:       fakeConfig,
+			BaseCommand: BaseCommand{
+				UI:          testUI,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+				Config:      fakeConfig,
+			},
 		}
 	})
 
@@ -143,7 +147,7 @@ var _ = Describe("UpdateBuildpackCommand", func() {
 		When("getting the current user fails", func() {
 			BeforeEach(func() {
 				expectedErr = errors.New("some-error that happened")
-				fakeConfig.CurrentUserReturns(configv3.User{}, expectedErr)
+				fakeActor.GetCurrentUserReturns(configv3.User{}, expectedErr)
 			})
 
 			It("returns the error", func() {
@@ -156,7 +160,7 @@ var _ = Describe("UpdateBuildpackCommand", func() {
 
 			BeforeEach(func() {
 				userName = "some-user"
-				fakeConfig.CurrentUserReturns(configv3.User{Name: userName}, nil)
+				fakeActor.GetCurrentUserReturns(configv3.User{Name: userName}, nil)
 			})
 
 			When("preparing buildpack bits causes an error", func() {
@@ -179,7 +183,7 @@ var _ = Describe("UpdateBuildpackCommand", func() {
 					fakeActor.PrepareBuildpackBitsReturns("path/to/prepared/bits", nil)
 					expectedErr = errors.New("update-error")
 					fakeActor.UpdateBuildpackByNameAndStackReturns(
-						v7action.Buildpack{},
+						resources.Buildpack{},
 						v7action.Warnings{"update-bp-warning1", "update-bp-warning2"},
 						expectedErr,
 					)
@@ -381,7 +385,7 @@ var _ = Describe("UpdateBuildpackCommand", func() {
 			When("updating the buildpack succeeds", func() {
 				BeforeEach(func() {
 					fakeActor.UpdateBuildpackByNameAndStackReturns(
-						v7action.Buildpack{GUID: buildpackGUID},
+						resources.Buildpack{GUID: buildpackGUID},
 						v7action.Warnings{"update-bp-warning1", "update-bp-warning2"},
 						nil,
 					)
@@ -436,17 +440,31 @@ var _ = Describe("UpdateBuildpackCommand", func() {
 						})
 
 						When("uploading the buildpack fails", func() {
-							BeforeEach(func() {
-								expectedErr = errors.New("upload error")
-								fakeActor.UploadBuildpackReturns("", v7action.Warnings{"upload-warning1", "upload-warning2"}, expectedErr)
+
+							When("the client returns invalid auth token", func() {
+								BeforeEach(func() {
+									fakeActor.UploadBuildpackReturns("", v7action.Warnings{"some-create-bp-with-auth-warning"}, ccerror.InvalidAuthTokenError{Message: "token expired"})
+								})
+
+								It("alerts the user and retries the upload", func() {
+									Expect(testUI.Err).To(Say("Failed to upload buildpack due to auth token expiration, retrying..."))
+									Expect(fakeActor.UploadBuildpackCallCount()).To(Equal(2))
+								})
 							})
 
-							It("returns all warnings and an error", func() {
-								Expect(testUI.Err).To(Say("update-bp-warning1"))
-								Expect(testUI.Err).To(Say("update-bp-warning2"))
-								Expect(testUI.Err).To(Say("upload-warning1"))
-								Expect(testUI.Err).To(Say("upload-warning2"))
-								Expect(executeErr).To(MatchError(expectedErr))
+							When("a non token error occurs", func() {
+								BeforeEach(func() {
+									expectedErr = errors.New("upload error")
+									fakeActor.UploadBuildpackReturns("", v7action.Warnings{"upload-warning1", "upload-warning2"}, expectedErr)
+								})
+
+								It("returns all warnings and an error", func() {
+									Expect(testUI.Err).To(Say("update-bp-warning1"))
+									Expect(testUI.Err).To(Say("update-bp-warning2"))
+									Expect(testUI.Err).To(Say("upload-warning1"))
+									Expect(testUI.Err).To(Say("upload-warning2"))
+									Expect(executeErr).To(MatchError(expectedErr))
+								})
 							})
 						})
 

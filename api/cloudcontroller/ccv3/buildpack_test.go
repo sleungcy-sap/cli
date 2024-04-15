@@ -1,12 +1,6 @@
 package ccv3_test
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/ccv3fakes"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/wrapper"
-	"code.cloudfoundry.org/cli/resources"
-	"code.cloudfoundry.org/cli/types"
 	"errors"
 	"fmt"
 	"io"
@@ -15,8 +9,16 @@ import (
 	"net/http"
 	"strings"
 
+	"code.cloudfoundry.org/cli/api/cloudcontroller"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/ccv3fakes"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/wrapper"
+	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/types"
+
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	. "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	. "code.cloudfoundry.org/cli/resources"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/ghttp"
@@ -58,7 +60,10 @@ var _ = Describe("Buildpacks", func() {
 							"stack": "windows64",
 							"position": 1,
 							"enabled": true,
-							"locked": false
+							"locked": false,
+							"metadata": {
+								"labels": {}
+							}
 						},
 						{
 							"guid": "guid2",
@@ -67,7 +72,10 @@ var _ = Describe("Buildpacks", func() {
 							"stack": "cflinuxfs3",
 							"position": 2,
 							"enabled": false,
-							"locked": true
+							"locked": true,
+							"metadata": {
+								"labels": {}
+							}
 						}
 					]
 				}`, server.URL())
@@ -83,7 +91,10 @@ var _ = Describe("Buildpacks", func() {
 							"stack": "cflinuxfs2",
 							"position": 3,
 							"enabled": true,
-							"locked": false
+							"locked": false,
+							"metadata": {
+								"labels": {}
+							}
 						}
 					]
 				}`
@@ -119,6 +130,7 @@ var _ = Describe("Buildpacks", func() {
 						Locked:   types.NullBool{Value: false, IsSet: true},
 						Stack:    "windows64",
 						State:    "AWAITING_UPLOAD",
+						Metadata: &Metadata{Labels: map[string]types.NullString{}},
 					},
 					resources.Buildpack{
 						Name:     "staticfile_buildpack",
@@ -128,6 +140,7 @@ var _ = Describe("Buildpacks", func() {
 						Locked:   types.NullBool{Value: true, IsSet: true},
 						Stack:    "cflinuxfs3",
 						State:    "AWAITING_UPLOAD",
+						Metadata: &Metadata{Labels: map[string]types.NullString{}},
 					},
 					resources.Buildpack{
 						Name:     "go_buildpack",
@@ -137,6 +150,7 @@ var _ = Describe("Buildpacks", func() {
 						Locked:   types.NullBool{Value: false, IsSet: true},
 						Stack:    "cflinuxfs2",
 						State:    "AWAITING_UPLOAD",
+						Metadata: &Metadata{Labels: map[string]types.NullString{}},
 					},
 				))
 				Expect(warnings).To(ConsistOf("this is a warning", "this is another warning"))

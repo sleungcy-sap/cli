@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"regexp"
 
+	. "code.cloudfoundry.org/cli/cf/util/testhelpers/matchers"
+
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,9 +23,7 @@ var _ = Describe("create-app-manifest command", func() {
 
 	BeforeEach(func() {
 		appName = helpers.NewAppName()
-		var err error
-		tempDir, err = ioutil.TempDir("", "create-manifest")
-		Expect(err).ToNot(HaveOccurred())
+		tempDir = helpers.TempDirAbsolutePath("", "create-manifest")
 
 		manifestFilePath = filepath.Join(tempDir, fmt.Sprintf("%s_manifest.yml", appName))
 	})
@@ -33,19 +33,27 @@ var _ = Describe("create-app-manifest command", func() {
 	})
 
 	Context("Help", func() {
-		It("displays the help information", func() {
-			session := helpers.CustomCF(helpers.CFEnv{WorkingDirectory: tempDir}, "create-app-manifest", "--help")
-			Eventually(session).Should(Say("NAME:"))
-			Eventually(session).Should(Say("create-app-manifest - Create an app manifest for an app that has been pushed successfully"))
-			Eventually(session).Should(Say("USAGE:"))
-			Eventually(session).Should(Say(`cf create-app-manifest APP_NAME \[-p \/path\/to\/<app-name>_manifest\.yml\]`))
-			Eventually(session).Should(Say(""))
-			Eventually(session).Should(Say("OPTIONS:"))
-			Eventually(session).Should(Say("-p      Specify a path for file creation. If path not specified, manifest file is created in current working directory."))
-			Eventually(session).Should(Say("SEE ALSO:"))
-			Eventually(session).Should(Say("apps, push"))
+		When("--help flag is set", func() {
+			It("appears in cf help -a", func() {
+				session := helpers.CF("help", "-a")
+				Eventually(session).Should(Exit(0))
+				Expect(session).To(HaveCommandInCategoryWithDescription("create-app-manifest", "APPS", "Create an app manifest for an app that has been pushed successfully"))
+			})
 
-			Eventually(session).Should(Exit(0))
+			It("displays the help information", func() {
+				session := helpers.CustomCF(helpers.CFEnv{WorkingDirectory: tempDir}, "create-app-manifest", "--help")
+				Eventually(session).Should(Say("NAME:"))
+				Eventually(session).Should(Say("create-app-manifest - Create an app manifest for an app that has been pushed successfully"))
+				Eventually(session).Should(Say("USAGE:"))
+				Eventually(session).Should(Say(`cf create-app-manifest APP_NAME \[-p \/path\/to\/<app-name>_manifest\.yml\]`))
+				Eventually(session).Should(Say(""))
+				Eventually(session).Should(Say("OPTIONS:"))
+				Eventually(session).Should(Say("-p      Specify a path for file creation. If path not specified, manifest file is created in current working directory."))
+				Eventually(session).Should(Say("SEE ALSO:"))
+				Eventually(session).Should(Say("apps, push"))
+
+				Eventually(session).Should(Exit(0))
+			})
 		})
 	})
 
@@ -123,7 +131,7 @@ var _ = Describe("create-app-manifest command", func() {
 						session := helpers.CustomCF(helpers.CFEnv{WorkingDirectory: tempDir}, "create-app-manifest", appName, "-p", tempDir)
 						Eventually(session).Should(Say(`Creating an app manifest from current settings of app %s in org %s / space %s as %s\.\.\.`, appName, orgName, spaceName, userName))
 						Eventually(session).Should(Say("FAILED"))
-						Eventually(session.Err).Should(Say("Error creating manifest file: open %s: is a directory", regexp.QuoteMeta(tempDir)))
+						Eventually(session.Err).Should(Say("Error creating file: open %s: is a directory", regexp.QuoteMeta(tempDir)))
 
 						Eventually(session).Should(Exit(1))
 					})
@@ -135,7 +143,7 @@ var _ = Describe("create-app-manifest command", func() {
 						session := helpers.CustomCF(helpers.CFEnv{WorkingDirectory: tempDir}, "create-app-manifest", appName, "-p", invalidPath)
 						Eventually(session).Should(Say(`Creating an app manifest from current settings of app %s in org %s / space %s as %s\.\.\.`, appName, orgName, spaceName, userName))
 						Eventually(session).Should(Say("FAILED"))
-						Eventually(session.Err).Should(Say("Error creating manifest file: open %s:.*", regexp.QuoteMeta(invalidPath)))
+						Eventually(session.Err).Should(Say("Error creating file: open %s:.*", regexp.QuoteMeta(invalidPath)))
 
 						Eventually(session).Should(Exit(1))
 					})

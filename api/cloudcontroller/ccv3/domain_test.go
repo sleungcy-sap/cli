@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 
 	. "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
@@ -21,7 +22,177 @@ var _ = Describe("Domain", func() {
 		client, _ = NewTestClient()
 	})
 
-	Describe("CreateDomain for Unscoped Domains", func() {
+	Describe("CheckRoute", func() {
+		var (
+			matches    bool
+			warnings   Warnings
+			executeErr error
+
+			domainGUID string
+			hostname   string
+			path       string
+			port       int
+		)
+
+		BeforeEach(func() {
+			domainGUID = "domain-guid"
+			hostname = ""
+			path = ""
+			port = 0
+		})
+
+		JustBeforeEach(func() {
+			matches, warnings, executeErr = client.CheckRoute(domainGUID, hostname, path, port)
+		})
+
+		When("the request succeeds", func() {
+			When("no query params given", func() {
+				BeforeEach(func() {
+					response := `{ "matching_route": true }`
+
+					server.AppendHandlers(
+						CombineHandlers(
+							VerifyRequest(http.MethodGet, "/v3/domains/domain-guid/route_reservations"),
+							RespondWith(http.StatusOK, response, http.Header{"X-Cf-Warnings": {"warning-1"}}),
+						),
+					)
+				})
+
+				It("returns whether the route matches and all warnings", func() {
+					Expect(matches).To(BeTrue())
+					Expect(executeErr).ToNot(HaveOccurred())
+					Expect(warnings).To(ConsistOf("warning-1"))
+				})
+			})
+
+			When("hostname is passed in", func() {
+				BeforeEach(func() {
+					hostname = "hello"
+					response := `{ "matching_route": true }`
+
+					server.AppendHandlers(
+						CombineHandlers(
+							VerifyRequest(http.MethodGet, "/v3/domains/domain-guid/route_reservations", "host=hello"),
+							RespondWith(http.StatusOK, response, http.Header{"X-Cf-Warnings": {"warning-1"}}),
+						),
+					)
+				})
+
+				It("returns whether the route matches and all warnings", func() {
+					Expect(matches).To(BeTrue())
+					Expect(executeErr).ToNot(HaveOccurred())
+					Expect(warnings).To(ConsistOf("warning-1"))
+				})
+			})
+
+			When("path is passed in", func() {
+				BeforeEach(func() {
+					path = "/potato"
+					response := `{ "matching_route": true }`
+
+					server.AppendHandlers(
+						CombineHandlers(
+							VerifyRequest(http.MethodGet, "/v3/domains/domain-guid/route_reservations", "path=/potato"),
+							RespondWith(http.StatusOK, response, http.Header{"X-Cf-Warnings": {"warning-1"}}),
+						),
+					)
+				})
+
+				It("returns whether the route matches and all warnings", func() {
+					Expect(matches).To(BeTrue())
+					Expect(executeErr).ToNot(HaveOccurred())
+					Expect(warnings).To(ConsistOf("warning-1"))
+				})
+			})
+
+			When("hostname and path are passed in", func() {
+				BeforeEach(func() {
+					hostname = "hello"
+					path = "/potato"
+					response := `{ "matching_route": true }`
+
+					server.AppendHandlers(
+						CombineHandlers(
+							VerifyRequest(http.MethodGet, "/v3/domains/domain-guid/route_reservations", "host=hello&path=/potato"),
+							RespondWith(http.StatusOK, response, http.Header{"X-Cf-Warnings": {"warning-1"}}),
+						),
+					)
+				})
+
+				It("returns whether the route matches and all warnings", func() {
+					Expect(matches).To(BeTrue())
+					Expect(executeErr).ToNot(HaveOccurred())
+					Expect(warnings).To(ConsistOf("warning-1"))
+				})
+			})
+
+			When("port is passed in", func() {
+				BeforeEach(func() {
+					port = 1024
+					response := `{ "matching_route": true }`
+
+					server.AppendHandlers(
+						CombineHandlers(
+							VerifyRequest(http.MethodGet, "/v3/domains/domain-guid/route_reservations", "port=1024"),
+							RespondWith(http.StatusOK, response, http.Header{"X-Cf-Warnings": {"warning-1"}}),
+						),
+					)
+				})
+
+				It("returns whether the route matches and all warnings", func() {
+					Expect(matches).To(BeTrue())
+					Expect(executeErr).ToNot(HaveOccurred())
+					Expect(warnings).To(ConsistOf("warning-1"))
+				})
+			})
+		})
+
+		When("the cloud controller returns errors and warnings", func() {
+			BeforeEach(func() {
+				response := `{
+  "errors": [
+    {
+      "code": 10008,
+      "detail": "The request is semantically invalid: command presence",
+      "title": "CF-UnprocessableEntity"
+    },
+	{
+      "code": 10010,
+      "detail": "Domain not found",
+      "title": "CF-ResourceNotFound"
+    }
+  ]
+}`
+				server.AppendHandlers(
+					CombineHandlers(
+						VerifyRequest(http.MethodGet, "/v3/domains/domain-guid/route_reservations"),
+						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
+					),
+				)
+			})
+
+			It("returns the error and all warnings", func() {
+				Expect(executeErr).To(MatchError(ccerror.MultiError{
+					ResponseCode: http.StatusTeapot,
+					Errors: []ccerror.V3Error{
+						{
+							Code:   10008,
+							Detail: "The request is semantically invalid: command presence",
+							Title:  "CF-UnprocessableEntity",
+						},
+						{
+							Code:   10010,
+							Detail: "Domain not found",
+							Title:  "CF-ResourceNotFound",
+						},
+					},
+				}))
+				Expect(warnings).To(ConsistOf("this is a warning"))
+			})
+		})
+	})
+
+	Describe("CreateDomain for Shared Domains", func() {
 		var (
 			domain     resources.Domain
 			warnings   Warnings
@@ -29,7 +200,13 @@ var _ = Describe("Domain", func() {
 		)
 
 		JustBeforeEach(func() {
-			domain, warnings, executeErr = client.CreateDomain(resources.Domain{Name: "some-name", Internal: types.NullBool{IsSet: true, Value: true}})
+			domain, warnings, executeErr = client.CreateDomain(
+				resources.Domain{
+					Name:        "some-name",
+					Internal:    types.NullBool{IsSet: true, Value: true},
+					RouterGroup: "some-router-group",
+				},
+			)
 		})
 
 		When("the request succeeds", func() {
@@ -37,12 +214,18 @@ var _ = Describe("Domain", func() {
 				response := `{
 					"guid": "some-guid",
 					"name": "some-name",
-					"internal": true
+					"internal": true,
+					"router_group": {
+						"guid": "some-router-group"
+					}
 				}`
 
 				expectedBody := `{
 					"name": "some-name",
-					"internal": true
+					"internal": true,
+					"router_group": {
+						"guid": "some-router-group"
+					}
 				}`
 
 				server.AppendHandlers(
@@ -59,9 +242,10 @@ var _ = Describe("Domain", func() {
 				Expect(warnings).To(ConsistOf("warning-1"))
 
 				Expect(domain).To(Equal(resources.Domain{
-					GUID:     "some-guid",
-					Name:     "some-name",
-					Internal: types.NullBool{IsSet: true, Value: true},
+					GUID:        "some-guid",
+					Name:        "some-name",
+					Internal:    types.NullBool{IsSet: true, Value: true},
+					RouterGroup: "some-router-group",
 				}))
 			})
 		})
@@ -111,7 +295,7 @@ var _ = Describe("Domain", func() {
 		})
 	})
 
-	Describe("CreateDomain for Scoped Domains", func() {
+	Describe("CreateDomain for Private Domains", func() {
 		var (
 			domain     resources.Domain
 			warnings   Warnings
@@ -127,9 +311,9 @@ var _ = Describe("Domain", func() {
 				response := `{
 					"guid": "some-guid",
 					"name": "some-name",
-					"relationships": { 
-						"organization": { 
-							"data" : { 
+					"relationships": {
+						"organization": {
+							"data" : {
 								"guid" : "organization-guid"
 							}
 						}
@@ -433,6 +617,101 @@ var _ = Describe("Domain", func() {
 		})
 	})
 
+	Describe("GetDomain", func() {
+
+		var (
+			domainGUID string
+			domain     resources.Domain
+			warnings   Warnings
+			executeErr error
+		)
+		JustBeforeEach(func() {
+			domainGUID = "domain-guid-1"
+			domain, warnings, executeErr = client.GetDomain(domainGUID)
+		})
+
+		When("domain is found", func() {
+			BeforeEach(func() {
+				response := `{
+	      	"name": "domain-name-1",
+	      	"guid": "domain-guid-1",
+					"metadata": {
+						"annotations": {},
+						"labels": {
+							"fun": "superfun",
+							"fun2": "super--fun"
+						}
+					}
+	    }`
+				server.AppendHandlers(
+					CombineHandlers(
+						VerifyRequest(http.MethodGet, "/v3/domains/domain-guid-1"),
+						RespondWith(http.StatusOK, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
+					),
+				)
+			})
+
+			It("returns a domain and prints all warnings", func() {
+				Expect(executeErr).To(Not(HaveOccurred()))
+
+				Expect(domain.Name).To(Equal("domain-name-1"))
+
+				Expect(domain.GUID).To(Equal("domain-guid-1"))
+
+				Expect(domain.Metadata.Labels).To(Equal(map[string]types.NullString{
+					"fun":  types.NewNullString("superfun"),
+					"fun2": types.NewNullString("super--fun"),
+				}))
+
+				Expect(warnings).To(ConsistOf("this is a warning"))
+			})
+		})
+
+		When("cloud controller returns an error", func() {
+			BeforeEach(func() {
+				response := `{
+	  "errors": [
+	    {
+	      "code": 10008,
+	      "detail": "The request is semantically invalid: command presence",
+	      "title": "CF-UnprocessableEntity"
+	    },
+			{
+	      "code": 10010,
+	      "detail": "Domain not found",
+	      "title": "CF-ResourceNotFound"
+	    }
+	  ]
+	}`
+				server.AppendHandlers(
+					CombineHandlers(
+						VerifyRequest(http.MethodGet, "/v3/domains/domain-guid-1"),
+						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
+					),
+				)
+			})
+
+			It("returns the error and all warnings", func() {
+				Expect(executeErr).To(MatchError(ccerror.MultiError{
+					ResponseCode: http.StatusTeapot,
+					Errors: []ccerror.V3Error{
+						{
+							Code:   10008,
+							Detail: "The request is semantically invalid: command presence",
+							Title:  "CF-UnprocessableEntity",
+						},
+						{
+							Code:   10010,
+							Detail: "Domain not found",
+							Title:  "CF-ResourceNotFound",
+						},
+					},
+				}))
+				Expect(warnings).To(ConsistOf("this is a warning"))
+			})
+		})
+	})
+
 	Describe("GetOrganizationDomains", func() {
 		var (
 			orgGUID    string
@@ -595,7 +874,7 @@ var _ = Describe("Domain", func() {
 
 		When("the request succeeds", func() {
 			BeforeEach(func() {
-				response := `{"data": 
+				response := `{"data":
 								[{
 									"guid": "some-org-guid"
 								}]

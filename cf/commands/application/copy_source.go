@@ -3,6 +3,7 @@ package application
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"code.cloudfoundry.org/cli/cf/api/applications"
 	"code.cloudfoundry.org/cli/cf/api/authentication"
@@ -105,14 +106,16 @@ func (cmd *CopySource) Execute(c flags.FlagContext) error {
 	}
 
 	var targetOrgName, targetSpaceName, spaceGUID, copyStr string
+	var spaceFields models.SpaceFields
 	if targetOrg != "" && targetSpace != "" {
-		spaceGUID, err = cmd.findSpaceGUID(targetOrg, targetSpace)
+		spaceFields, err = cmd.findSpaceFields(targetOrg, targetSpace)
+		spaceGUID = spaceFields.GUID
 		if err != nil {
 			return err
 		}
 
 		targetOrgName = targetOrg
-		targetSpaceName = targetSpace
+		targetSpaceName = spaceFields.Name
 	} else if targetSpace != "" {
 		var space models.Space
 		space, err = cmd.spaceRepo.FindByName(targetSpace)
@@ -121,7 +124,7 @@ func (cmd *CopySource) Execute(c flags.FlagContext) error {
 		}
 		spaceGUID = space.GUID
 		targetOrgName = cmd.config.OrganizationFields().Name
-		targetSpaceName = targetSpace
+		targetSpaceName = space.Name
 	} else {
 		spaceGUID = cmd.config.SpaceFields().GUID
 		targetOrgName = cmd.config.OrganizationFields().Name
@@ -152,23 +155,23 @@ func (cmd *CopySource) Execute(c flags.FlagContext) error {
 	return nil
 }
 
-func (cmd *CopySource) findSpaceGUID(targetOrg, targetSpace string) (string, error) {
+func (cmd *CopySource) findSpaceFields(targetOrg, targetSpace string) (models.SpaceFields, error) {
 	org, err := cmd.orgRepo.FindByName(targetOrg)
 	if err != nil {
-		return "", err
+		return models.SpaceFields{}, err
 	}
 
-	var space models.SpaceFields
+	var spaceFields models.SpaceFields
 	var foundSpace bool
 	for _, s := range org.Spaces {
-		if s.Name == targetSpace {
-			space = s
+		if strings.EqualFold(s.Name, targetSpace) {
+			spaceFields = s
 			foundSpace = true
 		}
 	}
 
 	if !foundSpace {
-		return "", fmt.Errorf(T("Could not find space {{.Space}} in organization {{.Org}}",
+		return models.SpaceFields{}, fmt.Errorf(T("Could not find space {{.Space}} in organization {{.Org}}",
 			map[string]interface{}{
 				"Space": terminal.EntityNameColor(targetSpace),
 				"Org":   terminal.EntityNameColor(targetOrg),
@@ -176,7 +179,7 @@ func (cmd *CopySource) findSpaceGUID(targetOrg, targetSpace string) (string, err
 		))
 	}
 
-	return space.GUID, nil
+	return spaceFields, nil
 }
 
 func buildCopyString(sourceAppName, targetAppName, targetOrgName, targetSpaceName, username string) string {

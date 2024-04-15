@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/cli/command/commandfakes"
 	. "code.cloudfoundry.org/cli/command/v7"
 	"code.cloudfoundry.org/cli/command/v7/v7fakes"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/util/configv3"
 	"code.cloudfoundry.org/cli/util/ui"
 
@@ -22,7 +23,7 @@ var _ = Describe("stacks Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeStacksActor
+		fakeActor       *v7fakes.FakeActor
 		executeErr      error
 		args            []string
 		binaryName      string
@@ -38,14 +39,16 @@ var _ = Describe("stacks Command", func() {
 		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeStacksActor)
+		fakeActor = new(v7fakes.FakeActor)
 		args = nil
 
 		cmd = StacksCommand{
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
+			BaseCommand: BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		binaryName = "faceman"
@@ -71,7 +74,7 @@ var _ = Describe("stacks Command", func() {
 
 	Context("When the environment is setup correctly", func() {
 		BeforeEach(func() {
-			fakeConfig.CurrentUserReturns(configv3.User{Name: "banana"}, nil)
+			fakeActor.GetCurrentUserReturns(configv3.User{Name: "banana"}, nil)
 		})
 
 		When("StacksActor returns an error", func() {
@@ -92,17 +95,24 @@ var _ = Describe("stacks Command", func() {
 			})
 		})
 
-		When("everything is perfect", func() {
+		When("StacksActor does not return an error", func() {
 			BeforeEach(func() {
-				stacks := []v7action.Stack{
+				stacks := []resources.Stack{
 					{Name: "Stack2", Description: "desc2"},
 					{Name: "stack1", Description: "desc1"},
 				}
 				fakeActor.GetStacksReturns(stacks, v7action.Warnings{"warning-1", "warning-2"}, nil)
 			})
 
-			It("asks the StacksActor for a list of stacks", func() {
-				Expect(fakeActor.GetStacksCallCount()).To(Equal(1))
+			When("the --labels flag is given", func() {
+				labelsFlagValue := "some-label-selector"
+				BeforeEach(func() {
+					cmd.Labels = labelsFlagValue
+				})
+				It("passes the label selector to GetStacks", func() {
+					labelSelector := fakeActor.GetStacksArgsForCall(0)
+					Expect(labelSelector).To(Equal(labelsFlagValue))
+				})
 			})
 
 			It("prints warnings", func() {

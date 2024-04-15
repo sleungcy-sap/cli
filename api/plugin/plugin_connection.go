@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"bytes"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"io"
@@ -11,23 +10,23 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+	"errors"
 
 	"code.cloudfoundry.org/cli/api/plugin/pluginerror"
+	"code.cloudfoundry.org/cli/util"
 )
 
 // PluginConnection represents a connection to a plugin repo.
 type PluginConnection struct {
 	HTTPClient  *http.Client
-	proxyReader ProxyReader
+	proxyReader ProxyReader // nolint
 }
 
 // NewConnection returns a new PluginConnection
 func NewConnection(skipSSLValidation bool, dialTimeout time.Duration) *PluginConnection {
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: skipSSLValidation,
-		},
-		Proxy: http.ProxyFromEnvironment,
+		TLSClientConfig: util.NewTLSConfig(nil, skipSSLValidation),
+		Proxy:           http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
 			KeepAlive: 30 * time.Second,
 			Timeout:   dialTimeout,
@@ -103,18 +102,21 @@ func (connection *PluginConnection) populateResponse(response *http.Response, pa
 func (connection *PluginConnection) processRequestErrors(request *http.Request, err error) error {
 	switch e := err.(type) {
 	case *url.Error:
-		switch urlErr := e.Err.(type) {
-		case x509.UnknownAuthorityError:
+		if errors.As(err, &x509.UnknownAuthorityError{}) {
 			return pluginerror.UnverifiedServerError{
 				URL: request.URL.String(),
 			}
-		case x509.HostnameError:
-			return pluginerror.SSLValidationHostnameError{
-				Message: urlErr.Error(),
-			}
-		default:
-			return pluginerror.RequestError{Err: e}
 		}
+
+		hostnameError := x509.HostnameError{}
+		if errors.As(err, &hostnameError) {
+			return pluginerror.SSLValidationHostnameError{
+				Message: hostnameError.Error(),
+			}
+		}
+
+		return pluginerror.RequestError{Err: e}
+
 	default:
 		return err
 	}

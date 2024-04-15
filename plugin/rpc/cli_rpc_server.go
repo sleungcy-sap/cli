@@ -9,9 +9,9 @@ import (
 	"code.cloudfoundry.org/cli/cf/configuration/coreconfig"
 	"code.cloudfoundry.org/cli/cf/terminal"
 	"code.cloudfoundry.org/cli/plugin"
-	"code.cloudfoundry.org/cli/plugin/models"
+	plugin_models "code.cloudfoundry.org/cli/plugin/models"
 	"code.cloudfoundry.org/cli/version"
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 
 	"fmt"
 	"net"
@@ -49,13 +49,13 @@ type CliRpcCmd struct {
 	stdout               io.Writer
 }
 
-//go:generate counterfeiter . TerminalOutputSwitch
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . TerminalOutputSwitch
 
 type TerminalOutputSwitch interface {
 	DisableTerminalOutput(bool)
 }
 
-//go:generate counterfeiter . OutputCapture
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . OutputCapture
 
 type OutputCapture interface {
 	SetOutputBucket(io.Writer)

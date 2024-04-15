@@ -1,10 +1,12 @@
 package v7_test
 
 import (
-	"code.cloudfoundry.org/cli/actor/v7action"
-	"code.cloudfoundry.org/cli/command/v7"
-	"code.cloudfoundry.org/cli/command/v7/v7fakes"
 	"errors"
+
+	"code.cloudfoundry.org/cli/actor/v7action"
+	v7 "code.cloudfoundry.org/cli/command/v7"
+	"code.cloudfoundry.org/cli/command/v7/v7fakes"
+	"code.cloudfoundry.org/cli/resources"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/command/commandfakes"
@@ -22,7 +24,7 @@ var _ = Describe("target Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeTargetActor
+		fakeActor       *v7fakes.FakeActor
 		binaryName      string
 		apiVersion      string
 		minCLIVersion   string
@@ -33,19 +35,21 @@ var _ = Describe("target Command", func() {
 		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeTargetActor)
+		fakeActor = new(v7fakes.FakeActor)
 
 		cmd = v7.TargetCommand{
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
+			BaseCommand: v7.BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		binaryName = "faceman"
 		fakeConfig.BinaryNameReturns(binaryName)
 		apiVersion = "1.2.3"
-		fakeActor.CloudControllerAPIVersionReturns(apiVersion)
+		fakeConfig.APIVersionReturns(apiVersion)
 		minCLIVersion = "1.0.0"
 		fakeConfig.MinCLIVersionReturns(minCLIVersion)
 		fakeConfig.BinaryVersionReturns("1.0.0")
@@ -58,52 +62,6 @@ var _ = Describe("target Command", func() {
 	When("a cloud controller API endpoint is set", func() {
 		BeforeEach(func() {
 			fakeConfig.TargetReturns("some-api-target")
-		})
-
-		When("checking the cloud controller minimum version warning", func() {
-			var binaryVersion string
-
-			When("the CLI version is less than the recommended minimum", func() {
-				BeforeEach(func() {
-					binaryVersion = "0.0.0"
-					fakeConfig.BinaryVersionReturns(binaryVersion)
-				})
-
-				It("displays a recommendation to update the CLI version", func() {
-					Expect(testUI.Err).To(Say("Cloud Foundry API version %s requires CLI version %s. You are currently on version %s. To upgrade your CLI, please visit: https://github.com/cloudfoundry/cli#downloads", apiVersion, minCLIVersion, binaryVersion))
-				})
-			})
-
-			When("the CLI version is greater or equal to the recommended minimum", func() {
-				BeforeEach(func() {
-					binaryVersion = "1.0.0"
-					fakeConfig.BinaryVersionReturns(binaryVersion)
-				})
-
-				It("does not display a recommendation to update the CLI version", func() {
-					Expect(testUI.Err).NotTo(Say("Cloud Foundry API version %s requires CLI version %s. You are currently on version %s. To upgrade your CLI, please visit: https://github.com/cloudfoundry/cli#downloads", apiVersion, minCLIVersion, binaryVersion))
-				})
-			})
-
-			When("an error is encountered while parsing the semver versions", func() {
-				BeforeEach(func() {
-					fakeConfig.BinaryVersionReturns("&#%")
-				})
-
-				It("does not recommend to update the CLI version", func() {
-					Expect(testUI.Err).NotTo(Say("Cloud Foundry API version %s requires CLI version %s.", apiVersion, minCLIVersion))
-				})
-			})
-
-			When("the CLI version is invalid", func() {
-				BeforeEach(func() {
-					fakeConfig.BinaryVersionReturns("&#%")
-				})
-
-				It("returns an error", func() {
-					Expect(executeErr.Error()).To(Equal("No Major.Minor.Patch elements found"))
-				})
-			})
 		})
 
 		When("checking target fails", func() {
@@ -130,7 +88,7 @@ var _ = Describe("target Command", func() {
 
 				BeforeEach(func() {
 					someErr = errors.New("some-current-user-error")
-					fakeConfig.CurrentUserReturns(configv3.User{}, someErr)
+					fakeActor.GetCurrentUserReturns(configv3.User{}, someErr)
 				})
 
 				It("returns the same error", func() {
@@ -143,7 +101,7 @@ var _ = Describe("target Command", func() {
 
 			When("getting the current user does not return an error", func() {
 				BeforeEach(func() {
-					fakeConfig.CurrentUserReturns(
+					fakeActor.GetCurrentUserReturns(
 						configv3.User{Name: "some-user"},
 						nil)
 				})
@@ -153,8 +111,8 @@ var _ = Describe("target Command", func() {
 						It("displays how to target an org and space", func() {
 							Expect(executeErr).ToNot(HaveOccurred())
 
-							Expect(testUI.Out).To(Say("api endpoint:   some-api-target"))
-							Expect(testUI.Out).To(Say("api version:    1.2.3"))
+							Expect(testUI.Out).To(Say("API endpoint:   some-api-target"))
+							Expect(testUI.Out).To(Say("API version:    1.2.3"))
 							Expect(testUI.Out).To(Say("user:           some-user"))
 							Expect(testUI.Out).To(Say("No org or space targeted, use '%s target -o ORG -s SPACE'", binaryName))
 						})
@@ -172,8 +130,8 @@ var _ = Describe("target Command", func() {
 						It("displays the org and tip to target space", func() {
 							Expect(executeErr).ToNot(HaveOccurred())
 
-							Expect(testUI.Out).To(Say("api endpoint:   some-api-target"))
-							Expect(testUI.Out).To(Say("api version:    1.2.3"))
+							Expect(testUI.Out).To(Say("API endpoint:   some-api-target"))
+							Expect(testUI.Out).To(Say("API version:    1.2.3"))
 							Expect(testUI.Out).To(Say("user:           some-user"))
 							Expect(testUI.Out).To(Say("org:            some-org"))
 							Expect(testUI.Out).To(Say("No space targeted, use '%s target -s SPACE'", binaryName))
@@ -197,8 +155,8 @@ var _ = Describe("target Command", func() {
 						It("displays the org and space targeted ", func() {
 							Expect(executeErr).ToNot(HaveOccurred())
 
-							Expect(testUI.Out).To(Say("api endpoint:   some-api-target"))
-							Expect(testUI.Out).To(Say("api version:    1.2.3"))
+							Expect(testUI.Out).To(Say("API endpoint:   some-api-target"))
+							Expect(testUI.Out).To(Say("API version:    1.2.3"))
 							Expect(testUI.Out).To(Say("user:           some-user"))
 							Expect(testUI.Out).To(Say("org:            some-org"))
 							Expect(testUI.Out).To(Say("space:          some-space"))
@@ -220,7 +178,7 @@ var _ = Describe("target Command", func() {
 						When("the space exists", func() {
 							BeforeEach(func() {
 								fakeActor.GetSpaceByNameAndOrganizationReturns(
-									v7action.Space{
+									resources.Space{
 										GUID: "some-space-guid",
 										Name: "some-space",
 									},
@@ -241,7 +199,7 @@ var _ = Describe("target Command", func() {
 						When("the space does not exist", func() {
 							BeforeEach(func() {
 								fakeActor.GetSpaceByNameAndOrganizationReturns(
-									v7action.Space{},
+									resources.Space{},
 									v7action.Warnings{},
 									actionerror.SpaceNotFoundError{Name: "some-space"})
 							})
@@ -273,7 +231,7 @@ var _ = Describe("target Command", func() {
 					When("the org does not exist", func() {
 						BeforeEach(func() {
 							fakeActor.GetOrganizationByNameReturns(
-								v7action.Organization{},
+								resources.Organization{},
 								nil,
 								actionerror.OrganizationNotFoundError{Name: "some-org"})
 						})
@@ -294,7 +252,7 @@ var _ = Describe("target Command", func() {
 								Name: "some-org",
 							})
 							fakeActor.GetOrganizationByNameReturns(
-								v7action.Organization{GUID: "some-org-guid"},
+								resources.Organization{GUID: "some-org-guid"},
 								v7action.Warnings{"warning-1", "warning-2"},
 								nil)
 						})
@@ -305,7 +263,7 @@ var _ = Describe("target Command", func() {
 							BeforeEach(func() {
 								err = errors.New("get-org-spaces-error")
 								fakeActor.GetOrganizationSpacesReturns(
-									[]v7action.Space{},
+									[]resources.Space{},
 									v7action.Warnings{
 										"warning-3",
 									},
@@ -357,7 +315,7 @@ var _ = Describe("target Command", func() {
 						When("there is only 1 space in the targeted org", func() {
 							BeforeEach(func() {
 								fakeActor.GetOrganizationSpacesReturns(
-									[]v7action.Space{{
+									[]resources.Space{{
 										GUID: "some-space-guid",
 										Name: "some-space",
 									}},
@@ -394,7 +352,7 @@ var _ = Describe("target Command", func() {
 						When("there are multiple spaces in the targeted org", func() {
 							BeforeEach(func() {
 								fakeActor.GetOrganizationSpacesReturns(
-									[]v7action.Space{
+									[]resources.Space{
 										{
 											GUID: "some-space-guid",
 											Name: "some-space",
@@ -431,7 +389,7 @@ var _ = Describe("target Command", func() {
 							BeforeEach(func() {
 								err = errors.New("get-org-spaces-error")
 								fakeActor.GetOrganizationSpacesReturns(
-									[]v7action.Space{},
+									[]resources.Space{},
 									v7action.Warnings{
 										"warning-3",
 									},
@@ -460,7 +418,7 @@ var _ = Describe("target Command", func() {
 					When("the org exists", func() {
 						BeforeEach(func() {
 							fakeActor.GetOrganizationByNameReturns(
-								v7action.Organization{
+								resources.Organization{
 									GUID: "some-org-guid",
 									Name: "some-org",
 								},
@@ -480,7 +438,7 @@ var _ = Describe("target Command", func() {
 						When("the space exists", func() {
 							BeforeEach(func() {
 								fakeActor.GetSpaceByNameAndOrganizationReturns(
-									v7action.Space{
+									resources.Space{
 										GUID: "some-space-guid",
 										Name: "some-space",
 									},
@@ -511,7 +469,7 @@ var _ = Describe("target Command", func() {
 						When("the space does not exist", func() {
 							BeforeEach(func() {
 								fakeActor.GetSpaceByNameAndOrganizationReturns(
-									v7action.Space{},
+									resources.Space{},
 									nil,
 									actionerror.SpaceNotFoundError{Name: "some-space"})
 							})
@@ -530,7 +488,7 @@ var _ = Describe("target Command", func() {
 					When("the org does not exist", func() {
 						BeforeEach(func() {
 							fakeActor.GetOrganizationByNameReturns(
-								v7action.Organization{},
+								resources.Organization{},
 								nil,
 								actionerror.OrganizationNotFoundError{Name: "some-org"})
 						})

@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+// AppInstanceRow represents an instance of a V3 app's process,
+// as displayed in the 'cf app' output.
 type AppInstanceRow struct {
 	Index   string
 	State   string
@@ -12,20 +14,27 @@ type AppInstanceRow struct {
 	CPU     string
 	Memory  string
 	Disk    string
+	LogRate string
 	Details string
 }
 
+// AppProcessTable represents a process of a V3 app, as displayed in the 'cf
+// app' output.
 type AppProcessTable struct {
 	Type          string
+	Sidecars      string
 	InstanceCount string
 	MemUsage      string
 	Instances     []AppInstanceRow
 }
 
+// AppTable represents a V3 app as a collection of processes,
+// as displayed in the 'cf app' output.
 type AppTable struct {
 	Processes []AppProcessTable
 }
 
+// ParseV3AppProcessTable parses bytes from 'cf app' stdout into an AppTable.
 func ParseV3AppProcessTable(input []byte) AppTable {
 	appTable := AppTable{}
 
@@ -47,11 +56,13 @@ func ParseV3AppProcessTable(input []byte) AppTable {
 
 		switch {
 		case strings.HasPrefix(row, "#"):
+			const columnCount = 8
+
 			// instance row
 			columns := splitColumns(row)
 			details := ""
-			if len(columns) >= 7 {
-				details = columns[6]
+			if len(columns) >= columnCount {
+				details = columns[7]
 			}
 
 			instanceRow := AppInstanceRow{
@@ -61,6 +72,7 @@ func ParseV3AppProcessTable(input []byte) AppTable {
 				CPU:     columns[3],
 				Memory:  columns[4],
 				Disk:    columns[5],
+				LogRate: columns[6],
 				Details: details,
 			}
 			lastProcessIndex := len(appTable.Processes) - 1

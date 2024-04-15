@@ -2,13 +2,15 @@ package shared
 
 import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
+	"code.cloudfoundry.org/cli/actor/sharedaction"
 	"code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/command"
+	"code.cloudfoundry.org/cli/resources"
 )
 
-func PollStage(dropletStream <-chan v7action.Droplet, warningsStream <-chan v7action.Warnings, errStream <-chan error, logStream <-chan *v7action.LogMessage, logErrStream <-chan error, ui command.UI) (v7action.Droplet, error) {
+func PollStage(dropletStream <-chan resources.Droplet, warningsStream <-chan v7action.Warnings, errStream <-chan error, logStream <-chan sharedaction.LogMessage, logErrStream <-chan error, ui command.UI) (resources.Droplet, error) {
 	var closedBuildStream, closedWarningsStream, closedErrStream bool
-	var droplet v7action.Droplet
+	var droplet resources.Droplet
 
 	for {
 		select {
@@ -37,17 +39,19 @@ func PollStage(dropletStream <-chan v7action.Droplet, warningsStream <-chan v7ac
 			}
 
 			switch logErr.(type) {
-			case actionerror.NOAATimeoutError:
+			case actionerror.LogCacheTimeoutError:
 				ui.DisplayWarning("timeout connecting to log server, no log will be shown")
 			default:
-				ui.DisplayWarning(logErr.Error())
+				ui.DisplayWarning("Failed to retrieve logs from Log Cache: {{.Error}}", map[string]interface{}{
+					"Error": logErr,
+				})
 			}
 		case err, ok := <-errStream:
 			if !ok {
 				closedErrStream = true
 				break
 			}
-			return v7action.Droplet{}, err
+			return resources.Droplet{}, err
 		}
 		if closedBuildStream && closedWarningsStream && closedErrStream {
 			return droplet, nil

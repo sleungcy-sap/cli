@@ -7,20 +7,23 @@ import (
 	"code.cloudfoundry.org/cli/resources"
 )
 
-// Process represents a V3 actor process.
-type Process resources.Process
+func (actor Actor) GetProcess(processGUID string) (resources.Process, Warnings, error) {
+	process, warnings, err := actor.CloudControllerClient.GetProcess(processGUID)
+
+	return resources.Process(process), Warnings(warnings), err
+}
 
 // GetProcessByTypeAndApplication returns a process for the given application
 // and type.
-func (actor Actor) GetProcessByTypeAndApplication(processType string, appGUID string) (Process, Warnings, error) {
+func (actor Actor) GetProcessByTypeAndApplication(processType string, appGUID string) (resources.Process, Warnings, error) {
 	process, warnings, err := actor.CloudControllerClient.GetApplicationProcessByType(appGUID, processType)
 	if _, ok := err.(ccerror.ProcessNotFoundError); ok {
-		return Process{}, Warnings(warnings), actionerror.ProcessNotFoundError{ProcessType: processType}
+		return resources.Process{}, Warnings(warnings), actionerror.ProcessNotFoundError{ProcessType: processType}
 	}
-	return Process(process), Warnings(warnings), err
+	return resources.Process(process), Warnings(warnings), err
 }
 
-func (actor Actor) ScaleProcessByApplication(appGUID string, process Process) (Warnings, error) {
+func (actor Actor) ScaleProcessByApplication(appGUID string, process resources.Process) (Warnings, error) {
 	_, warnings, err := actor.CloudControllerClient.CreateApplicationProcessScale(appGUID, resources.Process(process))
 	allWarnings := Warnings(warnings)
 	if err != nil {
@@ -33,7 +36,7 @@ func (actor Actor) ScaleProcessByApplication(appGUID string, process Process) (W
 	return allWarnings, nil
 }
 
-func (actor Actor) UpdateProcessByTypeAndApplication(processType string, appGUID string, updatedProcess Process) (Warnings, error) {
+func (actor Actor) UpdateProcessByTypeAndApplication(processType string, appGUID string, updatedProcess resources.Process) (Warnings, error) {
 	if updatedProcess.HealthCheckType != constant.HTTP {
 		if updatedProcess.HealthCheckEndpoint != constant.ProcessHealthCheckEndpointDefault && updatedProcess.HealthCheckEndpoint != "" {
 			return nil, actionerror.HTTPHealthCheckInvalidError{}

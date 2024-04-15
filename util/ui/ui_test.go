@@ -31,7 +31,7 @@ var _ = Describe("UI", func() {
 
 		out = NewBuffer()
 		ui.Out = out
-		ui.OutForInteration = out
+		ui.OutForInteraction = out
 		errBuff = NewBuffer()
 		ui.Err = errBuff
 	})
@@ -95,7 +95,7 @@ var _ = Describe("UI", func() {
 
 			It("displays the error to ui.Err and displays FAILED in bold red to ui.Out", func() {
 				Expect(ui.Err).To(Say("I am an error\n"))
-				Expect(out).To(Say("\x1b\\[31;1mFAILED\x1b\\[0m\n"))
+				Expect(out).To(Say("\u001B\\[31;1mFAILED\u001B\\[0;22m\n"))
 			})
 
 			When("the locale is not set to english", func() {
@@ -110,7 +110,7 @@ var _ = Describe("UI", func() {
 			It("displays the error text to ui.Err and displays FAILED in bold red to ui.Out", func() {
 				ui.DisplayError(errors.New("I am a BANANA!"))
 				Expect(ui.Err).To(Say("I am a BANANA!\n"))
-				Expect(out).To(Say("\x1b\\[31;1mFAILED\x1b\\[0m\n"))
+				Expect(out).To(Say("\u001B\\[31;1mFAILED\u001B\\[0;22m\n"))
 			})
 		})
 	})
@@ -118,7 +118,7 @@ var _ = Describe("UI", func() {
 	Describe("DisplayHeader", func() {
 		It("displays the header colorized and bolded to ui.Out", func() {
 			ui.DisplayHeader("some-header")
-			Expect(out).To(Say("\x1b\\[1msome-header\x1b\\[0m"))
+			Expect(out).To(Say("\u001B\\[1msome-header\u001B\\[22m"))
 		})
 
 		When("the locale is not set to English", func() {
@@ -134,7 +134,7 @@ var _ = Describe("UI", func() {
 
 			It("displays the translated header colorized and bolded to ui.Out", func() {
 				ui.DisplayHeader("FEATURE FLAGS")
-				Expect(out).To(Say("\x1b\\[1mINDICATEURS DE FONCTION\x1b\\[0m"))
+				Expect(out).To(Say("\u001B\\[1mINDICATEURS DE FONCTION\u001B\\[22m"))
 			})
 		})
 	})
@@ -149,13 +149,13 @@ var _ = Describe("UI", func() {
 	Describe("DisplayOK", func() {
 		It("displays 'OK' in green and bold", func() {
 			ui.DisplayOK()
-			Expect(out).To(Say("\x1b\\[32;1mOK\x1b\\[0m"))
+			Expect(out).To(Say("\u001B\\[32;1mOK\u001B\\[0;22m"))
 		})
 	})
 
 	// Covers the happy paths, additional cases are tested in TranslateText
 	Describe("DisplayText", func() {
-		It("displays the template with map values substituted in to ui.Out with a newline", func() {
+		It("displays the template with map values substituted into ui.Out with a newline", func() {
 			ui.DisplayText(
 				"template with {{.SomeMapValue}}",
 				map[string]interface{}{
@@ -175,13 +175,83 @@ var _ = Describe("UI", func() {
 				ui.Out = out
 			})
 
-			It("displays the translated template with map values substituted in to ui.Out", func() {
+			It("displays the translated template with map values substituted into ui.Out", func() {
 				ui.DisplayText(
 					"\nTIP: Use '{{.Command}}' to target new org",
 					map[string]interface{}{
 						"Command": "foo",
 					})
 				Expect(out).To(Say("\nASTUCE : utilisez 'foo' pour cibler une nouvelle organisation"))
+			})
+		})
+	})
+
+	Describe("Display JSON", func() {
+		It("displays the indented JSON object", func() {
+			obj := map[string]interface{}{
+				"str":  "hello",
+				"bool": true,
+				"int":  42,
+				"pass": "abc>&gd!f",
+				"map":  map[string]interface{}{"float": 123.03},
+				"arr":  []string{"a", "b"},
+			}
+
+			_ = ui.DisplayJSON("named_json", obj)
+
+			Expect(out).To(SatisfyAll(
+				Say("named_json: {\n"),
+				Say("  \"arr\": \\[\n"),
+				Say("    \"a\","),
+				Say("    \"b\"\n"),
+				Say("  \\],\n"),
+				Say("  \"bool\": true,\n"),
+				Say("  \"int\": 42,\n"),
+				Say("  \"map\": {\n"),
+				Say("    \"float\": 123.03\n"),
+				Say("  },\n"),
+				Say("  \"pass\": \"abc>&gd!f\",\n"),
+				Say("  \"str\": \"hello\"\n"),
+				Say("}\n"),
+				Say("\n"),
+			))
+		})
+	})
+
+	Describe("DeferText", func() {
+		It("defers the template with map values substituted into ui.Out with a newline", func() {
+			ui.DeferText(
+				"template with {{.SomeMapValue}}",
+				map[string]interface{}{
+					"SomeMapValue": "map-value",
+				})
+			Expect(out).NotTo(Say("template with map-value\n"))
+			ui.FlushDeferred()
+			Expect(out).To(Say("template with map-value\n"))
+		})
+
+		When("the locale is not set to english", func() {
+			BeforeEach(func() {
+				fakeConfig.LocaleReturns("fr-FR")
+
+				var err error
+				ui, err = NewUI(fakeConfig)
+				Expect(err).NotTo(HaveOccurred())
+
+				ui.Out = out
+			})
+
+			It("defers the translated template with map values substituted into ui.Out", func() {
+				ui.DeferText(
+					"\nTIP: Use '{{.Command}}' to target new org",
+					map[string]interface{}{
+						"Command": "foo",
+					})
+				Expect(out).NotTo(Say("\nASTUCE : utilisez 'foo' pour cibler une nouvelle organisation"))
+				ui.FlushDeferred()
+				Expect(out).To(Say("\nASTUCE : utilisez 'foo' pour cibler une nouvelle organisation"))
+				ui.FlushDeferred()
+				Expect(out).NotTo(Say("\nASTUCE : utilisez 'foo' pour cibler une nouvelle organisation"))
 			})
 		})
 	})
@@ -193,18 +263,18 @@ var _ = Describe("UI", func() {
 		})
 
 		When("an optional map is passed in", func() {
-			It("displays the template with map values bolded and substituted in to ui.Out", func() {
+			It("displays the template with map values bolded and substituted into ui.Out", func() {
 				ui.DisplayTextWithBold(
 					"template with {{.SomeMapValue}}",
 					map[string]interface{}{
 						"SomeMapValue": "map-value",
 					})
-				Expect(out).To(Say("template with \x1b\\[1mmap-value\x1b\\[0m"))
+				Expect(out).To(Say("template with \u001B\\[1mmap-value\u001B\\[22m"))
 			})
 		})
 
 		When("multiple optional maps are passed in", func() {
-			It("displays the template with only the first map values bolded and substituted in to ui.Out", func() {
+			It("displays the template with only the first map values bolded and substituted into ui.Out", func() {
 				ui.DisplayTextWithBold(
 					"template with {{.SomeMapValue}} and {{.SomeOtherMapValue}}",
 					map[string]interface{}{
@@ -213,7 +283,7 @@ var _ = Describe("UI", func() {
 					map[string]interface{}{
 						"SomeOtherMapValue": "other-map-value",
 					})
-				Expect(out).To(Say("template with \x1b\\[1mmap-value\x1b\\[0m and <no value>"))
+				Expect(out).To(Say("template with \u001B\\[1mmap-value\u001B\\[22m and <no value>"))
 			})
 		})
 
@@ -228,13 +298,13 @@ var _ = Describe("UI", func() {
 				ui.Out = out
 			})
 
-			It("displays the translated template with map values bolded and substituted in to ui.Out", func() {
+			It("displays the translated template with map values bolded and substituted into ui.Out", func() {
 				ui.DisplayTextWithBold(
 					"App {{.AppName}} does not exist.",
 					map[string]interface{}{
 						"AppName": "some-app-name",
 					})
-				Expect(out).To(Say("L'application \x1b\\[1msome-app-name\x1b\\[0m n'existe pas.\n"))
+				Expect(out).To(Say("L'application \u001B\\[1msome-app-name\u001B\\[22m n'existe pas.\n"))
 			})
 		})
 	})
@@ -246,18 +316,18 @@ var _ = Describe("UI", func() {
 		})
 
 		When("an optional map is passed in", func() {
-			It("displays the template with map values colorized, bolded, and substituted in to ui.Out", func() {
+			It("displays the template with map values colorized, bolded, and substituted into ui.Out", func() {
 				ui.DisplayTextWithFlavor(
 					"template with {{.SomeMapValue}}",
 					map[string]interface{}{
 						"SomeMapValue": "map-value",
 					})
-				Expect(out).To(Say("template with \x1b\\[36;1mmap-value\x1b\\[0m"))
+				Expect(out).To(Say("template with \u001B\\[36;1mmap-value\u001B\\[0;22m"))
 			})
 		})
 
 		When("multiple optional maps are passed in", func() {
-			It("displays the template with only the first map values colorized, bolded, and substituted in to ui.Out", func() {
+			It("displays the template with only the first map values colorized, bolded, and substituted into ui.Out", func() {
 				ui.DisplayTextWithFlavor(
 					"template with {{.SomeMapValue}} and {{.SomeOtherMapValue}}",
 					map[string]interface{}{
@@ -266,7 +336,7 @@ var _ = Describe("UI", func() {
 					map[string]interface{}{
 						"SomeOtherMapValue": "other-map-value",
 					})
-				Expect(out).To(Say("template with \x1b\\[36;1mmap-value\x1b\\[0m and <no value>"))
+				Expect(out).To(Say("template with \u001B\\[36;1mmap-value\u001B\\[0;22m and <no value>"))
 			})
 		})
 
@@ -281,84 +351,48 @@ var _ = Describe("UI", func() {
 				ui.Out = out
 			})
 
-			It("displays the translated template with map values colorized, bolded and substituted in to ui.Out", func() {
+			It("displays the translated template with map values colorized, bolded and substituted into ui.Out", func() {
 				ui.DisplayTextWithFlavor(
 					"App {{.AppName}} does not exist.",
 					map[string]interface{}{
 						"AppName": "some-app-name",
 					})
-				Expect(out).To(Say("L'application \x1b\\[36;1msome-app-name\x1b\\[0m n'existe pas.\n"))
+				Expect(out).To(Say("L'application \u001B\\[36;1msome-app-name\u001B\\[0;22m n'existe pas.\n"))
 			})
 		})
 	})
 
-	// Covers the happy paths, additional cases are tested in TranslateText
-	Describe("DisplayWarning", func() {
-		It("displays the warning to ui.Err", func() {
-			ui.DisplayWarning(
-				"template with {{.SomeMapValue}}",
-				map[string]interface{}{
-					"SomeMapValue": "map-value",
-				})
-			Expect(ui.Err).To(Say("template with map-value\n\n"))
+	Describe("DisplayDiffAddition", func() {
+		It("displays a green indented line with a +", func() {
+			ui.DisplayDiffAddition("added", 3, false)
+			Expect(out).To(Say("\u001B\\[32m\\+\\s+added\u001B\\[0m"))
+		})
+		It("displays a hyphen when the addHyphen is true", func() {
+			ui.DisplayDiffAddition("added", 3, true)
+			Expect(out).To(Say("\u001B\\[32m\\+\\s+\\- added\u001B\\[0m"))
 		})
 
-		When("the locale is not set to english", func() {
-			BeforeEach(func() {
-				fakeConfig.LocaleReturns("fr-FR")
+	})
 
-				var err error
-				ui, err = NewUI(fakeConfig)
-				Expect(err).NotTo(HaveOccurred())
-
-				ui.Err = NewBuffer()
-			})
-
-			It("displays the translated warning to ui.Err", func() {
-				ui.DisplayWarning(
-					"'{{.VersionShort}}' and '{{.VersionLong}}' are also accepted.",
-					map[string]interface{}{
-						"VersionShort": "some-value",
-						"VersionLong":  "some-other-value",
-					})
-				Expect(ui.Err).To(Say("'some-value' et 'some-other-value' sont également acceptés.\n"))
-			})
+	Describe("DisplayDiffRemoval", func() {
+		It("displays a red indented line with a -", func() {
+			ui.DisplayDiffRemoval("removed", 3, false)
+			Expect(out).To(Say("\u001B\\[31m\\-\\s+removed\u001B\\[0m"))
+		})
+		It("displays a a hyphen when addHyphen is true", func() {
+			ui.DisplayDiffRemoval("removed", 3, true)
+			Expect(out).To(Say("\u001B\\[31m\\-\\s+\\- removed\u001B\\[0m"))
 		})
 	})
 
-	// Covers the happy paths, additional cases are tested in TranslateText
-	Describe("DisplayWarnings", func() {
-		It("displays the warnings to ui.Err", func() {
-			ui.DisplayWarnings([]string{"warning-1", "warning-2"})
-			Expect(ui.Err).To(Say("warning-1\n"))
-			Expect(ui.Err).To(Say("warning-2\n"))
-			Expect(ui.Err).To(Say("\n"))
+	Describe("DisplayDiffUnchanged", func() {
+		It("displays a plain indented line with no prefix", func() {
+			ui.DisplayDiffUnchanged("unchanged", 3, false)
+			Expect(out).To(Say("        unchanged"))
 		})
-
-		When("the locale is not set to english", func() {
-			BeforeEach(func() {
-				fakeConfig.LocaleReturns("fr-FR")
-
-				var err error
-				ui, err = NewUI(fakeConfig)
-				Expect(err).NotTo(HaveOccurred())
-
-				ui.Err = NewBuffer()
-			})
-
-			It("displays the translated warnings to ui.Err", func() {
-				ui.DisplayWarnings([]string{"Also delete any mapped routes", "FEATURE FLAGS"})
-				Expect(ui.Err).To(Say("Supprimer aussi les routes mappées\n"))
-				Expect(ui.Err).To(Say("INDICATEURS DE FONCTION\n"))
-				Expect(ui.Err).To(Say("\n"))
-			})
-		})
-
-		Context("does not display newline when warnings are empty", func() {
-			It("does not print out a new line", func() {
-				ui.DisplayWarnings(nil)
-				Expect(errBuff.Contents()).To(BeEmpty())
-			})
+		It("displays a a hyphen when addHyphen is true", func() {
+			ui.DisplayDiffUnchanged("unchanged", 3, true)
+			Expect(out).To(Say("      - unchanged"))
 		})
 	})
 

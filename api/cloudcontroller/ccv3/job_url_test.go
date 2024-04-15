@@ -217,7 +217,7 @@ var _ = Describe("Job URL", func() {
 			BeforeEach(func() {
 				server.AppendHandlers(
 					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/spaces/some-space-guid/actions/apply_manifest", "no_route=true"),
+						VerifyRequest(http.MethodPost, "/v3/spaces/some-space-guid/actions/apply_manifest"),
 						VerifyHeaderKV("Content-type", "application/x-yaml"),
 						VerifyBody(manifestBody),
 						RespondWith(http.StatusAccepted, "", http.Header{

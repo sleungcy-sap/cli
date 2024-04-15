@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/cli/actor/v7action/v7actionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -29,9 +30,55 @@ var _ = Describe("SSH Actions", func() {
 		fakeConfig = new(v7actionfakes.FakeConfig)
 		fakeSharedActor = new(v7actionfakes.FakeSharedActor)
 		fakeUAAClient = new(v7actionfakes.FakeUAAClient)
-		actor = NewActor(fakeCloudControllerClient, fakeConfig, fakeSharedActor, fakeUAAClient)
+		actor = NewActor(fakeCloudControllerClient, fakeConfig, fakeSharedActor, fakeUAAClient, nil, nil)
 	})
 
+	Describe("GetSSHPasscode", func() {
+		var uaaAccessToken string
+
+		BeforeEach(func() {
+			uaaAccessToken = "4cc3sst0k3n"
+			fakeConfig.AccessTokenReturns(uaaAccessToken)
+			fakeConfig.SSHOAuthClientReturns("some-id")
+		})
+
+		When("no errors are encountered getting the ssh passcode", func() {
+			var expectedCode string
+
+			BeforeEach(func() {
+				expectedCode = "s3curep4ss"
+				fakeUAAClient.GetSSHPasscodeReturns(expectedCode, nil)
+			})
+
+			It("returns the ssh passcode", func() {
+				code, err := actor.GetSSHPasscode()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(code).To(Equal(expectedCode))
+				Expect(fakeUAAClient.GetSSHPasscodeCallCount()).To(Equal(1))
+				accessTokenArg, sshOAuthClientArg := fakeUAAClient.GetSSHPasscodeArgsForCall(0)
+				Expect(accessTokenArg).To(Equal(uaaAccessToken))
+				Expect(sshOAuthClientArg).To(Equal("some-id"))
+			})
+		})
+
+		When("an error is encountered getting the ssh passcode", func() {
+			var expectedErr error
+
+			BeforeEach(func() {
+				expectedErr = errors.New("failed fetching code")
+				fakeUAAClient.GetSSHPasscodeReturns("", expectedErr)
+			})
+
+			It("returns the error", func() {
+				_, err := actor.GetSSHPasscode()
+				Expect(err).To(MatchError(expectedErr))
+				Expect(fakeUAAClient.GetSSHPasscodeCallCount()).To(Equal(1))
+				accessTokenArg, sshOAuthClientArg := fakeUAAClient.GetSSHPasscodeArgsForCall(0)
+				Expect(accessTokenArg).To(Equal(uaaAccessToken))
+				Expect(sshOAuthClientArg).To(Equal("some-id"))
+			})
+		})
+	})
 	Describe("GetSecureShellConfigurationByApplicationNameSpaceProcessTypeAndIndex", func() {
 		var sshAuth SSHAuthentication
 
@@ -46,8 +93,13 @@ var _ = Describe("SSH Actions", func() {
 
 		When("the app ssh endpoint is empty", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.AppSSHEndpointReturns("")
+				fakeCloudControllerClient.GetInfoReturns(ccv3.Info{
+					Links: ccv3.InfoLinks{
+						AppSSH: resources.APILink{HREF: ""},
+					},
+				}, nil, nil)
 			})
+
 			It("creates an ssh-endpoint-not-set error", func() {
 				Expect(executeErr).To(MatchError("SSH endpoint not set"))
 			})
@@ -55,9 +107,13 @@ var _ = Describe("SSH Actions", func() {
 
 		When("the app ssh hostkey fingerprint is empty", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.AppSSHEndpointReturns("some-app-ssh-endpoint")
-				fakeCloudControllerClient.AppSSHHostKeyFingerprintReturns("")
+				fakeCloudControllerClient.GetInfoReturns(ccv3.Info{
+					Links: ccv3.InfoLinks{
+						AppSSH: resources.APILink{HREF: "some-app-ssh-endpoint"},
+					},
+				}, nil, nil)
 			})
+
 			It("creates an ssh-hostkey-fingerprint-not-set error", func() {
 				Expect(executeErr).To(MatchError("SSH hostkey fingerprint not set"))
 			})
@@ -65,8 +121,14 @@ var _ = Describe("SSH Actions", func() {
 
 		When("ssh endpoint and fingerprint are set", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.AppSSHEndpointReturns("some-app-ssh-endpoint")
-				fakeCloudControllerClient.AppSSHHostKeyFingerprintReturns("some-app-ssh-fingerprint")
+				fakeCloudControllerClient.GetInfoReturns(ccv3.Info{
+					Links: ccv3.InfoLinks{
+						AppSSH: resources.APILink{
+							HREF: "some-app-ssh-endpoint",
+							Meta: resources.APILinkMeta{HostKeyFingerprint: "some-app-ssh-fingerprint"},
+						},
+					},
+				}, nil, nil)
 			})
 
 			It("looks up the passcode with the config credentials", func() {

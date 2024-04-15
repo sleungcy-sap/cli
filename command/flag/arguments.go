@@ -8,6 +8,11 @@ type OptionalAppName struct {
 	AppName string `positional-arg-name:"APP_NAME" description:"The application name"`
 }
 
+type AppDroplet struct {
+	AppName     string `positional-arg-name:"APP_NAME" required:"true" description:"The application name"`
+	DropletGUID string `positional-arg-name:"DROPLET_GUID" required:"true" description:"The droplet guid"`
+}
+
 type BuildpackName struct {
 	Buildpack string `positional-arg-name:"BUILDPACK" required:"true" description:"The buildpack"`
 }
@@ -28,16 +33,20 @@ type ParamsAsJSON struct {
 	JSON string `positional-arg-name:"JSON" required:"true" description:"Parameters as JSON"`
 }
 
-type Service struct {
-	Service string `positional-arg-name:"SERVICE" required:"true" description:"The service offering name"`
+type ServiceOffering struct {
+	ServiceOffering string `positional-arg-name:"SERVICE_OFFERING" required:"true" description:"The service offering name"`
 }
 
 type ServiceInstance struct {
-	ServiceInstance string `positional-arg-name:"SERVICE_INSTANCE" required:"true" description:"The service instance name"`
+	ServiceInstance TrimmedString `positional-arg-name:"SERVICE_INSTANCE" required:"true" description:"The service instance name"`
 }
 
 type Organization struct {
 	Organization string `positional-arg-name:"ORG" required:"true" description:"The organization"`
+}
+
+type OrganizationQuota struct {
+	OrganizationQuotaName string `positional-arg-name:"ORG_QUOTA_NAME" required:"true" description:"The organization quota name"`
 }
 
 type APIPath struct {
@@ -57,15 +66,21 @@ type Quota struct {
 }
 
 type SecurityGroup struct {
-	ServiceGroup string `positional-arg-name:"SECURITY_GROUP" required:"true" description:"The security group"`
-}
-
-type ServiceBroker struct {
-	ServiceBroker string `positional-arg-name:"SERVICE_BROKER" required:"true" description:"The service broker"`
+	SecurityGroup string `positional-arg-name:"SECURITY_GROUP" required:"true" description:"The security group"`
 }
 
 type Space struct {
 	Space string `positional-arg-name:"SPACE" required:"true" description:"The space"`
+}
+
+type Rename struct {
+	OldAppName string `positional-arg-name:"APP_NAME" required:"true" description:"The current app name"`
+	NewAppName string `positional-arg-name:"NEW_APP_NAME" required:"true" description:"The new app name"`
+}
+
+type RenameSpace struct {
+	OldSpaceName string `positional-arg-name:"SPACE" required:"true" description:"The old space name"`
+	NewSpaceName string `positional-arg-name:"NEW_SPACE_NAME" required:"true" description:"The new space name"`
 }
 
 type SpaceQuota struct {
@@ -135,10 +150,21 @@ type BindSecurityGroupArgs struct {
 	SpaceName         string `positional-arg-name:"SPACE" description:"The space name"`
 }
 
+type BindSecurityGroupV7Args struct {
+	SecurityGroupName string `positional-arg-name:"SECURITY_GROUP" required:"true" description:"The security group name"`
+	OrganizationName  string `positional-arg-name:"ORG" required:"true" description:"The organization group name"`
+}
+
 type UnbindSecurityGroupArgs struct {
 	SecurityGroupName string `positional-arg-name:"SECURITY_GROUP" required:"true" description:"The security group name"`
 	OrganizationName  string `positional-arg-name:"ORG" description:"The organization group name"`
 	SpaceName         string `positional-arg-name:"SPACE" description:"The space name"`
+}
+
+type UnbindSecurityGroupV7Args struct {
+	SecurityGroupName string `positional-arg-name:"SECURITY_GROUP" required:"true" description:"The security group name"`
+	OrganizationName  string `positional-arg-name:"ORG" required:"true" description:"The organization group name"`
+	SpaceName         string `positional-arg-name:"SPACE" required:"true" description:"The space name"`
 }
 
 type FilesArgs struct {
@@ -167,7 +193,7 @@ type CopySourceArgs struct {
 }
 
 type CreateServiceArgs struct {
-	Service         string `positional-arg-name:"SERVICE" required:"true" description:"The service offering"`
+	ServiceOffering string `positional-arg-name:"SERVICE_OFFERING" required:"true" description:"The service offering"`
 	ServicePlan     string `positional-arg-name:"SERVICE_PLAN" required:"true" description:"The service plan that the service instance will use"`
 	ServiceInstance string `positional-arg-name:"SERVICE_INSTANCE" required:"true" description:"The service instance"`
 }
@@ -175,6 +201,10 @@ type CreateServiceArgs struct {
 type RenameServiceArgs struct {
 	ServiceInstance        string `positional-arg-name:"SERVICE_INSTANCE" required:"true" description:"The service instance to rename"`
 	NewServiceInstanceName string `positional-arg-name:"NEW_SERVICE_INSTANCE" required:"true" description:"The new name of the service instance"`
+}
+
+type ShareServiceArgs struct {
+	ServiceInstance string `positional-arg-name:"SERVICE_INSTANCE" required:"true" description:"The service instance to rename"`
 }
 
 type BindServiceArgs struct {
@@ -194,7 +224,7 @@ type AppRenameArgs struct {
 
 type RenameOrgArgs struct {
 	OldOrgName string `positional-arg-name:"ORG" required:"true" description:"The old organization name"`
-	NewOrgName string `positional-arg-name:"NEW_ORG" required:"true" description:"The new organization name"`
+	NewOrgName string `positional-arg-name:"NEW_ORG_NAME" required:"true" description:"The new organization name"`
 }
 
 type RenameSpaceArgs struct {
@@ -203,13 +233,22 @@ type RenameSpaceArgs struct {
 }
 
 type SetOrgQuotaArgs struct {
-	Organization string `positional-arg-name:"ORG" required:"true" description:"The organization"`
-	Quota        string `positional-arg-name:"QUOTA" required:"true" description:"The quota"`
+	Organization      string `positional-arg-name:"ORG" required:"true" description:"The organization"`
+	OrganizationQuota string `positional-arg-name:"QUOTA" required:"true" description:"The quota"`
 }
 
 type SetSpaceQuotaArgs struct {
 	Space      string `positional-arg-name:"SPACE_NAME" required:"true" description:"The space"`
+	SpaceQuota string `positional-arg-name:"QUOTA" required:"true" description:"The space quota"`
+}
+
+type UnsetSpaceQuotaArgs struct {
+	Space      string `positional-arg-name:"SPACE_NAME" required:"true" description:"The space"`
 	SpaceQuota string `positional-arg-name:"SPACE_QUOTA" required:"true" description:"The space quota"`
+}
+
+type SetEnvVarGroup struct {
+	EnvVarGroupJson string `positional-arg-name:"JSON_STRING" required:"true" description:"json string"`
 }
 
 type V6SetHealthCheckArgs struct {
@@ -244,22 +283,27 @@ type SetLabelArgs struct {
 	Labels       []string `positional-arg-name:"KEY=VALUE" required:"true" description:"A space-separated list of labels to set on the resource"`
 }
 
-type DeleteLabelArgs struct {
+type UnsetLabelArgs struct {
 	ResourceType string   `positional-arg-name:"RESOURCE" required:"true" description:"The type of resource"`
 	ResourceName string   `positional-arg-name:"RESOURCE_NAME" required:"true" description:"The name of the resource"`
-	LabelKeys    []string `positional-arg-name:"KEY" required:"true" description:"A label to delete on the resource"`
+	LabelKeys    []string `positional-arg-name:"KEY" required:"true" description:"A label to unset on the resource"`
 }
-type SetOrgRoleArgs struct {
+type OrgRoleArgs struct {
 	Username     string  `positional-arg-name:"USERNAME" required:"true" description:"The user"`
 	Organization string  `positional-arg-name:"ORG" required:"true" description:"The organization"`
 	Role         OrgRole `positional-arg-name:"ROLE" required:"true" description:"The organization role"`
 }
 
-type SetSpaceRoleArgs struct {
+type SpaceRoleArgs struct {
 	Username     string    `positional-arg-name:"USERNAME" required:"true" description:"The user"`
 	Organization string    `positional-arg-name:"ORG" required:"true" description:"The organization"`
 	Space        string    `positional-arg-name:"SPACE" required:"true" description:"The space"`
 	Role         SpaceRole `positional-arg-name:"ROLE" required:"true" description:"The space role"`
+}
+
+type SpaceUsersArgs struct {
+	Organization string `positional-arg-name:"ORG" required:"true" description:"The organization"`
+	Space        string `positional-arg-name:"SPACE" required:"true" description:"The space"`
 }
 
 type ServiceAuthTokenArgs struct {
@@ -273,11 +317,15 @@ type DeleteServiceAuthTokenArgs struct {
 	Provider string `positional-arg-name:"PROVIDER" required:"true" description:"The token provider"`
 }
 
+type ServiceBroker struct {
+	ServiceBroker string `positional-arg-name:"SERVICE_BROKER" required:"true" description:"The service broker"`
+}
+
 type ServiceBrokerArgs struct {
 	ServiceBroker string `positional-arg-name:"SERVICE_BROKER" required:"true" description:"The service broker name"`
 	Username      string `positional-arg-name:"USERNAME" required:"true" description:"The username"`
-	Password      string `positional-arg-name:"PASSWORD" required:"true" description:"The password"`
-	URL           string `positional-arg-name:"URL" required:"true" description:"The URL of the service broker"`
+	PasswordOrURL string `positional-arg-name:"URL" required:"true" description:"The URL of the service broker"`
+	URL           string `positional-arg-name:"URL" description:"The URL of the service broker"`
 }
 
 type RenameServiceBrokerArgs struct {
@@ -312,6 +360,10 @@ type RunTaskArgs struct {
 	Command string `positional-arg-name:"COMMAND" required:"true" description:"The command to execute"`
 }
 
+type RunTaskArgsV7 struct {
+	AppName string `positional-arg-name:"APP_NAME" required:"true" description:"The application name"`
+}
+
 type TerminateTaskArgs struct {
 	AppName    string `positional-arg-name:"APP_NAME" required:"true" description:"The application name"`
 	SequenceID string `positional-arg-name:"TASK_ID" required:"true" description:"The task's unique sequence ID"`
@@ -343,6 +395,16 @@ type AddNetworkPolicyArgs struct {
 	SourceApp string `positional-arg-name:"SOURCE_APP" required:"true" description:"The source app"`
 }
 
+type AddNetworkPolicyArgsV7 struct {
+	SourceApp string `positional-arg-name:"SOURCE_APP" required:"true" description:"The source app"`
+	DestApp   string `positional-arg-name:"DESTINATION_APP" required:"true" description:"The destination app"`
+}
+
 type RemoveNetworkPolicyArgs struct {
 	SourceApp string
+}
+
+type RemoveNetworkPolicyArgsV7 struct {
+	SourceApp string `positional-arg-name:"SOURCE_APP" required:"true" description:"The source app"`
+	DestApp   string `positional-arg-name:"DESTINATION_APP" required:"true" description:"The destination app"`
 }

@@ -1,11 +1,14 @@
 package v7_test
 
 import (
-	"code.cloudfoundry.org/cli/types"
 	"errors"
+
+	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/types"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/actor/v7action"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/command/commandfakes"
 	. "code.cloudfoundry.org/cli/command/v7"
 	"code.cloudfoundry.org/cli/command/v7/v7fakes"
@@ -23,7 +26,7 @@ var _ = Describe("buildpacks Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeBuildpacksActor
+		fakeActor       *v7fakes.FakeActor
 		executeErr      error
 		args            []string
 		binaryName      string
@@ -33,14 +36,16 @@ var _ = Describe("buildpacks Command", func() {
 		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeBuildpacksActor)
+		fakeActor = new(v7fakes.FakeActor)
 		args = nil
 
 		cmd = BuildpacksCommand{
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
+			BaseCommand: BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		binaryName = "faceman"
@@ -68,12 +73,23 @@ var _ = Describe("buildpacks Command", func() {
 
 	When("the environment is setup correctly", func() {
 		BeforeEach(func() {
-			fakeConfig.CurrentUserReturns(configv3.User{Name: "apple"}, nil)
+			fakeActor.GetCurrentUserReturns(configv3.User{Name: "apple"}, nil)
 		})
 
-		It("should print text indicating its runnning", func() {
+		It("should print text indicating its running", func() {
 			Expect(executeErr).NotTo(HaveOccurred())
 			Expect(testUI.Out).To(Say(`Getting buildpacks as apple\.\.\.`))
+		})
+
+		When("the --labels flag is used", func() {
+			BeforeEach(func() {
+				cmd.Labels = "some-label-selector"
+			})
+
+			It("passes the label selector to the actor", func() {
+				labelSelector := fakeActor.GetBuildpacksArgsForCall(0)
+				Expect(labelSelector).To(Equal("some-label-selector"))
+			})
 		})
 
 		When("getting buildpacks fails", func() {
@@ -93,12 +109,13 @@ var _ = Describe("buildpacks Command", func() {
 		When("getting buildpacks succeeds", func() {
 			When("buildpacks exist", func() {
 				BeforeEach(func() {
-					buildpacks := []v7action.Buildpack{
+					buildpacks := []resources.Buildpack{
 						{
 							Name:     "buildpack-1",
 							Position: types.NullInt{Value: 1, IsSet: true},
 							Enabled:  types.NullBool{Value: true, IsSet: true},
 							Locked:   types.NullBool{Value: false, IsSet: true},
+							State:    constant.BuildpackReady,
 							Filename: "buildpack-1.file",
 							Stack:    "buildpack-1-stack",
 						},
@@ -108,6 +125,7 @@ var _ = Describe("buildpacks Command", func() {
 							Position: types.NullInt{Value: 2, IsSet: true},
 							Enabled:  types.NullBool{Value: false, IsSet: true},
 							Locked:   types.NullBool{Value: true, IsSet: true},
+							State:    constant.BuildpackAwaitingUpload,
 							Filename: "buildpack-2.file",
 							Stack:    "",
 						},
@@ -118,14 +136,14 @@ var _ = Describe("buildpacks Command", func() {
 					Expect(executeErr).NotTo(HaveOccurred())
 					Expect(testUI.Err).To(Say("some-warning-1"))
 					Expect(testUI.Err).To(Say("some-warning-2"))
-					Expect(testUI.Out).To(Say(`position\s+name\s+stack\s+enabled\s+locked\s+filename`))
-					Expect(testUI.Out).To(Say(`1\s+buildpack-1\s+buildpack-1-stack\s+true\s+false\s+buildpack-1.file`))
-					Expect(testUI.Out).To(Say(`2\s+buildpack-2\s+false\s+true\s+buildpack-2.file`))
+					Expect(testUI.Out).To(Say(`position\s+name\s+stack\s+enabled\s+locked\s+state\s+filename`))
+					Expect(testUI.Out).To(Say(`1\s+buildpack-1\s+buildpack-1-stack\s+true\s+false\s+READY\s+buildpack-1.file`))
+					Expect(testUI.Out).To(Say(`2\s+buildpack-2\s+false\s+true\s+AWAITING_UPLOAD\s+buildpack-2.file`))
 				})
 			})
 			When("there are no buildpacks", func() {
 				BeforeEach(func() {
-					buildpacks := []v7action.Buildpack{}
+					buildpacks := []resources.Buildpack{}
 					fakeActor.GetBuildpacksReturns(buildpacks, v7action.Warnings{"some-warning-1", "some-warning-2"}, nil)
 				})
 				It("prints a table of buildpacks", func() {

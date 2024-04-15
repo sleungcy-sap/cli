@@ -7,6 +7,7 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	. "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/ghttp"
@@ -123,7 +124,7 @@ var _ = Describe("Isolation Segments", func() {
 		JustBeforeEach(func() {
 			queries = []Query{
 				{Key: OrganizationGUIDFilter, Values: []string{"some-org-guid"}},
-				{Key: NameFilter, Values: []string{"iso1,iso2,iso3"}},
+				{Key: NameFilter, Values: []string{"iso1", "iso2", "iso3"}},
 			}
 			segments, warnings, executeErr = client.GetIsolationSegments(queries...)
 		})

@@ -21,7 +21,7 @@ var _ = Describe("delete-buildpack Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeDeleteBuildpackActor
+		fakeActor       *v7fakes.FakeActor
 		input           *Buffer
 		binaryName      string
 		buildpackName   string
@@ -30,16 +30,18 @@ var _ = Describe("delete-buildpack Command", func() {
 
 	BeforeEach(func() {
 		input = NewBuffer()
-		fakeActor = new(v7fakes.FakeDeleteBuildpackActor)
+		fakeActor = new(v7fakes.FakeActor)
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
 		testUI = ui.NewTestUI(input, NewBuffer(), NewBuffer())
 
 		cmd = DeleteBuildpackCommand{
-			Actor:       fakeActor,
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
+			BaseCommand: BaseCommand{
+				Actor:       fakeActor,
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+			},
 		}
 		binaryName = "faceman"
 		buildpackName = "the-buildpack"
@@ -147,7 +149,7 @@ var _ = Describe("delete-buildpack Command", func() {
 
 			It("prints warnings and helpful error message (that includes the stack name)", func() {
 				Expect(testUI.Err).To(Say("a-warning"))
-				Expect(testUI.Err).To(Say("Buildpack the-buildpack with stack stack! not found."))
+				Expect(testUI.Err).To(Say(`Buildpack 'the-buildpack' with stack 'stack!' not found\.`))
 			})
 		})
 
@@ -159,7 +161,7 @@ var _ = Describe("delete-buildpack Command", func() {
 
 			It("prints warnings and helpful error message", func() {
 				Expect(testUI.Err).To(Say("a-warning"))
-				Expect(testUI.Err).To(Say("Buildpack the-buildpack does not exist."))
+				Expect(testUI.Err).To(Say(`Buildpack 'the-buildpack' does not exist\.`))
 			})
 		})
 	})

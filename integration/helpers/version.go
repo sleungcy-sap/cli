@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
+// IsVersionMet verifies the targeted API meets the minimum required version
 func IsVersionMet(minVersion string) bool {
 	version := matchMajorAPIVersion(minVersion)
 	ok, err := versioncheck.IsMinimumAPIVersionMet(version, minVersion)
@@ -26,21 +27,24 @@ func IsVersionMet(minVersion string) bool {
 	return ok
 }
 
+// UAAVersion a struct representation of the UAA version
 type UAAVersion struct {
 	App struct {
 		Version string `json:"version"`
 	} `json:"app"`
 }
 
+// Version returns the version of the targeted UAA
 func (v UAAVersion) Version() string {
 	return v.App.Version
 }
 
+// IsUAAVersionAtLeast returns true if the UAA version >= minVersion, false otherwise.
 func IsUAAVersionAtLeast(minVersion string) bool {
 	info := fetchAPIVersion()
 	uaaUrl := fmt.Sprintf("%s/info", info.Links.UAA.Href)
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: skipSSLValidation()},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: SkipSSLValidation()},
 	}
 	req, err := http.NewRequest("GET", uaaUrl, nil)
 	Expect(err).ToNot(HaveOccurred())
@@ -68,12 +72,14 @@ func IsUAAVersionAtLeast(minVersion string) bool {
 	return false
 }
 
+// SkipIfUAAVersionLessThan is used to skip tests if the UAA version is < the specified version
 func SkipIfUAAVersionLessThan(version string) {
 	if !IsUAAVersionAtLeast(version) {
 		Skip(fmt.Sprintf("Test requires UAA version at least %s", version))
 	}
 }
 
+// SkipIfUAAVersionAtLeast is used to skip tests if the UAA version >= the specified version.
 func SkipIfUAAVersionAtLeast(version string) {
 	if IsUAAVersionAtLeast(version) {
 		Skip(fmt.Sprintf("Test requires UAA version less than %s", version))
@@ -81,17 +87,20 @@ func SkipIfUAAVersionAtLeast(version string) {
 }
 
 func matchMajorAPIVersion(minVersion string) string {
-	version := GetAPIVersionV2()
 	if strings.HasPrefix(minVersion, "3") {
-		version = getAPIVersionV3()
+		return getAPIVersionV3()
+	} else {
+		return GetAPIVersionV2()
 	}
-	return version
 }
 
+// GetAPIVersionV2 returns the V2 api version of the targeted API
 func GetAPIVersionV2() string {
-	return fetchAPIVersion().Links.CloudContollerV2.Meta.Version
+	return fetchAPIVersion().Links.CloudControllerV2.Meta.Version
 }
 
+// SkipIfVersionLessThan is used to skip tests if the API version < the specified version. If
+// minVersion contains the prefix 3 then the v3 version is checked, otherwise the v2 version is used.
 func SkipIfVersionLessThan(minVersion string) {
 	if ignoreAPIVersion() {
 		return
@@ -103,6 +112,8 @@ func SkipIfVersionLessThan(minVersion string) {
 	}
 }
 
+// SkipIfVersionLessThan is used to skip tests if the API version >= the specified version. If
+// maxVersion contains the prefix 3 then the v3 version is checked, otherwise the v2 version is used.
 func SkipIfVersionAtLeast(maxVersion string) {
 	version := matchMajorAPIVersion(maxVersion)
 
@@ -123,13 +134,13 @@ func ignoreAPIVersion() bool {
 
 type ccRoot struct {
 	Links struct {
-		CloudContollerV2 struct {
+		CloudControllerV2 struct {
 			Meta struct {
 				Version string
 			}
 		} `json:"cloud_controller_v2"`
 
-		CloudContollerV3 struct {
+		CloudControllerV3 struct {
 			Meta struct {
 				Version string
 			}
@@ -142,6 +153,8 @@ type ccRoot struct {
 }
 
 var cacheLock sync.Mutex
+
+// CcRootCache is a pointer to a cache of the CC root response
 var CcRootCache *ccRoot
 
 func fetchAPIVersion() ccRoot {
@@ -159,9 +172,10 @@ func fetchAPIVersion() ccRoot {
 }
 
 func getAPIVersionV3() string {
-	return fetchAPIVersion().Links.CloudContollerV3.Meta.Version
+	return fetchAPIVersion().Links.CloudControllerV3.Meta.Version
 }
 
+// SkipIfNoRoutingAPI is used to skip tests if the routing API is not present
 func SkipIfNoRoutingAPI() {
 	// TODO: #161159794 remove this function and check a nicer error message when available
 	var response struct {

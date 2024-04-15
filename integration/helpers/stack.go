@@ -19,6 +19,7 @@ type ccStacks struct {
 	} `json:"resources"`
 }
 
+// FetchStacks returns all the stack names present in the foundation.
 func FetchStacks() []string {
 	session := CF("curl", "/v2/stacks")
 
@@ -36,6 +37,7 @@ func FetchStacks() []string {
 	return stacks
 }
 
+// PreferredStack returns the cflinuxfs3 stack name if it present, otherwise cflinuxfs2 is returned.
 func PreferredStack() string {
 	stacks := FetchStacks()
 
@@ -48,17 +50,21 @@ func PreferredStack() string {
 	return "cflinuxfs2"
 }
 
+// CreateStack creates a new stack with the user provided name. If a name is not provided, a random name is used
 func CreateStack(names ...string) string {
-	name := NewStackName()
+	var name string
+
 	if len(names) > 0 {
 		name = names[0]
+	} else {
+		name = NewStackName()
 	}
 
 	requestBody := fmt.Sprintf(
 		`{"name":"%s","description":"CF CLI integration test stack, please delete"}`,
 		name,
 	)
-	session := CF("curl", "-v", "-X", "POST", "/v2/stacks", "-d", requestBody)
+	session := CF("curl", "-v", "-X", "POST", "/v3/stacks", "-d", requestBody)
 
 	Eventually(session).Should(Say("201 Created"))
 	Eventually(session).Should(Exit(0))
@@ -66,20 +72,44 @@ func CreateStack(names ...string) string {
 	return name
 }
 
+// CreateStackWithGUID creates a stack with a random name and returns its name and guid
+func CreateStackWithGUID() (string, string) {
+	type StackStruct struct {
+		GUID string `json:"guid"`
+	}
+	name := NewStackName()
+	requestBody := fmt.Sprintf(
+		`{"name":"%s","description":"CF CLI integration test stack, please delete"}`,
+		name,
+	)
+	session := CF("curl", "-X", "POST", "/v3/stacks", "-d", requestBody)
+
+	Eventually(session).Should(Exit(0))
+	thisStack := StackStruct{}
+	err := json.Unmarshal(session.Out.Contents(), &thisStack)
+	Expect(err).ToNot(HaveOccurred())
+	stackGUID := thisStack.GUID
+	Expect(len(stackGUID)).ToNot(Equal(0))
+	return name, stackGUID
+}
+
+// DeleteStack deletes a specific stack
 func DeleteStack(name string) {
 	session := CF("stack", "--guid", name)
 	Eventually(session).Should(Exit(0))
 	guid := strings.TrimSpace(string(session.Out.Contents()))
 
-	session = CF("curl", "-v", "-X", "DELETE", "/v2/stacks/"+guid)
+	session = CF("curl", "-v", "-X", "DELETE", "/v3/stacks/"+guid)
 
 	Eventually(session).Should(Say("204 No Content"))
 	Eventually(session).Should(Exit(0))
 }
 
+// EnsureMinimumNumberOfStacks ensures there are at least <num> stacks in the foundation by creating new ones if there
+// are fewer than the specified number
 func EnsureMinimumNumberOfStacks(num int) []string {
 	var stacks []string
-	for stacks = FetchStacks(); len(stacks) < 2; {
+	for stacks = FetchStacks(); len(stacks) < num; {
 		stacks = append(stacks, CreateStack())
 	}
 	return stacks

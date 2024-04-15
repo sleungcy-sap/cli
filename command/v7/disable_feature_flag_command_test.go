@@ -22,7 +22,7 @@ var _ = Describe("Disable Feature Flag Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeDisableFeatureFlagActor
+		fakeActor       *v7fakes.FakeActor
 		executeErr      error
 		binaryName      string
 		featureFlagName = "flag1"
@@ -32,13 +32,15 @@ var _ = Describe("Disable Feature Flag Command", func() {
 		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeDisableFeatureFlagActor)
+		fakeActor = new(v7fakes.FakeActor)
 
 		cmd = DisableFeatureFlagCommand{
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
+			BaseCommand: BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		binaryName = "faceman"
@@ -68,7 +70,7 @@ var _ = Describe("Disable Feature Flag Command", func() {
 
 	When("the environment is setup correctly", func() {
 		BeforeEach(func() {
-			fakeConfig.CurrentUserReturns(configv3.User{Name: "apple"}, nil)
+			fakeActor.GetCurrentUserReturns(configv3.User{Name: "apple"}, nil)
 		})
 
 		It("should print text indicating its running", func() {
@@ -94,7 +96,7 @@ var _ = Describe("Disable Feature Flag Command", func() {
 					fakeActor.DisableFeatureFlagReturns(v7action.Warnings{"this is a warning"}, nil)
 				})
 
-				It("diaplays the feature flag was enabled", func() {
+				It("displays the feature flag was enabled", func() {
 					featureFlagArgs := fakeActor.DisableFeatureFlagArgsForCall(0)
 					Expect(featureFlagArgs).To(Equal(featureFlagName))
 					Expect(executeErr).NotTo(HaveOccurred())

@@ -2,180 +2,29 @@ package manifestparser_test
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	. "code.cloudfoundry.org/cli/util/manifestparser"
-
 	"github.com/cloudfoundry/bosh-cli/director/template"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v2"
 )
 
-var _ = Describe("Parser", func() {
-	var parser *Parser
+var _ = Describe("ManifestParser", func() {
+	var parser ManifestParser
 
-	BeforeEach(func() {
-		parser = NewParser()
-	})
-
-	Describe("NewParser", func() {
-		It("returns a parser", func() {
-			Expect(parser).ToNot(BeNil())
-		})
-	})
-
-	Describe("AppNames", func() {
-		When("given a valid manifest file", func() {
-			BeforeEach(func() {
-				parser.Applications = []Application{
-					{ApplicationModel: ApplicationModel{Name: "app-1"}, FullUnmarshalledApplication: nil},
-					{ApplicationModel: ApplicationModel{Name: "app-2"}, FullUnmarshalledApplication: nil}}
-			})
-
-			It("gets the app names", func() {
-				appNames := parser.AppNames()
-				Expect(appNames).To(ConsistOf("app-1", "app-2"))
-			})
-		})
-	})
-
-	Describe("ContainsManifest", func() {
+	Describe("InterpolateManifest", func() {
 		var (
-			pathToManifest string
-		)
-
-		BeforeEach(func() {
-			tempFile, err := ioutil.TempFile("", "contains-manifest-test")
-			Expect(err).ToNot(HaveOccurred())
-			pathToManifest = tempFile.Name()
-			Expect(tempFile.Close()).ToNot(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			err := os.RemoveAll(pathToManifest)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		Context("when the manifest is parsed successfully", func() {
-			BeforeEach(func() {
-				rawManifest := []byte(`---
-applications:
-- name: spark
-`)
-				err := ioutil.WriteFile(pathToManifest, rawManifest, 0666)
-				Expect(err).ToNot(HaveOccurred())
-
-				err = parser.InterpolateAndParse(pathToManifest, nil, nil)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("returns true", func() {
-				Expect(parser.ContainsManifest()).To(BeTrue())
-			})
-		})
-
-		Context("when the manifest is not parsed successfully", func() {
-			BeforeEach(func() {
-				rawManifest := []byte(`---
-applications:
-`)
-				err := ioutil.WriteFile(pathToManifest, rawManifest, 0666)
-				Expect(err).ToNot(HaveOccurred())
-
-				err = parser.InterpolateAndParse(pathToManifest, nil, nil)
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("returns false", func() {
-				Expect(parser.ContainsManifest()).To(BeFalse())
-			})
-		})
-
-		Context("when the manifest has not been parsed", func() {
-			It("returns false", func() {
-				Expect(parser.ContainsManifest()).To(BeFalse())
-			})
-		})
-	})
-
-	Describe("ContainsMultipleApps", func() {
-		When("given a valid manifest file with multiple apps", func() {
-			BeforeEach(func() {
-				parser.Applications = []Application{
-					{ApplicationModel: ApplicationModel{Name: "app-1"}, FullUnmarshalledApplication: nil},
-					{ApplicationModel: ApplicationModel{Name: "app-2"}, FullUnmarshalledApplication: nil}}
-			})
-
-			It("returns true", func() {
-				Expect(parser.ContainsMultipleApps()).To(BeTrue())
-			})
-		})
-
-		When("given a valid manifest file with a single app", func() {
-			BeforeEach(func() {
-				parser.Applications = []Application{{ApplicationModel: ApplicationModel{Name: "app-1"}, FullUnmarshalledApplication: nil}}
-			})
-
-			It("returns false", func() {
-				Expect(parser.ContainsMultipleApps()).To(BeFalse())
-			})
-		})
-	})
-
-	Describe("ContainsPrivateDockerImages", func() {
-		When("the manifest contains a docker image", func() {
-			When("the image is public", func() {
-				BeforeEach(func() {
-					parser.Applications = []Application{
-						{ApplicationModel: ApplicationModel{Name: "app-1", Docker: &Docker{Image: "image-1"}}, FullUnmarshalledApplication: nil},
-						{ApplicationModel: ApplicationModel{Name: "app-2", Docker: &Docker{Image: "image-2"}}, FullUnmarshalledApplication: nil}}
-				})
-
-				It("returns false", func() {
-					Expect(parser.ContainsPrivateDockerImages()).To(BeFalse())
-				})
-			})
-
-			When("the image is private", func() {
-				BeforeEach(func() {
-					parser.Applications = []Application{
-						{ApplicationModel: ApplicationModel{Name: "app-1", Docker: &Docker{Image: "image-1"}}},
-						{ApplicationModel: ApplicationModel{Name: "app-2", Docker: &Docker{Image: "image-2", Username: "user"}}},
-					}
-				})
-
-				It("returns true", func() {
-					Expect(parser.ContainsPrivateDockerImages()).To(BeTrue())
-				})
-			})
-		})
-
-		When("the manifest does not contain a docker image", func() {
-			BeforeEach(func() {
-				parser.Applications = []Application{
-					{ApplicationModel: ApplicationModel{Name: "app-1"}},
-					{ApplicationModel: ApplicationModel{Name: "app-2"}},
-				}
-			})
-
-			It("returns false", func() {
-				Expect(parser.ContainsPrivateDockerImages()).To(BeFalse())
-			})
-		})
-	})
-
-	Describe("InterpolateAndParse", func() {
-		var (
+			givenManifest    []byte
 			pathToManifest   string
 			pathsToVarsFiles []string
 			vars             []template.VarKV
 
-			executeErr error
-
-			rawManifest []byte
+			interpolatedManifest []byte
+			executeErr           error
 		)
 
 		BeforeEach(func() {
@@ -196,53 +45,38 @@ applications:
 		})
 
 		JustBeforeEach(func() {
-			executeErr = parser.InterpolateAndParse(pathToManifest, pathsToVarsFiles, vars)
+			interpolatedManifest, executeErr = parser.InterpolateManifest(pathToManifest, pathsToVarsFiles, vars)
 		})
 
-		Context("regardless of whether the manifest needs interpolation", func() {
+		When("the manifest does *not* need interpolation", func() {
 			BeforeEach(func() {
-				rawManifest = []byte(`---
+				givenManifest = []byte(`---
 applications:
 - name: spark
-  memory: 1G
-  instances: 2
 - name: flame
-  memory: 1G
-  instances: 2
 `)
-				err := ioutil.WriteFile(pathToManifest, rawManifest, 0666)
+				err := ioutil.WriteFile(pathToManifest, givenManifest, 0666)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("parses the manifest properly", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 
-				Expect(parser.AppNames()).To(ConsistOf("spark", "flame"))
-				Expect(parser.PathToManifest).To(Equal(pathToManifest))
-				Expect(parser.FullRawManifest()).To(MatchYAML(rawManifest))
-			})
-		})
-
-		Context("invalid yaml is passed", func() {
-			BeforeEach(func() {
-				rawManifest = []byte("\t\t")
-				err := ioutil.WriteFile(pathToManifest, rawManifest, 0666)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("parses the manifest properly", func() {
-				Expect(executeErr).To(HaveOccurred())
+				Expect(string(interpolatedManifest)).To(Equal(`applications:
+- name: spark
+- name: flame
+`))
 			})
 		})
 
 		When("the manifest contains variables that need interpolation", func() {
 			BeforeEach(func() {
-				rawManifest = []byte(`---
+				givenManifest = []byte(`---
 applications:
 - name: ((var1))
 - name: ((var2))
 `)
-				err := ioutil.WriteFile(pathToManifest, rawManifest, 0666)
+				err := ioutil.WriteFile(pathToManifest, givenManifest, 0666)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -286,14 +120,20 @@ applications:
 
 					It("interpolates the placeholder values", func() {
 						Expect(executeErr).ToNot(HaveOccurred())
-						Expect(parser.AppNames()).To(ConsistOf("spark", "flame"))
+						Expect(string(interpolatedManifest)).To(Equal(`applications:
+- name: spark
+- name: flame
+`))
 					})
 				})
 
 				When("the provided files exists and contain valid yaml", func() {
 					It("interpolates the placeholder values", func() {
 						Expect(executeErr).ToNot(HaveOccurred())
-						Expect(parser.AppNames()).To(ConsistOf("spark", "flame"))
+						Expect(string(interpolatedManifest)).To(Equal(`applications:
+- name: spark
+- name: flame
+`))
 					})
 				})
 
@@ -350,7 +190,10 @@ applications:
 
 				It("interpolates the placeholder values", func() {
 					Expect(executeErr).ToNot(HaveOccurred())
-					Expect(parser.AppNames()).To(ConsistOf("spark", "flame"))
+					Expect(string(interpolatedManifest)).To(Equal(`applications:
+- name: spark
+- name: flame
+`))
 				})
 			})
 
@@ -377,88 +220,110 @@ applications:
 
 				It("interpolates the placeholder values, prioritizing the vars flag", func() {
 					Expect(executeErr).ToNot(HaveOccurred())
-					Expect(parser.AppNames()).To(ConsistOf("spark", "flame"))
+					Expect(string(interpolatedManifest)).To(Equal(`applications:
+- name: spark
+- name: flame
+`))
 				})
 			})
 		})
 	})
 
-	Describe("RawAppManifest", func() {
+	Describe("ParseManifest", func() {
 		var (
-			rawAppManifest []byte
-			appName        string
-			executeErr     error
-			rawManifest    []byte
 			pathToManifest string
-			tmpMyPath      string
+			rawManifest    []byte
+
+			executeErr     error
+			parsedManifest Manifest
 		)
 
 		BeforeEach(func() {
-			var err error
-
-			appName = "spark"
-
-			tmpMyPath, err = ioutil.TempDir("", "")
-			Expect(err).ToNot(HaveOccurred())
-
-			rawManifest = []byte(fmt.Sprintf(`---
-applications:
-- name: spark
-  memory: 1G
-  instances: 2
-  docker:
-    username: experiment
-  path: %s
-- name: flame
-  memory: 1G
-  instances: 2
-  docker:
-    username: experiment
-`, tmpMyPath))
-
+			pathToManifest = "/some/path/to/manifest.yml"
+			rawManifest = nil
 		})
 
 		JustBeforeEach(func() {
-			tempFile, err := ioutil.TempFile("", "manifest-test-")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(tempFile.Close()).ToNot(HaveOccurred())
-			pathToManifest = tempFile.Name()
-			err = ioutil.WriteFile(pathToManifest, rawManifest, 0666)
-			Expect(err).ToNot(HaveOccurred())
-			err = parser.InterpolateAndParse(pathToManifest, nil, nil)
-			Expect(err).ToNot(HaveOccurred())
-			rawAppManifest, executeErr = parser.RawAppManifest(appName)
+			parsedManifest, executeErr = parser.ParseManifest(pathToManifest, rawManifest)
 		})
 
-		AfterEach(func() {
-			err := os.RemoveAll(pathToManifest)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		When("marshaling does not error", func() {
-
-			It("returns just the app's manifest", func() {
-				Expect(executeErr).ToNot(HaveOccurred())
-				Expect(string(rawAppManifest)).To(MatchYAML(fmt.Sprintf(`applications:
-- name: spark
-  memory: 1G
-  instances: 2
-  docker:
-    username: experiment
-  path: %s`, tmpMyPath)))
-			})
-		})
-
-		When("The app is not present", func() {
+		When("the manifest does not contain applications", func() {
 			BeforeEach(func() {
-				appName = "not-here"
+				rawManifest = []byte(`applications:
+`)
 			})
 
 			It("returns an error", func() {
-				Expect(executeErr).To(MatchError(AppNotInManifestError{Name: "not-here"}))
-				Expect(rawAppManifest).To(BeNil())
+				Expect(executeErr).To(HaveOccurred())
+				Expect(executeErr).To(MatchError(errors.New("Manifest must have at least one application.")))
 			})
 		})
 
+		When("invalid yaml is passed", func() {
+			BeforeEach(func() {
+				rawManifest = []byte("\t\t")
+			})
+
+			It("returns an error", func() {
+				Expect(executeErr).To(HaveOccurred())
+			})
+		})
+
+		When("unmarshalling returns an error", func() {
+			BeforeEach(func() {
+				rawManifest = []byte(`---
+	blah blah
+	`)
+			})
+
+			It("returns an error", func() {
+				Expect(executeErr).To(HaveOccurred())
+				Expect(executeErr).To(MatchError(&yaml.TypeError{}))
+			})
+		})
+
+		When("the manifest is valid", func() {
+			BeforeEach(func() {
+				rawManifest = []byte(`applications:
+- name: one
+- name: two
+`)
+			})
+
+			It("interpolates the placeholder values", func() {
+				Expect(executeErr).ToNot(HaveOccurred())
+				Expect(parsedManifest.AppNames()).To(ConsistOf("one", "two"))
+			})
+		})
+	})
+
+	Describe("MarshalManifest", func() {
+		It("marshals the manifest", func() {
+			manifest := Manifest{
+				Applications: []Application{
+					{
+						Name: "app-1",
+						Processes: []Process{
+							{
+								Type:                    "web",
+								RemainingManifestFields: map[string]interface{}{"unknown-process-key": 2},
+							},
+						},
+						RemainingManifestFields: map[string]interface{}{"unknown-key": 1},
+					},
+				},
+			}
+
+			yaml, err := parser.MarshalManifest(manifest)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(yaml).To(MatchYAML(`applications:
+- name: app-1
+  unknown-key: 1
+  processes:
+  - type: web
+    unknown-process-key: 2
+`))
+		})
 	})
 })

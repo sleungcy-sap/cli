@@ -4,11 +4,12 @@ import (
 	"os"
 	"time"
 
+	"testing"
+
 	. "code.cloudfoundry.org/cli/actor/v7pushaction"
 	"code.cloudfoundry.org/cli/actor/v7pushaction/v7pushactionfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -29,16 +30,15 @@ func getCurrentDir() string {
 	return pwd
 }
 
-func getTestPushActor() (*Actor, *v7pushactionfakes.FakeV2Actor, *v7pushactionfakes.FakeV7Actor, *v7pushactionfakes.FakeSharedActor) {
-	fakeV2Actor := new(v7pushactionfakes.FakeV2Actor)
+func getTestPushActor() (*Actor, *v7pushactionfakes.FakeV7Actor, *v7pushactionfakes.FakeSharedActor) {
 	fakeV7Actor := new(v7pushactionfakes.FakeV7Actor)
 	fakeSharedActor := new(v7pushactionfakes.FakeSharedActor)
-	actor := NewActor(fakeV2Actor, fakeV7Actor, fakeSharedActor)
-	return actor, fakeV2Actor, fakeV7Actor, fakeSharedActor
+	actor := NewActor(fakeV7Actor, fakeSharedActor)
+	return actor, fakeV7Actor, fakeSharedActor
 }
 
-func EventFollower(wrapper func(eventStream chan<- Event)) []Event {
-	eventStream := make(chan Event)
+func EventFollower(wrapper func(eventStream chan<- *PushEvent)) []Event {
+	eventStream := make(chan *PushEvent)
 	closed := make(chan bool)
 
 	var events []Event
@@ -50,7 +50,7 @@ func EventFollower(wrapper func(eventStream chan<- Event)) []Event {
 				close(closed)
 				return
 			}
-			events = append(events, event)
+			events = append(events, event.Event)
 		}
 	}()
 

@@ -4,11 +4,11 @@ import (
 	"errors"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
-	"code.cloudfoundry.org/cli/actor/v2action"
 	"code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/command/commandfakes"
-	"code.cloudfoundry.org/cli/command/v7"
+	v7 "code.cloudfoundry.org/cli/command/v7"
 	"code.cloudfoundry.org/cli/command/v7/v7fakes"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/util/configv3"
 	"code.cloudfoundry.org/cli/util/ui"
 	. "github.com/onsi/ginkgo"
@@ -22,8 +22,7 @@ var _ = Describe("reset-space-isolation-segment Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeResetSpaceIsolationSegmentActor
-		fakeActorV2     *v7fakes.FakeResetSpaceIsolationSegmentActorV2
+		fakeActor       *v7fakes.FakeActor
 		binaryName      string
 		executeErr      error
 		space           string
@@ -34,15 +33,15 @@ var _ = Describe("reset-space-isolation-segment Command", func() {
 		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeResetSpaceIsolationSegmentActor)
-		fakeActorV2 = new(v7fakes.FakeResetSpaceIsolationSegmentActorV2)
+		fakeActor = new(v7fakes.FakeActor)
 
 		cmd = v7.ResetSpaceIsolationSegmentCommand{
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
-			ActorV2:     fakeActorV2,
+			BaseCommand: v7.BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		binaryName = "faceman"
@@ -72,7 +71,7 @@ var _ = Describe("reset-space-isolation-segment Command", func() {
 
 	When("the user is logged in", func() {
 		BeforeEach(func() {
-			fakeConfig.CurrentUserReturns(configv3.User{Name: "banana"}, nil)
+			fakeActor.GetCurrentUserReturns(configv3.User{Name: "banana"}, nil)
 			fakeConfig.TargetedOrganizationReturns(configv3.Organization{
 				Name: org,
 				GUID: "some-org-guid",
@@ -83,7 +82,7 @@ var _ = Describe("reset-space-isolation-segment Command", func() {
 
 		When("the space lookup is unsuccessful", func() {
 			BeforeEach(func() {
-				fakeActorV2.GetSpaceByOrganizationAndNameReturns(v2action.Space{}, v2action.Warnings{"warning-1", "warning-2"}, actionerror.SpaceNotFoundError{Name: space})
+				fakeActor.GetSpaceByNameAndOrganizationReturns(resources.Space{}, v7action.Warnings{"warning-1", "warning-2"}, actionerror.SpaceNotFoundError{Name: space})
 			})
 
 			It("returns the warnings and error", func() {
@@ -95,10 +94,10 @@ var _ = Describe("reset-space-isolation-segment Command", func() {
 
 		When("the space lookup is successful", func() {
 			BeforeEach(func() {
-				fakeActorV2.GetSpaceByOrganizationAndNameReturns(v2action.Space{
+				fakeActor.GetSpaceByNameAndOrganizationReturns(resources.Space{
 					Name: space,
 					GUID: "some-space-guid",
-				}, v2action.Warnings{"warning-1", "warning-2"}, nil)
+				}, v7action.Warnings{"warning-1", "warning-2"}, nil)
 			})
 
 			When("the reset changes the isolation segment to platform default", func() {
@@ -118,8 +117,7 @@ var _ = Describe("reset-space-isolation-segment Command", func() {
 					Expect(testUI.Err).To(Say("warning-3"))
 					Expect(testUI.Err).To(Say("warning-4"))
 
-					Expect(testUI.Out).To(Say("Applications in this space will be placed in the platform default isolation segment."))
-					Expect(testUI.Out).To(Say("Running applications need a restart to be moved there."))
+					Expect(testUI.Out).To(Say("TIP: Restart applications in this space to relocate them to the platform default."))
 
 					Expect(fakeActor.ResetSpaceIsolationSegmentCallCount()).To(Equal(1))
 					orgGUID, spaceGUID := fakeActor.ResetSpaceIsolationSegmentArgsForCall(0)
@@ -145,8 +143,7 @@ var _ = Describe("reset-space-isolation-segment Command", func() {
 					Expect(testUI.Err).To(Say("warning-3"))
 					Expect(testUI.Err).To(Say("warning-4"))
 
-					Expect(testUI.Out).To(Say("Applications in this space will be placed in isolation segment some-org-iso-seg-name."))
-					Expect(testUI.Out).To(Say("Running applications need a restart to be moved there."))
+					Expect(testUI.Out).To(Say("TIP: Restart applications in this space to relocate them to this organization's default isolation segment."))
 
 					Expect(fakeActor.ResetSpaceIsolationSegmentCallCount()).To(Equal(1))
 					orgGUID, spaceGUID := fakeActor.ResetSpaceIsolationSegmentArgsForCall(0)

@@ -3,6 +3,10 @@ package isolated
 import (
 	"fmt"
 	"net/http"
+	"os/exec"
+	"strings"
+
+	. "code.cloudfoundry.org/cli/cf/util/testhelpers/matchers"
 
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
@@ -11,19 +15,27 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("Logs Command", func() {
+var _ = Describe("logs Command", func() {
 	Describe("help", func() {
-		It("displays command usage to output", func() {
-			session := helpers.CF("logs", "--help")
-			Eventually(session).Should(Say("NAME:"))
-			Eventually(session).Should(Say("logs - Tail or show recent logs for an app"))
-			Eventually(session).Should(Say("USAGE:"))
-			Eventually(session).Should(Say("cf logs APP_NAME"))
-			Eventually(session).Should(Say("OPTIONS:"))
-			Eventually(session).Should(Say(`--recent\s+Dump recent logs instead of tailing`))
-			Eventually(session).Should(Say("SEE ALSO:"))
-			Eventually(session).Should(Say("app, apps, ssh"))
-			Eventually(session).Should(Exit(0))
+		When("--help flag is set", func() {
+			It("appears in cf help -a", func() {
+				session := helpers.CF("help", "-a")
+				Eventually(session).Should(Exit(0))
+				Expect(session).To(HaveCommandInCategoryWithDescription("logs", "APPS", "Tail or show recent logs for an app"))
+			})
+
+			It("displays command usage to output", func() {
+				session := helpers.CF("logs", "--help")
+				Eventually(session).Should(Say("NAME:"))
+				Eventually(session).Should(Say("logs - Tail or show recent logs for an app"))
+				Eventually(session).Should(Say("USAGE:"))
+				Eventually(session).Should(Say("cf logs APP_NAME"))
+				Eventually(session).Should(Say("OPTIONS:"))
+				Eventually(session).Should(Say(`--recent\s+Dump recent logs instead of tailing`))
+				Eventually(session).Should(Say("SEE ALSO:"))
+				Eventually(session).Should(Say("app, apps, ssh"))
+				Eventually(session).Should(Exit(0))
+			})
 		})
 	})
 
@@ -90,7 +102,6 @@ var _ = Describe("Logs Command", func() {
 				It("streams logs out to the screen", func() {
 					session := helpers.CF("logs", appName)
 					defer session.Terminate()
-
 					userName, _ := helpers.GetCredentials()
 					Eventually(session).Should(Say("Retrieving logs for app %s in org %s / space %s as %s...", appName, orgName, spaceName, userName))
 
@@ -108,6 +119,23 @@ var _ = Describe("Logs Command", func() {
 					Eventually(session).Should(Say("Retrieving logs for app %s in org %s / space %s as %s...", appName, orgName, spaceName, userName))
 					Eventually(session).Should(Say(`%s \[API/\d+\]\s+OUT Created app with guid %s`, helpers.ISO8601Regex, helpers.GUIDRegex))
 					Eventually(session).Should(Exit(0))
+				})
+
+				It("it can get at least 1000 recent log messages", func() {
+					route := fmt.Sprintf("%s.%s", appName, helpers.DefaultSharedDomain())
+					// 3 lines of logs for each call to curl + a few lines during the push, 1500 for some overhead
+					for i := 0; i < 500; i += 1 {
+						command := exec.Command("curl", route)
+						session, err := Start(command, GinkgoWriter, GinkgoWriter)
+						Expect(err).NotTo(HaveOccurred())
+						Eventually(session).Should(Exit(0))
+					}
+					Eventually(func() int {
+						session := helpers.CF("logs", appName, "--recent")
+						Eventually(session).Should(Exit(0))
+						output := session.Out.Contents()
+						return strings.Count(string(output), "\n")
+					}).Should(BeNumerically(">=", 1000))
 				})
 			})
 		})

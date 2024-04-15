@@ -1,13 +1,14 @@
 package push
 
 import (
+	"io/ioutil"
+	"path/filepath"
+
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gexec"
-	"io/ioutil"
-	"path/filepath"
 )
 
 var _ = Describe("pushing docker images", func() {
@@ -27,7 +28,6 @@ var _ = Describe("pushing docker images", func() {
 		Eventually(session).Should(Say(`name:\s+%s`, appName))
 		Eventually(session).Should(Say(`requested state:\s+started`))
 		Eventually(session).Should(Say("stack:"))
-		Consistently(session).ShouldNot(Say("buildpacks:"))
 		Eventually(session).Should(Say(`docker image:\s+%s`, dockerImage))
 		Eventually(session).Should(Exit(0))
 	}

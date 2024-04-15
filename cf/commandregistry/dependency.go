@@ -28,7 +28,7 @@ import (
 	"code.cloudfoundry.org/cli/util/randomword"
 )
 
-//go:generate counterfeiter . RandomWordGenerator
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . RandomWordGenerator
 
 type RandomWordGenerator interface {
 	Babble() string
@@ -145,7 +145,7 @@ func NewDependency(writer io.Writer, logger trace.Printer, envDialTimeout string
 		deps.ServiceBuilder,
 	)
 
-	deps.WordGenerator = new(randomword.Generator)
+	deps.WordGenerator = randomword.NewGenerator()
 
 	deps.AppZipper = appfiles.ApplicationZipper{}
 	deps.AppFiles = appfiles.ApplicationFiles{}

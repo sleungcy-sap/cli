@@ -1,12 +1,13 @@
 package v7pushaction_test
 
 import (
+	"errors"
+
 	"code.cloudfoundry.org/cli/actor/sharedaction"
 	"code.cloudfoundry.org/cli/actor/v7action"
 	. "code.cloudfoundry.org/cli/actor/v7pushaction"
 	"code.cloudfoundry.org/cli/actor/v7pushaction/v7pushactionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
-	"errors"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -25,7 +26,7 @@ var _ = Describe("MatchResources", func() {
 	)
 
 	BeforeEach(func() {
-		actor, _, fakeV7Actor, _ = getTestPushActor()
+		actor, fakeV7Actor, _ = getTestPushActor()
 	})
 
 	JustBeforeEach(func() {

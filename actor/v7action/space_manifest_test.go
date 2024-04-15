@@ -2,19 +2,19 @@ package v7action_test
 
 import (
 	"errors"
-	"strconv"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	. "code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/actor/v7action/v7actionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Application Manifest Actions", func() {
+var _ = Describe("Space Manifest Actions", func() {
 	var (
 		actor                     *Actor
 		fakeCloudControllerClient *v7actionfakes.FakeCloudControllerClient
@@ -22,12 +22,72 @@ var _ = Describe("Application Manifest Actions", func() {
 
 	BeforeEach(func() {
 		fakeCloudControllerClient = new(v7actionfakes.FakeCloudControllerClient)
-		actor = NewActor(fakeCloudControllerClient, nil, nil, nil)
+		actor = NewActor(fakeCloudControllerClient, nil, nil, nil, nil, nil)
+	})
+
+	Describe("DiffSpaceManifest", func() {
+		var (
+			spaceGUID   string
+			rawManifest []byte
+
+			diff       resources.ManifestDiff
+			warnings   Warnings
+			executeErr error
+		)
+
+		BeforeEach(func() {
+			spaceGUID = "some-space-guid"
+			rawManifest = []byte("---\n- applications:\n name: my-app")
+		})
+
+		JustBeforeEach(func() {
+			diff, warnings, executeErr = actor.DiffSpaceManifest(spaceGUID, rawManifest)
+		})
+
+		When("getting the diff succeeds", func() {
+			BeforeEach(func() {
+				returnedDiff := resources.ManifestDiff{
+					Diffs: []resources.Diff{
+						{Op: resources.AddOperation, Path: "/some/path", Value: "wow"},
+					},
+				}
+
+				fakeCloudControllerClient.GetSpaceManifestDiffReturns(
+					returnedDiff,
+					ccv3.Warnings{"diff-manifest-warning"},
+					nil,
+				)
+			})
+
+			It("returns the diff and warnings", func() {
+				Expect(executeErr).NotTo(HaveOccurred())
+				Expect(diff).To(Equal(resources.ManifestDiff{
+					Diffs: []resources.Diff{
+						{Op: resources.AddOperation, Path: "/some/path", Value: "wow"},
+					},
+				}))
+				Expect(warnings).To(ConsistOf("diff-manifest-warning"))
+			})
+		})
+
+		When("getting the diff errors", func() {
+			BeforeEach(func() {
+				fakeCloudControllerClient.GetSpaceManifestDiffReturns(
+					resources.ManifestDiff{},
+					ccv3.Warnings{"diff-manifest-warning"},
+					errors.New("diff-manifest-error"),
+				)
+			})
+
+			It("returns the error and warnings", func() {
+				Expect(executeErr).To(MatchError("diff-manifest-error"))
+				Expect(warnings).To(ConsistOf("diff-manifest-warning"))
+			})
+		})
 	})
 
 	Describe("SetSpaceManifest", func() {
 		var (
-			noRouteFlag = true
 			spaceGUID   string
 			rawManifest []byte
 
@@ -41,7 +101,7 @@ var _ = Describe("Application Manifest Actions", func() {
 		})
 
 		JustBeforeEach(func() {
-			warnings, executeErr = actor.SetSpaceManifest(spaceGUID, rawManifest, noRouteFlag)
+			warnings, executeErr = actor.SetSpaceManifest(spaceGUID, rawManifest)
 		})
 
 		When("applying the manifest succeeds", func() {
@@ -66,16 +126,9 @@ var _ = Describe("Application Manifest Actions", func() {
 					Expect(warnings).To(ConsistOf("apply-manifest-1-warning", "poll-1-warning"))
 
 					Expect(fakeCloudControllerClient.UpdateSpaceApplyManifestCallCount()).To(Equal(1))
-					guidInCall, appManifest, actualNoRouteQuery := fakeCloudControllerClient.UpdateSpaceApplyManifestArgsForCall(0)
+					guidInCall, appManifest := fakeCloudControllerClient.UpdateSpaceApplyManifestArgsForCall(0)
 					Expect(guidInCall).To(Equal("some-space-guid"))
 					Expect(appManifest).To(Equal(rawManifest))
-					Expect(actualNoRouteQuery).To(Equal(
-						[]ccv3.Query{
-							{
-								Key:    ccv3.NoRouteFilter,
-								Values: []string{strconv.FormatBool(noRouteFlag)},
-							},
-						}))
 
 					Expect(fakeCloudControllerClient.PollJobCallCount()).To(Equal(1))
 					jobURL := fakeCloudControllerClient.PollJobArgsForCall(0)

@@ -4,9 +4,10 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/internal"
 	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/util/lookuptable"
 )
 
-// GetServiceOfferings lists service offering with optional filters.
+// GetServiceOffering lists service offering with optional filters.
 func (client *Client) GetServiceOfferings(query ...Query) ([]resources.ServiceOffering, Warnings, error) {
 	var result []resources.ServiceOffering
 
@@ -22,10 +23,7 @@ func (client *Client) GetServiceOfferings(query ...Query) ([]resources.ServiceOf
 		},
 	})
 
-	brokerNameLookup := make(map[string]string)
-	for _, b := range included.ServiceBrokers {
-		brokerNameLookup[b.GUID] = b.Name
-	}
+	brokerNameLookup := lookuptable.NameFromGUID(included.ServiceBrokers)
 
 	for i, _ := range result {
 		result[i].ServiceBrokerName = brokerNameLookup[result[i].ServiceBrokerGUID]
@@ -34,8 +32,28 @@ func (client *Client) GetServiceOfferings(query ...Query) ([]resources.ServiceOf
 	return result, warnings, err
 }
 
+func (client *Client) GetServiceOfferingByGUID(guid string) (resources.ServiceOffering, Warnings, error) {
+	if guid == "" {
+		return resources.ServiceOffering{}, nil, ccerror.ServiceOfferingNotFoundError{}
+	}
+
+	var result resources.ServiceOffering
+
+	_, warnings, err := client.MakeRequest(RequestParams{
+		RequestName:  internal.GetServiceOfferingRequest,
+		URIParams:    internal.Params{"service_offering_guid": guid},
+		ResponseBody: &result,
+	})
+
+	return result, warnings, err
+}
+
 func (client *Client) GetServiceOfferingByNameAndBroker(serviceOfferingName, serviceBrokerName string) (resources.ServiceOffering, Warnings, error) {
-	query := []Query{{Key: NameFilter, Values: []string{serviceOfferingName}}}
+	query := []Query{
+		{Key: NameFilter, Values: []string{serviceOfferingName}},
+		{Key: PerPage, Values: []string{"2"}},
+		{Key: Page, Values: []string{"1"}},
+	}
 	if serviceBrokerName != "" {
 		query = append(query, Query{Key: ServiceBrokerNamesFilter, Values: []string{serviceBrokerName}})
 	}

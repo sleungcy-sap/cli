@@ -3,61 +3,26 @@ package v7
 import (
 	"fmt"
 
-	"code.cloudfoundry.org/cli/actor/sharedaction"
-	"code.cloudfoundry.org/cli/actor/v7action"
-	"code.cloudfoundry.org/cli/command"
 	"code.cloudfoundry.org/cli/command/translatableerror"
-	"code.cloudfoundry.org/cli/command/v7/shared"
 	"code.cloudfoundry.org/cli/util/configv3"
 )
 
-//go:generate counterfeiter . TargetActor
-
-type TargetActor interface {
-	GetOrganizationByName(orgName string) (v7action.Organization, v7action.Warnings, error)
-	GetOrganizationSpaces(orgGUID string) ([]v7action.Space, v7action.Warnings, error)
-	GetSpaceByNameAndOrganization(spaceName string, orgGUID string) (v7action.Space, v7action.Warnings, error)
-	CloudControllerAPIVersion() string
-}
-
 type TargetCommand struct {
+	BaseCommand
+
 	Organization    string      `short:"o" description:"Organization"`
 	Space           string      `short:"s" description:"Space"`
 	usage           interface{} `usage:"CF_NAME target [-o ORG] [-s SPACE]"`
 	relatedCommands interface{} `related_commands:"create-org, create-space, login, orgs, spaces"`
-
-	UI          command.UI
-	Config      command.Config
-	SharedActor command.SharedActor
-	Actor       TargetActor
-}
-
-func (cmd *TargetCommand) Setup(config command.Config, ui command.UI) error {
-	cmd.Config = config
-	cmd.UI = ui
-	cmd.SharedActor = sharedaction.NewActor(config)
-
-	ccClient, uaaClient, err := shared.NewClients(config, ui, true, "")
-	if err != nil {
-		return err
-	}
-	cmd.Actor = v7action.NewActor(ccClient, config, nil, uaaClient)
-
-	return nil
 }
 
 func (cmd *TargetCommand) Execute(args []string) error {
-	err := command.WarnIfCLIVersionBelowAPIDefinedMinimum(cmd.Config, cmd.Actor.CloudControllerAPIVersion(), cmd.UI)
+	err := cmd.SharedActor.CheckTarget(false, false)
 	if err != nil {
 		return err
 	}
 
-	err = cmd.SharedActor.CheckTarget(false, false)
-	if err != nil {
-		return err
-	}
-
-	user, err := cmd.Config.CurrentUser()
+	user, err := cmd.Actor.GetCurrentUser()
 	if err != nil {
 		cmd.clearTargets()
 		return err
@@ -183,8 +148,8 @@ func (cmd *TargetCommand) setSpace() error {
 // displayTargetTable neatly displays target information.
 func (cmd *TargetCommand) displayTargetTable(user configv3.User) {
 	table := [][]string{
-		{cmd.UI.TranslateText("api endpoint:"), cmd.Config.Target()},
-		{cmd.UI.TranslateText("api version:"), cmd.Actor.CloudControllerAPIVersion()},
+		{cmd.UI.TranslateText("API endpoint:"), cmd.Config.Target()},
+		{cmd.UI.TranslateText("API version:"), cmd.Config.APIVersion()},
 		{cmd.UI.TranslateText("user:"), user.Name},
 	}
 

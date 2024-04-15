@@ -2,10 +2,8 @@ package global
 
 import (
 	"fmt"
-	"os"
 	"time"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccversion"
 	"code.cloudfoundry.org/cli/integration/helpers"
 
 	. "github.com/onsi/ginkgo"
@@ -28,14 +26,7 @@ var (
 
 func TestGlobal(t *testing.T) {
 	RegisterFailHandler(Fail)
-	reporters := []Reporter{}
-
-	prBuilderReporter := helpers.GetPRBuilderReporter()
-	if prBuilderReporter != nil {
-		reporters = append(reporters, prBuilderReporter)
-	}
-
-	RunSpecsWithDefaultAndCustomReporters(t, "Global Suite", reporters)
+	RunSpecs(t, "Global Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {
@@ -49,10 +40,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 
 	helpers.SetupSynchronizedSuite(func() {
 		helpers.EnableFeatureFlag("diego_docker")
-
-		if helpers.IsVersionMet(ccversion.MinVersionShareServiceV3) {
-			helpers.EnableFeatureFlag("service_instance_sharing")
-		}
+		helpers.EnableFeatureFlag("service_instance_sharing")
 	})
 
 	ReadOnlyOrg, ReadOnlySpace = helpers.SetupReadOnlyOrgAndSpace()
@@ -65,13 +53,6 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		Fail("Test suite cannot run in parallel")
 	}
 	GinkgoWriter.Write([]byte(fmt.Sprintf("==============================End of Global Node %d Synchronized Before Each==============================", GinkgoParallelNode())))
-})
-
-var _ = AfterSuite(func() {
-	outputRoot := os.Getenv(helpers.PRBuilderOutputEnvVar)
-	if outputRoot != "" {
-		helpers.WriteFailureSummary(outputRoot, "summary_isg.txt")
-	}
 })
 
 var _ = BeforeEach(func() {

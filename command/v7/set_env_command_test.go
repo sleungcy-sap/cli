@@ -6,7 +6,7 @@ import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/command/commandfakes"
-	"code.cloudfoundry.org/cli/command/v7"
+	v7 "code.cloudfoundry.org/cli/command/v7"
 	"code.cloudfoundry.org/cli/command/v7/v7fakes"
 	"code.cloudfoundry.org/cli/util/configv3"
 	"code.cloudfoundry.org/cli/util/ui"
@@ -21,7 +21,7 @@ var _ = Describe("set-env Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeSetEnvActor
+		fakeActor       *v7fakes.FakeActor
 		binaryName      string
 		executeErr      error
 		appName         string
@@ -31,13 +31,15 @@ var _ = Describe("set-env Command", func() {
 		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeSetEnvActor)
+		fakeActor = new(v7fakes.FakeActor)
 
 		cmd = v7.SetEnvCommand{
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
+			BaseCommand: v7.BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		binaryName = "faceman"
@@ -76,7 +78,7 @@ var _ = Describe("set-env Command", func() {
 
 		When("getting the current user returns an error", func() {
 			BeforeEach(func() {
-				fakeConfig.CurrentUserReturns(configv3.User{}, errors.New("some-error"))
+				fakeActor.GetCurrentUserReturns(configv3.User{}, errors.New("some-error"))
 			})
 
 			It("returns the error", func() {
@@ -86,7 +88,7 @@ var _ = Describe("set-env Command", func() {
 
 		When("getting the current user succeeds", func() {
 			BeforeEach(func() {
-				fakeConfig.CurrentUserReturns(configv3.User{Name: "banana"}, nil)
+				fakeActor.GetCurrentUserReturns(configv3.User{Name: "banana"}, nil)
 			})
 
 			When("setting the environment succeeds", func() {
@@ -102,7 +104,7 @@ var _ = Describe("set-env Command", func() {
 					Expect(testUI.Err).To(Say("set-warning-1"))
 					Expect(testUI.Err).To(Say("set-warning-2"))
 					Expect(testUI.Out).To(Say("OK"))
-					Expect(testUI.Out).To(Say(`TIP: Use 'cf v3-stage some-app' to ensure your env variable changes take effect\.`))
+					Expect(testUI.Out).To(Say(`TIP: Use 'cf restage some-app' to ensure your env variable changes take effect\.`))
 
 					Expect(fakeActor.SetEnvironmentVariableByApplicationNameAndSpaceCallCount()).To(Equal(1))
 					appName, spaceGUID, envVariablePair := fakeActor.SetEnvironmentVariableByApplicationNameAndSpaceArgsForCall(0)

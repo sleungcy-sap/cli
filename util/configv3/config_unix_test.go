@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package configv3_test
@@ -28,7 +29,7 @@ var _ = Describe("Verbose", func() {
 
 	DescribeTable("absolute paths",
 		func(env string, configTrace string, flag bool, expected bool, location []string) {
-			rawConfig := fmt.Sprintf(`{ "Trace":"%s" }`, configTrace)
+			rawConfig := fmt.Sprintf(`{ "Trace":"%s", "ConfigVersion": %d }`, configTrace, CurrentConfigVersion)
 			setConfig(homeDir, rawConfig)
 
 			defer os.Unsetenv("CF_TRACE")
@@ -77,7 +78,7 @@ var _ = Describe("Verbose", func() {
 			It("resolves relative paths into absolute paths", func() {
 				configTrace := "foo/bar"
 
-				rawConfig := fmt.Sprintf(`{ "Trace":"%s" }`, configTrace)
+				rawConfig := fmt.Sprintf(`{ "Trace":"%s", "ConfigVersion": %d }`, configTrace, CurrentConfigVersion)
 				setConfig(homeDir, rawConfig)
 
 				cfTrace := "foo2/bar2"
@@ -119,7 +120,7 @@ var _ = Describe("Verbose", func() {
 			})
 
 			It("resolves symlinks into absolute paths", func() {
-				rawConfig := fmt.Sprintf(`{ "Trace":"%s" }`, symlinkLogPath)
+				rawConfig := fmt.Sprintf(`{ "Trace":"%s", "ConfigVersion": %d }`, symlinkLogPath, CurrentConfigVersion)
 				setConfig(homeDir, rawConfig)
 
 				config, err := LoadConfig(FlagOverride{})

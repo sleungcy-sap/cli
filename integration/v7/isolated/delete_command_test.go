@@ -1,6 +1,9 @@
 package isolated
 
 import (
+	"fmt"
+
+	. "code.cloudfoundry.org/cli/cf/util/testhelpers/matchers"
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -22,6 +25,12 @@ var _ = Describe("delete command", func() {
 	})
 
 	When("--help flag is set", func() {
+		It("appears in cf help -a", func() {
+			session := helpers.CF("help", "-a")
+			Eventually(session).Should(Exit(0))
+			Expect(session).To(HaveCommandInCategoryWithDescription("delete", "APPS", "Delete an app"))
+		})
+
 		It("Displays command usage to output", func() {
 			session := helpers.CF("delete", "--help")
 			Eventually(session).Should(Say("NAME:"))
@@ -30,7 +39,7 @@ var _ = Describe("delete command", func() {
 			Eventually(session).Should(Say(`cf delete APP_NAME \[-r\] \[-f\]`))
 			Eventually(session).Should(Say("OPTIONS:"))
 			Eventually(session).Should(Say(`\s+-f\s+Force deletion without confirmation`))
-			Eventually(session).Should(Say(`\s+-r\s+Also delete any mapped routes \[Not currently functional\]`))
+			Eventually(session).Should(Say(`\s+-r\s+Also delete any mapped routes`))
 			Eventually(session).Should(Exit(0))
 		})
 	})
@@ -66,7 +75,7 @@ var _ = Describe("delete command", func() {
 					username, _ := helpers.GetCredentials()
 					session := helpers.CF("delete", appName, "-f")
 					Eventually(session).Should(Say("Deleting app %s in org %s / space %s as %s...", appName, orgName, spaceName, username))
-					Eventually(session).Should(Say("App %s does not exist", appName))
+					Eventually(session.Err).Should(Say(`App '%s' does not exist\.`, appName))
 					Eventually(session).Should(Say("OK"))
 					Eventually(session).Should(Exit(0))
 				})
@@ -77,6 +86,26 @@ var _ = Describe("delete command", func() {
 
 				BeforeEach(func() {
 					buffer = NewBuffer()
+				})
+
+				When("the -r flag is provided", func() {
+					BeforeEach(func() {
+						_, err := buffer.Write([]byte("y\n"))
+						Expect(err).ToNot(HaveOccurred())
+					})
+
+					It("shows more information when confirming", func() {
+						username, _ := helpers.GetCredentials()
+						session := helpers.CFWithStdin(buffer, "delete", "-r", appName)
+						Eventually(session).Should(Say(
+							`Deleting the app and associated routes will make apps with this route, in any org, unreachable\.`,
+						))
+						Eventually(session).Should(Say(`Really delete the app %s and associated routes\? \[yN\]`, appName))
+						Eventually(session).Should(Say("Deleting app %s in org %s / space %s as %s...", appName, orgName, spaceName, username))
+						Eventually(session.Err).Should(Say(`App '%s' does not exist\.`, appName))
+						Eventually(session).Should(Say("OK"))
+						Eventually(session).Should(Exit(0))
+					})
 				})
 
 				When("the user enters 'y'", func() {
@@ -90,7 +119,7 @@ var _ = Describe("delete command", func() {
 						session := helpers.CFWithStdin(buffer, "delete", appName)
 						Eventually(session).Should(Say(`Really delete the app %s\? \[yN\]`, appName))
 						Eventually(session).Should(Say("Deleting app %s in org %s / space %s as %s...", appName, orgName, spaceName, username))
-						Eventually(session).Should(Say("App %s does not exist", appName))
+						Eventually(session.Err).Should(Say(`App '%s' does not exist\.`, appName))
 						Eventually(session).Should(Say("OK"))
 						Eventually(session).Should(Exit(0))
 					})
@@ -105,7 +134,7 @@ var _ = Describe("delete command", func() {
 					It("does not delete the app", func() {
 						session := helpers.CFWithStdin(buffer, "delete", appName)
 						Eventually(session).Should(Say(`Really delete the app %s\? \[yN\]`, appName))
-						Eventually(session).Should(Say("Delete cancelled"))
+						Eventually(session).Should(Say(`App '%s' has not been deleted\.`, appName))
 						Eventually(session).Should(Exit(0))
 					})
 				})
@@ -119,7 +148,7 @@ var _ = Describe("delete command", func() {
 					It("does not delete the app", func() {
 						session := helpers.CFWithStdin(buffer, "delete", appName)
 						Eventually(session).Should(Say(`Really delete the app %s\? \[yN\]`, appName))
-						Eventually(session).Should(Say("Delete cancelled"))
+						Eventually(session).Should(Say(`App '%s' has not been deleted\.`, appName))
 						Eventually(session).Should(Exit(0))
 					})
 				})
@@ -147,7 +176,14 @@ var _ = Describe("delete command", func() {
 		When("the app exists", func() {
 			BeforeEach(func() {
 				helpers.WithHelloWorldApp(func(appDir string) {
-					Eventually(helpers.CustomCF(helpers.CFEnv{WorkingDirectory: appDir}, "push", appName)).Should(Exit(0))
+					Eventually(
+						helpers.CustomCF(
+							helpers.CFEnv{WorkingDirectory: appDir},
+							"push",
+							appName,
+							"--no-start",
+						),
+					).Should(Exit(0))
 				})
 			})
 
@@ -159,6 +195,59 @@ var _ = Describe("delete command", func() {
 				Eventually(session).Should(Exit(0))
 
 				Eventually(helpers.CF("app", appName)).Should(Exit(1))
+			})
+
+			When("the -r flag is provided", func() {
+				It("deletes the app and associated routes", func() {
+					session := helpers.CF("delete", appName, "-f", "-r")
+					username, _ := helpers.GetCredentials()
+					Eventually(session).Should(Say("Deleting app %s in org %s / space %s as %s...", appName, orgName, spaceName, username))
+					Eventually(session).Should(Say("OK"))
+					Eventually(session).Should(Exit(0))
+
+					Eventually(helpers.CF("app", appName)).Should(Exit(1))
+
+					session = helpers.CF("routes")
+					Eventually(session).Should(Exit(0))
+					Expect(session).NotTo(Say(appName))
+				})
+
+				When("app to delete has a route bound to another app", func() {
+					var boundRouteURL string
+
+					BeforeEach(func() {
+						var (
+							appNameSharingBoundRoute = helpers.PrefixedRandomName("another-app")
+							domain                   = helpers.DefaultSharedDomain()
+							host                     = appName
+							path                     string
+						)
+						boundRouteURL = fmt.Sprintf("%s.%s", host, domain)
+
+						helpers.WithHelloWorldApp(func(appDir string) {
+							Eventually(
+								helpers.CustomCF(
+									helpers.CFEnv{WorkingDirectory: appDir},
+									"push",
+									appNameSharingBoundRoute,
+									"--no-start",
+								),
+							).Should(Exit(0))
+						})
+
+						helpers.MapRouteToApplication(appNameSharingBoundRoute, domain, host, path)
+					})
+
+					It("does not delete the app or associated routes", func() {
+						session := helpers.CF("delete", appName, "-f", "-r")
+						username, _ := helpers.GetCredentials()
+						Eventually(session).Should(Say("Deleting app %s in org %s / space %s as %s...", appName, orgName, spaceName, username))
+						Eventually(session.Err).Should(Say("App '%s' was not deleted because route '%s' is mapped to more than one app.", appName, boundRouteURL))
+						Eventually(session).Should(Say("FAILED"))
+						Eventually(session).Should(Say("\n\nTIP: Run 'cf delete %s' to delete the app and 'cf delete-route' to delete the route.", appName))
+						Eventually(session).Should(Exit(1))
+					})
+				})
 			})
 		})
 	})

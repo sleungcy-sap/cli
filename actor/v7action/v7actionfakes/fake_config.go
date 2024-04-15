@@ -6,9 +6,20 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/cli/actor/v7action"
+	"code.cloudfoundry.org/cli/util/configv3"
 )
 
 type FakeConfig struct {
+	APIVersionStub        func() string
+	aPIVersionMutex       sync.RWMutex
+	aPIVersionArgsForCall []struct {
+	}
+	aPIVersionReturns struct {
+		result1 string
+	}
+	aPIVersionReturnsOnCall map[int]struct {
+		result1 string
+	}
 	AccessTokenStub        func() string
 	accessTokenMutex       sync.RWMutex
 	accessTokenArgsForCall []struct {
@@ -18,6 +29,18 @@ type FakeConfig struct {
 	}
 	accessTokenReturnsOnCall map[int]struct {
 		result1 string
+	}
+	CurrentUserStub        func() (configv3.User, error)
+	currentUserMutex       sync.RWMutex
+	currentUserArgsForCall []struct {
+	}
+	currentUserReturns struct {
+		result1 configv3.User
+		result2 error
+	}
+	currentUserReturnsOnCall map[int]struct {
+		result1 configv3.User
+		result2 error
 	}
 	DialTimeoutStub        func() time.Duration
 	dialTimeoutMutex       sync.RWMutex
@@ -29,6 +52,16 @@ type FakeConfig struct {
 	dialTimeoutReturnsOnCall map[int]struct {
 		result1 time.Duration
 	}
+	IsCFOnK8sStub        func() bool
+	isCFOnK8sMutex       sync.RWMutex
+	isCFOnK8sArgsForCall []struct {
+	}
+	isCFOnK8sReturns struct {
+		result1 bool
+	}
+	isCFOnK8sReturnsOnCall map[int]struct {
+		result1 bool
+	}
 	PollingIntervalStub        func() time.Duration
 	pollingIntervalMutex       sync.RWMutex
 	pollingIntervalArgsForCall []struct {
@@ -39,6 +72,16 @@ type FakeConfig struct {
 	pollingIntervalReturnsOnCall map[int]struct {
 		result1 time.Duration
 	}
+	RefreshTokenStub        func() string
+	refreshTokenMutex       sync.RWMutex
+	refreshTokenArgsForCall []struct {
+	}
+	refreshTokenReturns struct {
+		result1 string
+	}
+	refreshTokenReturnsOnCall map[int]struct {
+		result1 string
+	}
 	SSHOAuthClientStub        func() string
 	sSHOAuthClientMutex       sync.RWMutex
 	sSHOAuthClientArgsForCall []struct {
@@ -48,6 +91,54 @@ type FakeConfig struct {
 	}
 	sSHOAuthClientReturnsOnCall map[int]struct {
 		result1 string
+	}
+	SetAccessTokenStub        func(string)
+	setAccessTokenMutex       sync.RWMutex
+	setAccessTokenArgsForCall []struct {
+		arg1 string
+	}
+	SetKubernetesAuthInfoStub        func(string)
+	setKubernetesAuthInfoMutex       sync.RWMutex
+	setKubernetesAuthInfoArgsForCall []struct {
+		arg1 string
+	}
+	SetRefreshTokenStub        func(string)
+	setRefreshTokenMutex       sync.RWMutex
+	setRefreshTokenArgsForCall []struct {
+		arg1 string
+	}
+	SetTargetInformationStub        func(configv3.TargetInformationArgs)
+	setTargetInformationMutex       sync.RWMutex
+	setTargetInformationArgsForCall []struct {
+		arg1 configv3.TargetInformationArgs
+	}
+	SetTokenInformationStub        func(string, string, string)
+	setTokenInformationMutex       sync.RWMutex
+	setTokenInformationArgsForCall []struct {
+		arg1 string
+		arg2 string
+		arg3 string
+	}
+	SetUAAClientCredentialsStub        func(string, string)
+	setUAAClientCredentialsMutex       sync.RWMutex
+	setUAAClientCredentialsArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	SetUAAGrantTypeStub        func(string)
+	setUAAGrantTypeMutex       sync.RWMutex
+	setUAAGrantTypeArgsForCall []struct {
+		arg1 string
+	}
+	SkipSSLValidationStub        func() bool
+	skipSSLValidationMutex       sync.RWMutex
+	skipSSLValidationArgsForCall []struct {
+	}
+	skipSSLValidationReturns struct {
+		result1 bool
+	}
+	skipSSLValidationReturnsOnCall map[int]struct {
+		result1 bool
 	}
 	StagingTimeoutStub        func() time.Duration
 	stagingTimeoutMutex       sync.RWMutex
@@ -69,8 +160,84 @@ type FakeConfig struct {
 	startupTimeoutReturnsOnCall map[int]struct {
 		result1 time.Duration
 	}
+	TargetStub        func() string
+	targetMutex       sync.RWMutex
+	targetArgsForCall []struct {
+	}
+	targetReturns struct {
+		result1 string
+	}
+	targetReturnsOnCall map[int]struct {
+		result1 string
+	}
+	UAAGrantTypeStub        func() string
+	uAAGrantTypeMutex       sync.RWMutex
+	uAAGrantTypeArgsForCall []struct {
+	}
+	uAAGrantTypeReturns struct {
+		result1 string
+	}
+	uAAGrantTypeReturnsOnCall map[int]struct {
+		result1 string
+	}
+	UnsetOrganizationAndSpaceInformationStub        func()
+	unsetOrganizationAndSpaceInformationMutex       sync.RWMutex
+	unsetOrganizationAndSpaceInformationArgsForCall []struct {
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeConfig) APIVersion() string {
+	fake.aPIVersionMutex.Lock()
+	ret, specificReturn := fake.aPIVersionReturnsOnCall[len(fake.aPIVersionArgsForCall)]
+	fake.aPIVersionArgsForCall = append(fake.aPIVersionArgsForCall, struct {
+	}{})
+	fake.recordInvocation("APIVersion", []interface{}{})
+	fake.aPIVersionMutex.Unlock()
+	if fake.APIVersionStub != nil {
+		return fake.APIVersionStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.aPIVersionReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeConfig) APIVersionCallCount() int {
+	fake.aPIVersionMutex.RLock()
+	defer fake.aPIVersionMutex.RUnlock()
+	return len(fake.aPIVersionArgsForCall)
+}
+
+func (fake *FakeConfig) APIVersionCalls(stub func() string) {
+	fake.aPIVersionMutex.Lock()
+	defer fake.aPIVersionMutex.Unlock()
+	fake.APIVersionStub = stub
+}
+
+func (fake *FakeConfig) APIVersionReturns(result1 string) {
+	fake.aPIVersionMutex.Lock()
+	defer fake.aPIVersionMutex.Unlock()
+	fake.APIVersionStub = nil
+	fake.aPIVersionReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *FakeConfig) APIVersionReturnsOnCall(i int, result1 string) {
+	fake.aPIVersionMutex.Lock()
+	defer fake.aPIVersionMutex.Unlock()
+	fake.APIVersionStub = nil
+	if fake.aPIVersionReturnsOnCall == nil {
+		fake.aPIVersionReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.aPIVersionReturnsOnCall[i] = struct {
+		result1 string
+	}{result1}
 }
 
 func (fake *FakeConfig) AccessToken() string {
@@ -125,6 +292,61 @@ func (fake *FakeConfig) AccessTokenReturnsOnCall(i int, result1 string) {
 	}{result1}
 }
 
+func (fake *FakeConfig) CurrentUser() (configv3.User, error) {
+	fake.currentUserMutex.Lock()
+	ret, specificReturn := fake.currentUserReturnsOnCall[len(fake.currentUserArgsForCall)]
+	fake.currentUserArgsForCall = append(fake.currentUserArgsForCall, struct {
+	}{})
+	fake.recordInvocation("CurrentUser", []interface{}{})
+	fake.currentUserMutex.Unlock()
+	if fake.CurrentUserStub != nil {
+		return fake.CurrentUserStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.currentUserReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeConfig) CurrentUserCallCount() int {
+	fake.currentUserMutex.RLock()
+	defer fake.currentUserMutex.RUnlock()
+	return len(fake.currentUserArgsForCall)
+}
+
+func (fake *FakeConfig) CurrentUserCalls(stub func() (configv3.User, error)) {
+	fake.currentUserMutex.Lock()
+	defer fake.currentUserMutex.Unlock()
+	fake.CurrentUserStub = stub
+}
+
+func (fake *FakeConfig) CurrentUserReturns(result1 configv3.User, result2 error) {
+	fake.currentUserMutex.Lock()
+	defer fake.currentUserMutex.Unlock()
+	fake.CurrentUserStub = nil
+	fake.currentUserReturns = struct {
+		result1 configv3.User
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeConfig) CurrentUserReturnsOnCall(i int, result1 configv3.User, result2 error) {
+	fake.currentUserMutex.Lock()
+	defer fake.currentUserMutex.Unlock()
+	fake.CurrentUserStub = nil
+	if fake.currentUserReturnsOnCall == nil {
+		fake.currentUserReturnsOnCall = make(map[int]struct {
+			result1 configv3.User
+			result2 error
+		})
+	}
+	fake.currentUserReturnsOnCall[i] = struct {
+		result1 configv3.User
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeConfig) DialTimeout() time.Duration {
 	fake.dialTimeoutMutex.Lock()
 	ret, specificReturn := fake.dialTimeoutReturnsOnCall[len(fake.dialTimeoutArgsForCall)]
@@ -174,6 +396,58 @@ func (fake *FakeConfig) DialTimeoutReturnsOnCall(i int, result1 time.Duration) {
 	}
 	fake.dialTimeoutReturnsOnCall[i] = struct {
 		result1 time.Duration
+	}{result1}
+}
+
+func (fake *FakeConfig) IsCFOnK8s() bool {
+	fake.isCFOnK8sMutex.Lock()
+	ret, specificReturn := fake.isCFOnK8sReturnsOnCall[len(fake.isCFOnK8sArgsForCall)]
+	fake.isCFOnK8sArgsForCall = append(fake.isCFOnK8sArgsForCall, struct {
+	}{})
+	fake.recordInvocation("IsCFOnK8s", []interface{}{})
+	fake.isCFOnK8sMutex.Unlock()
+	if fake.IsCFOnK8sStub != nil {
+		return fake.IsCFOnK8sStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.isCFOnK8sReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeConfig) IsCFOnK8sCallCount() int {
+	fake.isCFOnK8sMutex.RLock()
+	defer fake.isCFOnK8sMutex.RUnlock()
+	return len(fake.isCFOnK8sArgsForCall)
+}
+
+func (fake *FakeConfig) IsCFOnK8sCalls(stub func() bool) {
+	fake.isCFOnK8sMutex.Lock()
+	defer fake.isCFOnK8sMutex.Unlock()
+	fake.IsCFOnK8sStub = stub
+}
+
+func (fake *FakeConfig) IsCFOnK8sReturns(result1 bool) {
+	fake.isCFOnK8sMutex.Lock()
+	defer fake.isCFOnK8sMutex.Unlock()
+	fake.IsCFOnK8sStub = nil
+	fake.isCFOnK8sReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeConfig) IsCFOnK8sReturnsOnCall(i int, result1 bool) {
+	fake.isCFOnK8sMutex.Lock()
+	defer fake.isCFOnK8sMutex.Unlock()
+	fake.IsCFOnK8sStub = nil
+	if fake.isCFOnK8sReturnsOnCall == nil {
+		fake.isCFOnK8sReturnsOnCall = make(map[int]struct {
+			result1 bool
+		})
+	}
+	fake.isCFOnK8sReturnsOnCall[i] = struct {
+		result1 bool
 	}{result1}
 }
 
@@ -229,6 +503,58 @@ func (fake *FakeConfig) PollingIntervalReturnsOnCall(i int, result1 time.Duratio
 	}{result1}
 }
 
+func (fake *FakeConfig) RefreshToken() string {
+	fake.refreshTokenMutex.Lock()
+	ret, specificReturn := fake.refreshTokenReturnsOnCall[len(fake.refreshTokenArgsForCall)]
+	fake.refreshTokenArgsForCall = append(fake.refreshTokenArgsForCall, struct {
+	}{})
+	fake.recordInvocation("RefreshToken", []interface{}{})
+	fake.refreshTokenMutex.Unlock()
+	if fake.RefreshTokenStub != nil {
+		return fake.RefreshTokenStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.refreshTokenReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeConfig) RefreshTokenCallCount() int {
+	fake.refreshTokenMutex.RLock()
+	defer fake.refreshTokenMutex.RUnlock()
+	return len(fake.refreshTokenArgsForCall)
+}
+
+func (fake *FakeConfig) RefreshTokenCalls(stub func() string) {
+	fake.refreshTokenMutex.Lock()
+	defer fake.refreshTokenMutex.Unlock()
+	fake.RefreshTokenStub = stub
+}
+
+func (fake *FakeConfig) RefreshTokenReturns(result1 string) {
+	fake.refreshTokenMutex.Lock()
+	defer fake.refreshTokenMutex.Unlock()
+	fake.RefreshTokenStub = nil
+	fake.refreshTokenReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *FakeConfig) RefreshTokenReturnsOnCall(i int, result1 string) {
+	fake.refreshTokenMutex.Lock()
+	defer fake.refreshTokenMutex.Unlock()
+	fake.RefreshTokenStub = nil
+	if fake.refreshTokenReturnsOnCall == nil {
+		fake.refreshTokenReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.refreshTokenReturnsOnCall[i] = struct {
+		result1 string
+	}{result1}
+}
+
 func (fake *FakeConfig) SSHOAuthClient() string {
 	fake.sSHOAuthClientMutex.Lock()
 	ret, specificReturn := fake.sSHOAuthClientReturnsOnCall[len(fake.sSHOAuthClientArgsForCall)]
@@ -278,6 +604,278 @@ func (fake *FakeConfig) SSHOAuthClientReturnsOnCall(i int, result1 string) {
 	}
 	fake.sSHOAuthClientReturnsOnCall[i] = struct {
 		result1 string
+	}{result1}
+}
+
+func (fake *FakeConfig) SetAccessToken(arg1 string) {
+	fake.setAccessTokenMutex.Lock()
+	fake.setAccessTokenArgsForCall = append(fake.setAccessTokenArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("SetAccessToken", []interface{}{arg1})
+	fake.setAccessTokenMutex.Unlock()
+	if fake.SetAccessTokenStub != nil {
+		fake.SetAccessTokenStub(arg1)
+	}
+}
+
+func (fake *FakeConfig) SetAccessTokenCallCount() int {
+	fake.setAccessTokenMutex.RLock()
+	defer fake.setAccessTokenMutex.RUnlock()
+	return len(fake.setAccessTokenArgsForCall)
+}
+
+func (fake *FakeConfig) SetAccessTokenCalls(stub func(string)) {
+	fake.setAccessTokenMutex.Lock()
+	defer fake.setAccessTokenMutex.Unlock()
+	fake.SetAccessTokenStub = stub
+}
+
+func (fake *FakeConfig) SetAccessTokenArgsForCall(i int) string {
+	fake.setAccessTokenMutex.RLock()
+	defer fake.setAccessTokenMutex.RUnlock()
+	argsForCall := fake.setAccessTokenArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeConfig) SetKubernetesAuthInfo(arg1 string) {
+	fake.setKubernetesAuthInfoMutex.Lock()
+	fake.setKubernetesAuthInfoArgsForCall = append(fake.setKubernetesAuthInfoArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("SetKubernetesAuthInfo", []interface{}{arg1})
+	fake.setKubernetesAuthInfoMutex.Unlock()
+	if fake.SetKubernetesAuthInfoStub != nil {
+		fake.SetKubernetesAuthInfoStub(arg1)
+	}
+}
+
+func (fake *FakeConfig) SetKubernetesAuthInfoCallCount() int {
+	fake.setKubernetesAuthInfoMutex.RLock()
+	defer fake.setKubernetesAuthInfoMutex.RUnlock()
+	return len(fake.setKubernetesAuthInfoArgsForCall)
+}
+
+func (fake *FakeConfig) SetKubernetesAuthInfoCalls(stub func(string)) {
+	fake.setKubernetesAuthInfoMutex.Lock()
+	defer fake.setKubernetesAuthInfoMutex.Unlock()
+	fake.SetKubernetesAuthInfoStub = stub
+}
+
+func (fake *FakeConfig) SetKubernetesAuthInfoArgsForCall(i int) string {
+	fake.setKubernetesAuthInfoMutex.RLock()
+	defer fake.setKubernetesAuthInfoMutex.RUnlock()
+	argsForCall := fake.setKubernetesAuthInfoArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeConfig) SetRefreshToken(arg1 string) {
+	fake.setRefreshTokenMutex.Lock()
+	fake.setRefreshTokenArgsForCall = append(fake.setRefreshTokenArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("SetRefreshToken", []interface{}{arg1})
+	fake.setRefreshTokenMutex.Unlock()
+	if fake.SetRefreshTokenStub != nil {
+		fake.SetRefreshTokenStub(arg1)
+	}
+}
+
+func (fake *FakeConfig) SetRefreshTokenCallCount() int {
+	fake.setRefreshTokenMutex.RLock()
+	defer fake.setRefreshTokenMutex.RUnlock()
+	return len(fake.setRefreshTokenArgsForCall)
+}
+
+func (fake *FakeConfig) SetRefreshTokenCalls(stub func(string)) {
+	fake.setRefreshTokenMutex.Lock()
+	defer fake.setRefreshTokenMutex.Unlock()
+	fake.SetRefreshTokenStub = stub
+}
+
+func (fake *FakeConfig) SetRefreshTokenArgsForCall(i int) string {
+	fake.setRefreshTokenMutex.RLock()
+	defer fake.setRefreshTokenMutex.RUnlock()
+	argsForCall := fake.setRefreshTokenArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeConfig) SetTargetInformation(arg1 configv3.TargetInformationArgs) {
+	fake.setTargetInformationMutex.Lock()
+	fake.setTargetInformationArgsForCall = append(fake.setTargetInformationArgsForCall, struct {
+		arg1 configv3.TargetInformationArgs
+	}{arg1})
+	fake.recordInvocation("SetTargetInformation", []interface{}{arg1})
+	fake.setTargetInformationMutex.Unlock()
+	if fake.SetTargetInformationStub != nil {
+		fake.SetTargetInformationStub(arg1)
+	}
+}
+
+func (fake *FakeConfig) SetTargetInformationCallCount() int {
+	fake.setTargetInformationMutex.RLock()
+	defer fake.setTargetInformationMutex.RUnlock()
+	return len(fake.setTargetInformationArgsForCall)
+}
+
+func (fake *FakeConfig) SetTargetInformationCalls(stub func(configv3.TargetInformationArgs)) {
+	fake.setTargetInformationMutex.Lock()
+	defer fake.setTargetInformationMutex.Unlock()
+	fake.SetTargetInformationStub = stub
+}
+
+func (fake *FakeConfig) SetTargetInformationArgsForCall(i int) configv3.TargetInformationArgs {
+	fake.setTargetInformationMutex.RLock()
+	defer fake.setTargetInformationMutex.RUnlock()
+	argsForCall := fake.setTargetInformationArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeConfig) SetTokenInformation(arg1 string, arg2 string, arg3 string) {
+	fake.setTokenInformationMutex.Lock()
+	fake.setTokenInformationArgsForCall = append(fake.setTokenInformationArgsForCall, struct {
+		arg1 string
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("SetTokenInformation", []interface{}{arg1, arg2, arg3})
+	fake.setTokenInformationMutex.Unlock()
+	if fake.SetTokenInformationStub != nil {
+		fake.SetTokenInformationStub(arg1, arg2, arg3)
+	}
+}
+
+func (fake *FakeConfig) SetTokenInformationCallCount() int {
+	fake.setTokenInformationMutex.RLock()
+	defer fake.setTokenInformationMutex.RUnlock()
+	return len(fake.setTokenInformationArgsForCall)
+}
+
+func (fake *FakeConfig) SetTokenInformationCalls(stub func(string, string, string)) {
+	fake.setTokenInformationMutex.Lock()
+	defer fake.setTokenInformationMutex.Unlock()
+	fake.SetTokenInformationStub = stub
+}
+
+func (fake *FakeConfig) SetTokenInformationArgsForCall(i int) (string, string, string) {
+	fake.setTokenInformationMutex.RLock()
+	defer fake.setTokenInformationMutex.RUnlock()
+	argsForCall := fake.setTokenInformationArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeConfig) SetUAAClientCredentials(arg1 string, arg2 string) {
+	fake.setUAAClientCredentialsMutex.Lock()
+	fake.setUAAClientCredentialsArgsForCall = append(fake.setUAAClientCredentialsArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("SetUAAClientCredentials", []interface{}{arg1, arg2})
+	fake.setUAAClientCredentialsMutex.Unlock()
+	if fake.SetUAAClientCredentialsStub != nil {
+		fake.SetUAAClientCredentialsStub(arg1, arg2)
+	}
+}
+
+func (fake *FakeConfig) SetUAAClientCredentialsCallCount() int {
+	fake.setUAAClientCredentialsMutex.RLock()
+	defer fake.setUAAClientCredentialsMutex.RUnlock()
+	return len(fake.setUAAClientCredentialsArgsForCall)
+}
+
+func (fake *FakeConfig) SetUAAClientCredentialsCalls(stub func(string, string)) {
+	fake.setUAAClientCredentialsMutex.Lock()
+	defer fake.setUAAClientCredentialsMutex.Unlock()
+	fake.SetUAAClientCredentialsStub = stub
+}
+
+func (fake *FakeConfig) SetUAAClientCredentialsArgsForCall(i int) (string, string) {
+	fake.setUAAClientCredentialsMutex.RLock()
+	defer fake.setUAAClientCredentialsMutex.RUnlock()
+	argsForCall := fake.setUAAClientCredentialsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeConfig) SetUAAGrantType(arg1 string) {
+	fake.setUAAGrantTypeMutex.Lock()
+	fake.setUAAGrantTypeArgsForCall = append(fake.setUAAGrantTypeArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("SetUAAGrantType", []interface{}{arg1})
+	fake.setUAAGrantTypeMutex.Unlock()
+	if fake.SetUAAGrantTypeStub != nil {
+		fake.SetUAAGrantTypeStub(arg1)
+	}
+}
+
+func (fake *FakeConfig) SetUAAGrantTypeCallCount() int {
+	fake.setUAAGrantTypeMutex.RLock()
+	defer fake.setUAAGrantTypeMutex.RUnlock()
+	return len(fake.setUAAGrantTypeArgsForCall)
+}
+
+func (fake *FakeConfig) SetUAAGrantTypeCalls(stub func(string)) {
+	fake.setUAAGrantTypeMutex.Lock()
+	defer fake.setUAAGrantTypeMutex.Unlock()
+	fake.SetUAAGrantTypeStub = stub
+}
+
+func (fake *FakeConfig) SetUAAGrantTypeArgsForCall(i int) string {
+	fake.setUAAGrantTypeMutex.RLock()
+	defer fake.setUAAGrantTypeMutex.RUnlock()
+	argsForCall := fake.setUAAGrantTypeArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeConfig) SkipSSLValidation() bool {
+	fake.skipSSLValidationMutex.Lock()
+	ret, specificReturn := fake.skipSSLValidationReturnsOnCall[len(fake.skipSSLValidationArgsForCall)]
+	fake.skipSSLValidationArgsForCall = append(fake.skipSSLValidationArgsForCall, struct {
+	}{})
+	fake.recordInvocation("SkipSSLValidation", []interface{}{})
+	fake.skipSSLValidationMutex.Unlock()
+	if fake.SkipSSLValidationStub != nil {
+		return fake.SkipSSLValidationStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.skipSSLValidationReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeConfig) SkipSSLValidationCallCount() int {
+	fake.skipSSLValidationMutex.RLock()
+	defer fake.skipSSLValidationMutex.RUnlock()
+	return len(fake.skipSSLValidationArgsForCall)
+}
+
+func (fake *FakeConfig) SkipSSLValidationCalls(stub func() bool) {
+	fake.skipSSLValidationMutex.Lock()
+	defer fake.skipSSLValidationMutex.Unlock()
+	fake.SkipSSLValidationStub = stub
+}
+
+func (fake *FakeConfig) SkipSSLValidationReturns(result1 bool) {
+	fake.skipSSLValidationMutex.Lock()
+	defer fake.skipSSLValidationMutex.Unlock()
+	fake.SkipSSLValidationStub = nil
+	fake.skipSSLValidationReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeConfig) SkipSSLValidationReturnsOnCall(i int, result1 bool) {
+	fake.skipSSLValidationMutex.Lock()
+	defer fake.skipSSLValidationMutex.Unlock()
+	fake.SkipSSLValidationStub = nil
+	if fake.skipSSLValidationReturnsOnCall == nil {
+		fake.skipSSLValidationReturnsOnCall = make(map[int]struct {
+			result1 bool
+		})
+	}
+	fake.skipSSLValidationReturnsOnCall[i] = struct {
+		result1 bool
 	}{result1}
 }
 
@@ -385,21 +983,178 @@ func (fake *FakeConfig) StartupTimeoutReturnsOnCall(i int, result1 time.Duration
 	}{result1}
 }
 
+func (fake *FakeConfig) Target() string {
+	fake.targetMutex.Lock()
+	ret, specificReturn := fake.targetReturnsOnCall[len(fake.targetArgsForCall)]
+	fake.targetArgsForCall = append(fake.targetArgsForCall, struct {
+	}{})
+	fake.recordInvocation("Target", []interface{}{})
+	fake.targetMutex.Unlock()
+	if fake.TargetStub != nil {
+		return fake.TargetStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.targetReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeConfig) TargetCallCount() int {
+	fake.targetMutex.RLock()
+	defer fake.targetMutex.RUnlock()
+	return len(fake.targetArgsForCall)
+}
+
+func (fake *FakeConfig) TargetCalls(stub func() string) {
+	fake.targetMutex.Lock()
+	defer fake.targetMutex.Unlock()
+	fake.TargetStub = stub
+}
+
+func (fake *FakeConfig) TargetReturns(result1 string) {
+	fake.targetMutex.Lock()
+	defer fake.targetMutex.Unlock()
+	fake.TargetStub = nil
+	fake.targetReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *FakeConfig) TargetReturnsOnCall(i int, result1 string) {
+	fake.targetMutex.Lock()
+	defer fake.targetMutex.Unlock()
+	fake.TargetStub = nil
+	if fake.targetReturnsOnCall == nil {
+		fake.targetReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.targetReturnsOnCall[i] = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *FakeConfig) UAAGrantType() string {
+	fake.uAAGrantTypeMutex.Lock()
+	ret, specificReturn := fake.uAAGrantTypeReturnsOnCall[len(fake.uAAGrantTypeArgsForCall)]
+	fake.uAAGrantTypeArgsForCall = append(fake.uAAGrantTypeArgsForCall, struct {
+	}{})
+	fake.recordInvocation("UAAGrantType", []interface{}{})
+	fake.uAAGrantTypeMutex.Unlock()
+	if fake.UAAGrantTypeStub != nil {
+		return fake.UAAGrantTypeStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.uAAGrantTypeReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeConfig) UAAGrantTypeCallCount() int {
+	fake.uAAGrantTypeMutex.RLock()
+	defer fake.uAAGrantTypeMutex.RUnlock()
+	return len(fake.uAAGrantTypeArgsForCall)
+}
+
+func (fake *FakeConfig) UAAGrantTypeCalls(stub func() string) {
+	fake.uAAGrantTypeMutex.Lock()
+	defer fake.uAAGrantTypeMutex.Unlock()
+	fake.UAAGrantTypeStub = stub
+}
+
+func (fake *FakeConfig) UAAGrantTypeReturns(result1 string) {
+	fake.uAAGrantTypeMutex.Lock()
+	defer fake.uAAGrantTypeMutex.Unlock()
+	fake.UAAGrantTypeStub = nil
+	fake.uAAGrantTypeReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *FakeConfig) UAAGrantTypeReturnsOnCall(i int, result1 string) {
+	fake.uAAGrantTypeMutex.Lock()
+	defer fake.uAAGrantTypeMutex.Unlock()
+	fake.UAAGrantTypeStub = nil
+	if fake.uAAGrantTypeReturnsOnCall == nil {
+		fake.uAAGrantTypeReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.uAAGrantTypeReturnsOnCall[i] = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *FakeConfig) UnsetOrganizationAndSpaceInformation() {
+	fake.unsetOrganizationAndSpaceInformationMutex.Lock()
+	fake.unsetOrganizationAndSpaceInformationArgsForCall = append(fake.unsetOrganizationAndSpaceInformationArgsForCall, struct {
+	}{})
+	fake.recordInvocation("UnsetOrganizationAndSpaceInformation", []interface{}{})
+	fake.unsetOrganizationAndSpaceInformationMutex.Unlock()
+	if fake.UnsetOrganizationAndSpaceInformationStub != nil {
+		fake.UnsetOrganizationAndSpaceInformationStub()
+	}
+}
+
+func (fake *FakeConfig) UnsetOrganizationAndSpaceInformationCallCount() int {
+	fake.unsetOrganizationAndSpaceInformationMutex.RLock()
+	defer fake.unsetOrganizationAndSpaceInformationMutex.RUnlock()
+	return len(fake.unsetOrganizationAndSpaceInformationArgsForCall)
+}
+
+func (fake *FakeConfig) UnsetOrganizationAndSpaceInformationCalls(stub func()) {
+	fake.unsetOrganizationAndSpaceInformationMutex.Lock()
+	defer fake.unsetOrganizationAndSpaceInformationMutex.Unlock()
+	fake.UnsetOrganizationAndSpaceInformationStub = stub
+}
+
 func (fake *FakeConfig) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.aPIVersionMutex.RLock()
+	defer fake.aPIVersionMutex.RUnlock()
 	fake.accessTokenMutex.RLock()
 	defer fake.accessTokenMutex.RUnlock()
+	fake.currentUserMutex.RLock()
+	defer fake.currentUserMutex.RUnlock()
 	fake.dialTimeoutMutex.RLock()
 	defer fake.dialTimeoutMutex.RUnlock()
+	fake.isCFOnK8sMutex.RLock()
+	defer fake.isCFOnK8sMutex.RUnlock()
 	fake.pollingIntervalMutex.RLock()
 	defer fake.pollingIntervalMutex.RUnlock()
+	fake.refreshTokenMutex.RLock()
+	defer fake.refreshTokenMutex.RUnlock()
 	fake.sSHOAuthClientMutex.RLock()
 	defer fake.sSHOAuthClientMutex.RUnlock()
+	fake.setAccessTokenMutex.RLock()
+	defer fake.setAccessTokenMutex.RUnlock()
+	fake.setKubernetesAuthInfoMutex.RLock()
+	defer fake.setKubernetesAuthInfoMutex.RUnlock()
+	fake.setRefreshTokenMutex.RLock()
+	defer fake.setRefreshTokenMutex.RUnlock()
+	fake.setTargetInformationMutex.RLock()
+	defer fake.setTargetInformationMutex.RUnlock()
+	fake.setTokenInformationMutex.RLock()
+	defer fake.setTokenInformationMutex.RUnlock()
+	fake.setUAAClientCredentialsMutex.RLock()
+	defer fake.setUAAClientCredentialsMutex.RUnlock()
+	fake.setUAAGrantTypeMutex.RLock()
+	defer fake.setUAAGrantTypeMutex.RUnlock()
+	fake.skipSSLValidationMutex.RLock()
+	defer fake.skipSSLValidationMutex.RUnlock()
 	fake.stagingTimeoutMutex.RLock()
 	defer fake.stagingTimeoutMutex.RUnlock()
 	fake.startupTimeoutMutex.RLock()
 	defer fake.startupTimeoutMutex.RUnlock()
+	fake.targetMutex.RLock()
+	defer fake.targetMutex.RUnlock()
+	fake.uAAGrantTypeMutex.RLock()
+	defer fake.uAAGrantTypeMutex.RUnlock()
+	fake.unsetOrganizationAndSpaceInformationMutex.RLock()
+	defer fake.unsetOrganizationAndSpaceInformationMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

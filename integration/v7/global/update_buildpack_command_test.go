@@ -8,7 +8,6 @@ import (
 	"os"
 	"regexp"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccversion"
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -34,7 +33,7 @@ var _ = Describe("update-buildpack command", func() {
 			Eventually(session).Should(Say("NAME:"))
 			Eventually(session).Should(Say("update-buildpack - Update a buildpack"))
 			Eventually(session).Should(Say("USAGE:"))
-			Eventually(session).Should(Say(regexp.QuoteMeta(`cf update-buildpack BUILDPACK [-p PATH | -s STACK | --assign-stack NEW_STACK] [-i POSITION] [--enable|--disable] [--lock|--unlock] [--rename]`)))
+			Eventually(session).Should(Say(regexp.QuoteMeta(`cf update-buildpack BUILDPACK [-p PATH | -s STACK | --assign-stack NEW_STACK] [-i POSITION] [--rename NEW_NAME] [--enable|--disable] [--lock|--unlock]`)))
 			Eventually(session).Should(Say("TIP:"))
 			Eventually(session).Should(Say("Path should be a zip file, a url to a zip file, or a local directory. Position is a positive integer, sets priority, and is sorted from lowest to highest.\n\n"))
 			Eventually(session).Should(Say("Use '--assign-stack' with caution. Associating a buildpack with a stack that it does not support may result in undefined behavior. Additionally, changing this association once made may require a local copy of the buildpack.\n\n"))
@@ -82,7 +81,7 @@ var _ = Describe("update-buildpack command", func() {
 			When("the buildpack does not exist", func() {
 				It("returns a buildpack not found error", func() {
 					session := helpers.CF("update-buildpack", buildpackName)
-					Eventually(session.Err).Should(Say("Buildpack %s not found", buildpackName))
+					Eventually(session.Err).Should(Say("Buildpack '%s' not found", buildpackName))
 					Eventually(session).Should(Say("FAILED"))
 					Eventually(session).Should(Exit(1))
 				})
@@ -129,7 +128,7 @@ var _ = Describe("update-buildpack command", func() {
 							nonexistentStack := "some-incorrect-stack-name"
 							session := helpers.CF("update-buildpack", buildpackName, "-s", nonexistentStack)
 
-							Eventually(session.Err).Should(Say("Buildpack %s with stack %s not found", buildpackName, nonexistentStack))
+							Eventually(session.Err).Should(Say("Buildpack '%s' with stack '%s' not found", buildpackName, nonexistentStack))
 							Eventually(session).Should(Say("FAILED"))
 							Eventually(session).Should(Exit(1))
 						})
@@ -183,7 +182,7 @@ var _ = Describe("update-buildpack command", func() {
 							nonexistentStack := "some-incorrect-stack-name"
 							session := helpers.CF("update-buildpack", buildpackName, "-s", nonexistentStack)
 
-							Eventually(session.Err).Should(Say("Buildpack %s with stack %s not found", buildpackName, nonexistentStack))
+							Eventually(session.Err).Should(Say("Buildpack '%s' with stack '%s' not found", buildpackName, nonexistentStack))
 							Eventually(session).Should(Say("FAILED"))
 							Eventually(session).Should(Exit(1))
 						})
@@ -273,7 +272,7 @@ var _ = Describe("update-buildpack command", func() {
 					})
 
 					It("returns a buildpack with stack not found error", func() {
-						Eventually(session.Err).Should(Say("Buildpack %s with stack %s not found", buildpackName, stackName))
+						Eventually(session.Err).Should(Say("Buildpack '%s' with stack '%s' not found", buildpackName, stackName))
 						Eventually(session).Should(Say("FAILED"))
 						Eventually(session).Should(Exit(1))
 					})
@@ -411,9 +410,9 @@ var _ = Describe("update-buildpack command", func() {
 							})
 
 							It("returns the appropriate error", func() {
-								Eventually(session.Err).Should(Say("Get %s: dial tcp: lookup", buildpackPath))
-								Eventually(session).Should(Say("FAILED"))
 								Eventually(session).Should(Exit(1))
+								Expect(session.Err).To(Say(`Get "%s": dial tcp: lookup`, buildpackPath))
+								Expect(session).To(Say("FAILED"))
 							})
 						})
 					})
@@ -462,10 +461,6 @@ var _ = Describe("update-buildpack command", func() {
 						stacks []string
 					)
 
-					BeforeEach(func() {
-						helpers.SkipIfVersionLessThan(ccversion.MinVersionBuildpackStackAssociationV2)
-					})
-
 					When("the user assigns a stack that exists on the system", func() {
 						BeforeEach(func() {
 							stacks = helpers.EnsureMinimumNumberOfStacks(2)
@@ -492,7 +487,7 @@ var _ = Describe("update-buildpack command", func() {
 
 							It("displays an error that the buildpack already has a stack association", func() {
 								session := helpers.CF("update-buildpack", buildpackName, "--assign-stack", stacks[1])
-								Eventually(session.Err).Should(Say("Buildpack stack can not be changed"))
+								Eventually(session.Err).Should(Say("Buildpack stack cannot be changed"))
 								Eventually(session).Should(Say("FAILED"))
 								Eventually(session).Should(Exit(1))
 							})

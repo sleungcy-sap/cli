@@ -83,7 +83,7 @@ wacky
 wise
 zany`
 
-const nouns = `ardvark
+const nouns = `aardvark
 alligator
 antelope
 baboon
@@ -170,7 +170,7 @@ rabbit
 ratel
 raven
 reedbuck
-rhinocerous
+rhinoceros
 roan
 sable
 serval
@@ -195,8 +195,13 @@ zebra`
 
 type Generator struct{}
 
+func NewGenerator() Generator {
+	rand.Seed(time.Now().UnixNano())
+	return Generator{}
+}
+
 func (gen Generator) Babble() string {
-	return fmt.Sprintf("%s-%s", gen.RandomAdjective(), gen.RandomNoun())
+	return fmt.Sprintf("%s-%s-%s", gen.RandomAdjective(), gen.RandomNoun(), gen.RandomTwoLetters())
 }
 
 func (Generator) RandomAdjective() string {
@@ -207,8 +212,14 @@ func (Generator) RandomNoun() string {
 	return randomElement(nouns)
 }
 
+func (Generator) RandomTwoLetters() string {
+	var asciiLetterA = 97
+	letterOne := string(rune(rand.Intn(26) + asciiLetterA))
+	letterTwo := string(rune(rand.Intn(26) + asciiLetterA))
+	return letterOne + letterTwo
+}
+
 func randomElement(fullList string) string {
-	rand.Seed(time.Now().UnixNano())
 	wordList := strings.Split(fullList, "\n")
 	randomWordIndex := rand.Int() % len(wordList)
 

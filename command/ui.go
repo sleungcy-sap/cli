@@ -8,15 +8,20 @@ import (
 )
 
 // UI is the interface to STDOUT, STDERR, and STDIN.
-//go:generate counterfeiter . UI
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . UI
 type UI interface {
+	DeferText(template string, data ...map[string]interface{})
 	DisplayBoolPrompt(defaultResponse bool, template string, templateValues ...map[string]interface{}) (bool, error)
 	DisplayChangesForPush(changeSet []ui.Change) error
 	DisplayDeprecationWarning()
+	DisplayDiffAddition(line string, depth int, addHyphen bool)
+	DisplayDiffRemoval(line string, depth int, addHyphen bool)
+	DisplayDiffUnchanged(line string, depth int, addHyphen bool)
 	DisplayError(err error)
 	DisplayFileDeprecationWarning()
 	DisplayHeader(text string)
 	DisplayInstancesTableForApp(table [][]string)
+	DisplayJSON(name string, jsonData interface{}) error
 	DisplayKeyValueTable(prefix string, table [][]string, padding int)
 	DisplayKeyValueTableForApp(table [][]string)
 	DisplayLogMessage(message ui.LogMessage, displayHeader bool)
@@ -27,8 +32,8 @@ type UI interface {
 	DisplayPasswordPrompt(template string, templateValues ...map[string]interface{}) (string, error)
 	DisplayTableWithHeader(prefix string, table [][]string, padding int)
 	DisplayText(template string, data ...map[string]interface{})
-	DisplayTextPrompt(template string, templateValues ...map[string]interface{}) (string, error)
 	DisplayTextMenu(choices []string, promptTemplate string, templateValues ...map[string]interface{}) (string, error)
+	DisplayTextPrompt(template string, templateValues ...map[string]interface{}) (string, error)
 	DisplayTextWithBold(text string, keys ...map[string]interface{})
 	DisplayTextWithFlavor(text string, keys ...map[string]interface{})
 	DisplayWarning(formattedString string, keys ...map[string]interface{})

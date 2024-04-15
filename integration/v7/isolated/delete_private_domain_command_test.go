@@ -3,6 +3,7 @@ package isolated
 import (
 	"regexp"
 
+	. "code.cloudfoundry.org/cli/cf/util/testhelpers/matchers"
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -11,7 +12,13 @@ import (
 )
 
 var _ = Describe("delete-private-domain command", func() {
-	When("--help flag is given", func() {
+	Context("Help", func() {
+		It("appears in cf help -a", func() {
+			session := helpers.CF("help", "-a")
+			Eventually(session).Should(Exit(0))
+			Expect(session).To(HaveCommandInCategoryWithDescription("delete-private-domain", "DOMAINS", "Delete a private domain"))
+		})
+
 		It("Displays command usage to output", func() {
 			session := helpers.CF("delete-private-domain", "--help")
 
@@ -19,6 +26,8 @@ var _ = Describe("delete-private-domain command", func() {
 			Eventually(session).Should(Say(`\s+delete-private-domain - Delete a private domain`))
 			Eventually(session).Should(Say("USAGE:"))
 			Eventually(session).Should(Say(`\s+cf delete-private-domain DOMAIN \[-f\]`))
+			Eventually(session).Should(Say("ALIAS:"))
+			Eventually(session).Should(Say(`\s+delete-domain`))
 			Eventually(session).Should(Say("OPTIONS:"))
 			Eventually(session).Should(Say(`\s+-f\s+Force deletion without confirmation`))
 			Eventually(session).Should(Say("SEE ALSO:"))
@@ -106,7 +115,21 @@ var _ = Describe("delete-private-domain command", func() {
 				Eventually(session).Should(Say("OK"))
 				Eventually(session).Should(Say("\n\nTIP: Run 'cf domains' to view available domains."))
 				Eventually(session).Should(Exit(0))
+
+				session = helpers.CF("domains")
+				Consistently(session).ShouldNot(Say(`%s\s+private`, domainName))
+				Eventually(session).Should(Exit(0))
 			})
+		})
+
+		When("the domain doesn't exist", func() {
+			It("displays OK and returns successfully", func() {
+				session := helpers.CFWithStdin(buffer, "delete-private-domain", "nonexistent.com", "-f")
+				Eventually(session.Err).Should(Say(`Domain 'nonexistent\.com' does not exist\.`))
+				Eventually(session).Should(Say("OK"))
+				Eventually(session).Should(Exit(0))
+			})
+
 		})
 	})
 })

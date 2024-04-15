@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/cli/command/commandfakes"
 	. "code.cloudfoundry.org/cli/command/v7"
 	"code.cloudfoundry.org/cli/command/v7/v7fakes"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/util/configv3"
 	"code.cloudfoundry.org/cli/util/ui"
 
@@ -22,7 +23,7 @@ var _ = Describe("Feature Flags Command", func() {
 		testUI          *ui.UI
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
-		fakeActor       *v7fakes.FakeFeatureFlagsActor
+		fakeActor       *v7fakes.FakeActor
 		executeErr      error
 		binaryName      string
 	)
@@ -37,13 +38,15 @@ var _ = Describe("Feature Flags Command", func() {
 		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
-		fakeActor = new(v7fakes.FakeFeatureFlagsActor)
+		fakeActor = new(v7fakes.FakeActor)
 
 		cmd = FeatureFlagsCommand{
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
+			BaseCommand: BaseCommand{
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+				Actor:       fakeActor,
+			},
 		}
 
 		binaryName = "faceman"
@@ -69,7 +72,7 @@ var _ = Describe("Feature Flags Command", func() {
 
 	Context("When the environment is setup correctly", func() {
 		BeforeEach(func() {
-			fakeConfig.CurrentUserReturns(configv3.User{Name: "banana"}, nil)
+			fakeActor.GetCurrentUserReturns(configv3.User{Name: "banana"}, nil)
 		})
 
 		When("FeatureFlagsActor returns an error", func() {
@@ -92,7 +95,7 @@ var _ = Describe("Feature Flags Command", func() {
 
 		When("everything is perfect", func() {
 			BeforeEach(func() {
-				flags := []v7action.FeatureFlag{
+				flags := []resources.FeatureFlag{
 					{Name: "flag2", Enabled: true},
 					{Name: "flag1", Enabled: false},
 				}

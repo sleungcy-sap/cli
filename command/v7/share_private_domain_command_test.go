@@ -1,6 +1,8 @@
 package v7_test
 
 import (
+	"errors"
+
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/command/commandfakes"
@@ -8,7 +10,6 @@ import (
 	. "code.cloudfoundry.org/cli/command/v7"
 	"code.cloudfoundry.org/cli/command/v7/v7fakes"
 	"code.cloudfoundry.org/cli/util/configv3"
-	"errors"
 
 	"code.cloudfoundry.org/cli/util/ui"
 
@@ -22,7 +23,7 @@ var _ = Describe("share-private-domain command", func() {
 		cmd             SharePrivateDomainCommand
 		DomainName      = "some-domain-name"
 		OrgName         = "some-org-name"
-		fakeActor       *v7fakes.FakeSharePrivateDomainActor
+		fakeActor       *v7fakes.FakeActor
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
 		testUI          *ui.UI
@@ -33,14 +34,16 @@ var _ = Describe("share-private-domain command", func() {
 
 	BeforeEach(func() {
 		testUI = ui.NewTestUI(nil, NewBuffer(), NewBuffer())
-		fakeActor = new(v7fakes.FakeSharePrivateDomainActor)
+		fakeActor = new(v7fakes.FakeActor)
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
 		cmd = SharePrivateDomainCommand{
-			Actor:       fakeActor,
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
+			BaseCommand: BaseCommand{
+				Actor:       fakeActor,
+				UI:          testUI,
+				Config:      fakeConfig,
+				SharedActor: fakeSharedActor,
+			},
 		}
 		cmd.RequiredArgs = flag.OrgDomain{
 			Organization: OrgName,
@@ -72,7 +75,7 @@ var _ = Describe("share-private-domain command", func() {
 
 	When("getting the current user fails", func() {
 		BeforeEach(func() {
-			fakeConfig.CurrentUserReturns(configv3.User{}, errors.New("current-user-error"))
+			fakeActor.GetCurrentUserReturns(configv3.User{}, errors.New("current-user-error"))
 		})
 
 		It("returns an error", func() {
@@ -87,7 +90,7 @@ var _ = Describe("share-private-domain command", func() {
 
 	When("the environment is setup correctly", func() {
 		BeforeEach(func() {
-			fakeConfig.CurrentUserReturns(configv3.User{Name: "the-user"}, nil)
+			fakeActor.GetCurrentUserReturns(configv3.User{Name: "the-user"}, nil)
 		})
 
 		It("should print text indicating it is sharing a domain", func() {

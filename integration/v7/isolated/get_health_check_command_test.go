@@ -1,6 +1,7 @@
 package isolated
 
 import (
+	. "code.cloudfoundry.org/cli/cf/util/testhelpers/matchers"
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -23,6 +24,12 @@ var _ = Describe("get-health-check command", func() {
 
 	Describe("help", func() {
 		When("--help flag is set", func() {
+			It("appears in cf help -a", func() {
+				session := helpers.CF("help", "-a")
+				Eventually(session).Should(Exit(0))
+				Expect(session).To(HaveCommandInCategoryWithDescription("get-health-check", "APPS", "Show the type of health check performed on an app"))
+			})
+
 			It("Displays command usage to output", func() {
 				session := helpers.CF("get-health-check", "--help")
 
@@ -79,7 +86,7 @@ var _ = Describe("get-health-check command", func() {
 		When("the app exists", func() {
 			BeforeEach(func() {
 				helpers.WithProcfileApp(func(appDir string) {
-					Eventually(helpers.CustomCF(helpers.CFEnv{WorkingDirectory: appDir}, "push", appName)).Should(Exit(0))
+					Eventually(helpers.CustomCF(helpers.CFEnv{WorkingDirectory: appDir}, "push", appName, "--no-start")).Should(Exit(0))
 				})
 			})
 
@@ -89,7 +96,6 @@ var _ = Describe("get-health-check command", func() {
 				Eventually(session).Should(Say(`Getting health check type for app %s in org %s / space %s as %s\.\.\.`, appName, orgName, spaceName, username))
 				Eventually(session).Should(Say(`process\s+health check\s+endpoint \(for http\)\s+invocation timeout\n`))
 				Eventually(session).Should(Say(`web\s+port\s+1\n`))
-				Eventually(session).Should(Say(`console\s+process\s+1\n`))
 
 				Eventually(session).Should(Exit(0))
 			})
@@ -105,7 +111,6 @@ var _ = Describe("get-health-check command", func() {
 					Eventually(session).Should(Say(`Getting health check type for app %s in org %s / space %s as %s\.\.\.`, appName, orgName, spaceName, username))
 					Eventually(session).Should(Say(`process\s+health check\s+endpoint \(for http\)\s+invocation timeout\n`))
 					Eventually(session).Should(Say(`web\s+http\s+/\s+1\n`))
-					Eventually(session).Should(Say(`console\s+process\s+1\n`))
 
 					Eventually(session).Should(Exit(0))
 				})
@@ -122,7 +127,6 @@ var _ = Describe("get-health-check command", func() {
 					Eventually(session).Should(Say(`Getting health check type for app %s in org %s / space %s as %s\.\.\.`, appName, orgName, spaceName, username))
 					Eventually(session).Should(Say(`process\s+health check\s+endpoint \(for http\)\s+invocation timeout\n`))
 					Eventually(session).Should(Say(`web\s+http\s+/some-endpoint\s+1\n`))
-					Eventually(session).Should(Say(`console\s+process\s+1\n`))
 
 					Eventually(session).Should(Exit(0))
 				})
@@ -171,7 +175,6 @@ var _ = Describe("get-health-check command", func() {
 					Eventually(session).Should(Say(`Getting health check type for app %s in org %s / space %s as %s\.\.\.`, appName, orgName, spaceName, username))
 					Eventually(session).Should(Say("\n\n"))
 					Eventually(session).Should(Say(`web\s+process\s+\d+`))
-					Eventually(session).Should(Say(`console\s+process\s+\d+`))
 
 					Eventually(session).Should(Exit(0))
 				})

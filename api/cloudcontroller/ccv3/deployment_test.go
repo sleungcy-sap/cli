@@ -7,6 +7,7 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 
 	. "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	. "github.com/onsi/ginkgo"
@@ -14,7 +15,7 @@ import (
 	. "github.com/onsi/gomega/ghttp"
 )
 
-var _ = Describe("Task", func() {
+var _ = Describe("Deployment", func() {
 	var client *Client
 
 	BeforeEach(func() {
@@ -86,6 +87,52 @@ var _ = Describe("Task", func() {
 					resources.Deployment{GUID: "newest-deployment-guid", CreatedAt: "2018-05-25T22:42:10Z"},
 					resources.Deployment{GUID: "oldest-deployment-guid", CreatedAt: "2018-04-25T22:42:10Z"},
 				))
+			})
+
+		})
+
+		Context("when the request fails", func() {
+			BeforeEach(func() {
+				response := `{
+  "errors": [
+    {
+      "code": 10008,
+      "detail": "The request is semantically invalid: command presence",
+      "title": "CF-UnprocessableEntity"
+    },
+    {
+      "code": 10010,
+      "detail": "App not found",
+      "title": "CF-ResourceNotFound"
+    }
+  ]
+}`
+
+				server.AppendHandlers(
+					CombineHandlers(
+						VerifyRequest(http.MethodGet, "/v3/deployments", "app_guids=some-app-guid&order_by=-created_at&per_page=1"),
+						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"warning"}}),
+					),
+				)
+			})
+
+			It("returns CC warnings and error", func() {
+				Expect(executeErr).To(MatchError(ccerror.MultiError{
+					ResponseCode: http.StatusTeapot,
+					Errors: []ccerror.V3Error{
+						{
+							Code:   10008,
+							Detail: "The request is semantically invalid: command presence",
+							Title:  "CF-UnprocessableEntity",
+						},
+						{
+							Code:   10010,
+							Detail: "App not found",
+							Title:  "CF-ResourceNotFound",
+						},
+					},
+				}))
+				Expect(warnings).To(ConsistOf("warning"))
 			})
 		})
 	})
@@ -187,13 +234,66 @@ var _ = Describe("Task", func() {
 		})
 	})
 
+	Describe("CreateApplicationDeploymentByRevision", func() {
+		var (
+			deploymentGUID string
+			warnings       Warnings
+			executeErr     error
+			revisionGUID   string
+		)
+
+		JustBeforeEach(func() {
+			deploymentGUID, warnings, executeErr = client.CreateApplicationDeploymentByRevision("some-app-guid", revisionGUID)
+		})
+
+		Context("when the application exists", func() {
+			var response string
+			BeforeEach(func() {
+				revisionGUID = "some-revision-guid"
+				response = `{
+  "guid": "some-deployment-guid",
+  "created_at": "2018-04-25T22:42:10Z",
+  "relationships": {
+    "app": {
+      "data": {
+        "guid": "some-app-guid"
+      }
+    }
+  }
+}`
+			})
+
+			Context("when creating the deployment succeeds", func() {
+				BeforeEach(func() {
+					server.AppendHandlers(
+						CombineHandlers(
+							VerifyRequest(http.MethodPost, "/v3/deployments"),
+							VerifyJSON(`{"revision":{ "guid":"some-revision-guid" }, "relationships":{"app":{"data":{"guid":"some-app-guid"}}}}`),
+							RespondWith(http.StatusAccepted, response, http.Header{"X-Cf-Warnings": {"warning"}}),
+						),
+					)
+				})
+
+				It("creates the deployment with no errors and returns all warnings", func() {
+					Expect(deploymentGUID).To(Equal("some-deployment-guid"))
+					Expect(executeErr).ToNot(HaveOccurred())
+					Expect(warnings).To(ConsistOf("warning"))
+				})
+			})
+		})
+	})
+
 	Describe("GetDeployment", func() {
 		var response string
 		Context("When the deployments exists", func() {
 			BeforeEach(func() {
 				response = `{
 				    "guid": "some-deployment-guid",
-					"state": "DEPLOYING",
+					"state": "DEPLOYED",
+					"status": {
+						"value": "FINALIZED",
+						"reason": "SUPERSEDED"
+					},
 					"droplet": {
  					  "guid": "some-droplet-guid"
 					},
@@ -223,7 +323,9 @@ var _ = Describe("Task", func() {
 				Expect(warnings).To(ConsistOf("warning"))
 				Expect(deployment).To(Not(BeNil()))
 				Expect(deployment.GUID).To(Equal("some-deployment-guid"))
-				Expect(deployment.State).To(Equal(constant.DeploymentDeploying))
+				Expect(deployment.State).To(Equal(constant.DeploymentDeployed))
+				Expect(deployment.StatusValue).To(Equal(constant.DeploymentStatusValueFinalized))
+				Expect(deployment.StatusReason).To(Equal(constant.DeploymentStatusReasonSuperseded))
 			})
 		})
 

@@ -5,13 +5,13 @@ import (
 	"code.cloudfoundry.org/cli/resources"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
@@ -19,6 +19,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/ccv3fakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/wrapper"
+	"code.cloudfoundry.org/cli/resources"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
@@ -370,7 +371,7 @@ var _ = Describe("Package", func() {
 						State:     constant.PackageProcessingUpload,
 						CreatedAt: "2017-08-14T21:16:12Z",
 						Links: map[string]resources.APILink{
-							"upload": {HREF: "some-pkg-upload-url-1", Method: http.MethodPost},
+							"upload": resources.APILink{HREF: "some-pkg-upload-url-1", Method: http.MethodPost},
 						},
 					},
 					{
@@ -379,7 +380,7 @@ var _ = Describe("Package", func() {
 						State:     constant.PackageReady,
 						CreatedAt: "2017-08-14T21:20:13Z",
 						Links: map[string]resources.APILink{
-							"upload": {HREF: "some-pkg-upload-url-2", Method: http.MethodPost},
+							"upload": resources.APILink{HREF: "some-pkg-upload-url-2", Method: http.MethodPost},
 						},
 					},
 				}))
@@ -441,24 +442,19 @@ var _ = Describe("Package", func() {
 			client, _ = NewTestClient()
 
 			inputPackage = resources.Package{
-				Links: map[string]resources.APILink{
-					"upload": {
-						HREF:   fmt.Sprintf("%s/v3/my-special-endpoint/some-pkg-guid/upload", server.URL()),
-						Method: http.MethodPost,
-					},
-				},
+				GUID: "package-guid",
 			}
 		})
 
 		When("the upload is successful", func() {
 			var (
-				resourcesList       []Resource
+				inputResources      []Resource
 				readerBody          []byte
 				verifyHeaderAndBody func(http.ResponseWriter, *http.Request)
 			)
 
 			BeforeEach(func() {
-				resourcesList = []Resource{
+				inputResources = []Resource{
 					{FilePath: "foo"},
 					{FilePath: "bar"},
 				}
@@ -471,7 +467,7 @@ var _ = Describe("Package", func() {
 
 				server.AppendHandlers(
 					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/my-special-endpoint/some-pkg-guid/upload"),
+						VerifyRequest(http.MethodPost, "/v3/packages/package-guid/upload"),
 						func(writer http.ResponseWriter, req *http.Request) {
 							verifyHeaderAndBody(writer, req)
 						},
@@ -501,7 +497,7 @@ var _ = Describe("Package", func() {
 						Expect(resourcesPart.FormName()).To(Equal("resourcesList"))
 
 						defer resourcesPart.Close()
-						expectedJSON, err := json.Marshal(resourcesList)
+						expectedJSON, err := json.Marshal(inputResources)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(ioutil.ReadAll(resourcesPart)).To(MatchJSON(expectedJSON))
 
@@ -518,7 +514,7 @@ var _ = Describe("Package", func() {
 				})
 
 				It("returns the created job and warnings", func() {
-					pkg, warnings, err := client.UploadBitsPackage(inputPackage, resourcesList, reader, int64(len(readerBody)))
+					pkg, warnings, err := client.UploadBitsPackage(inputPackage, inputResources, reader, int64(len(readerBody)))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(warnings).To(ConsistOf("this is a warning"))
 					Expect(pkg).To(Equal(resources.Package{
@@ -545,7 +541,7 @@ var _ = Describe("Package", func() {
 						Expect(resourcesPart.FormName()).To(Equal("resourcesList"))
 
 						defer resourcesPart.Close()
-						expectedJSON, err := json.Marshal(resourcesList)
+						expectedJSON, err := json.Marshal(inputResources)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(ioutil.ReadAll(resourcesPart)).To(MatchJSON(expectedJSON))
 
@@ -556,7 +552,7 @@ var _ = Describe("Package", func() {
 				})
 
 				It("does not send the application bits", func() {
-					pkg, warnings, err := client.UploadBitsPackage(inputPackage, resourcesList, nil, 33513531353)
+					pkg, warnings, err := client.UploadBitsPackage(inputPackage, inputResources, nil, 33513531353)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(warnings).To(ConsistOf("this is a warning"))
 					Expect(pkg).To(Equal(resources.Package{
@@ -582,7 +578,7 @@ var _ = Describe("Package", func() {
 
 				server.AppendHandlers(
 					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/my-special-endpoint/some-pkg-guid/upload"),
+						VerifyRequest(http.MethodPost, "/v3/packages/package-guid/upload"),
 						RespondWith(http.StatusNotFound, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
 					),
 				)
@@ -614,7 +610,7 @@ var _ = Describe("Package", func() {
 				fakeReader.ReadReturns(0, expectedErr)
 
 				server.AppendHandlers(
-					VerifyRequest(http.MethodPost, "/v3/my-special-endpoint/some-pkg-guid/upload"),
+					VerifyRequest(http.MethodPost, "/v3/packages/package-guid/upload"),
 				)
 			})
 
@@ -630,7 +626,7 @@ var _ = Describe("Package", func() {
 					CustomMake: func(connection cloudcontroller.Connection, request *cloudcontroller.Request, response *cloudcontroller.Response) error {
 						defer GinkgoRecover() // Since this will be running in a thread
 
-						if strings.HasSuffix(request.URL.String(), "/v3/my-special-endpoint/some-pkg-guid/upload") {
+						if strings.HasSuffix(request.URL.String(), "/v3/packages/package-guid/upload") {
 							_, err := ioutil.ReadAll(request.Body)
 							Expect(err).ToNot(HaveOccurred())
 							Expect(request.Body.Close()).ToNot(HaveOccurred())
@@ -660,7 +656,7 @@ var _ = Describe("Package", func() {
 					CustomMake: func(connection cloudcontroller.Connection, request *cloudcontroller.Request, response *cloudcontroller.Response) error {
 						defer GinkgoRecover() // Since this will be running in a thread
 
-						if strings.HasSuffix(request.URL.String(), "/v3/my-special-endpoint/some-pkg-guid/upload") {
+						if strings.HasSuffix(request.URL.String(), "/v3/packages/package-guid/upload") {
 							defer request.Body.Close()
 							readBytes, err := ioutil.ReadAll(request.Body)
 							Expect(err).ToNot(HaveOccurred())
@@ -677,13 +673,6 @@ var _ = Describe("Package", func() {
 			It("returns the http error", func() {
 				_, _, err := client.UploadBitsPackage(inputPackage, []Resource{}, strings.NewReader(strings.Repeat("a", UploadSize)), 3)
 				Expect(err).To(MatchError(expectedErr))
-			})
-		})
-
-		When("the input package does not have an upload link", func() {
-			It("returns an UploadLinkNotFoundError", func() {
-				_, _, err := client.UploadBitsPackage(resources.Package{GUID: "some-pkg-guid"}, nil, nil, 0)
-				Expect(err).To(MatchError(ccerror.UploadLinkNotFoundError{PackageGUID: "some-pkg-guid"}))
 			})
 		})
 	})
@@ -710,12 +699,7 @@ var _ = Describe("Package", func() {
 
 				inputPackage = resources.Package{
 					State: constant.PackageAwaitingUpload,
-					Links: map[string]resources.APILink{
-						"upload": {
-							HREF:   fmt.Sprintf("%s/v3/my-special-endpoint/some-pkg-guid/upload", server.URL()),
-							Method: http.MethodPost,
-						},
-					},
+					GUID:  "package-guid",
 				}
 
 				tempFile, err = ioutil.TempFile("", "package-upload")
@@ -758,7 +742,7 @@ var _ = Describe("Package", func() {
 
 				server.AppendHandlers(
 					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/my-special-endpoint/some-pkg-guid/upload"),
+						VerifyRequest(http.MethodPost, "/v3/packages/package-guid/upload"),
 						verifyHeaderAndBody,
 						RespondWith(http.StatusOK, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
 					),
@@ -778,22 +762,11 @@ var _ = Describe("Package", func() {
 					GUID:  "some-pkg-guid",
 					State: constant.PackageProcessingUpload,
 					Links: map[string]resources.APILink{
-						"upload": {HREF: "some-package-upload-url", Method: http.MethodPost},
+						"upload": resources.APILink{HREF: "some-package-upload-url", Method: http.MethodPost},
 					},
 				}
 				Expect(pkg).To(Equal(expectedPackage))
 				Expect(warnings).To(ConsistOf("this is a warning"))
-			})
-		})
-
-		When("the package does not have an upload link", func() {
-			BeforeEach(func() {
-				inputPackage = resources.Package{GUID: "some-pkg-guid", State: constant.PackageAwaitingUpload}
-				fileToUpload = "/path/to/foo"
-			})
-
-			It("returns an UploadLinkNotFoundError", func() {
-				Expect(executeErr).To(MatchError(ccerror.UploadLinkNotFoundError{PackageGUID: "some-pkg-guid"}))
 			})
 		})
 
@@ -804,13 +777,8 @@ var _ = Describe("Package", func() {
 				var err error
 
 				inputPackage = resources.Package{
+					GUID:  "package-guid",
 					State: constant.PackageAwaitingUpload,
-					Links: map[string]resources.APILink{
-						"upload": {
-							HREF:   fmt.Sprintf("%s/v3/my-special-endpoint/some-pkg-guid/upload", server.URL()),
-							Method: http.MethodPost,
-						},
-					},
 				}
 
 				tempFile, err = ioutil.TempFile("", "package-upload")
@@ -841,7 +809,7 @@ var _ = Describe("Package", func() {
 
 				server.AppendHandlers(
 					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/my-special-endpoint/some-pkg-guid/upload"),
+						VerifyRequest(http.MethodPost, "/v3/packages/package-guid/upload"),
 						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
 					),
 				)
@@ -872,6 +840,105 @@ var _ = Describe("Package", func() {
 				Expect(warnings).To(ConsistOf("this is a warning"))
 			})
 
+		})
+	})
+
+	Describe("CopyPackage", func() {
+		var (
+			sourcePackageGUID string
+			targetAppGUID     string
+
+			targetPackage resources.Package
+			warnings      Warnings
+			executeErr    error
+			response      string
+		)
+
+		BeforeEach(func() {
+			sourcePackageGUID = "source-package-guid"
+
+			targetAppGUID = "target-app-guid"
+			response = `{
+					"guid": "some-targetPackage-guid"
+				}`
+
+			expectedBody := map[string]interface{}{
+				"relationships": map[string]interface{}{
+					"app": map[string]interface{}{
+						"data": map[string]string{
+							"guid": targetAppGUID,
+						},
+					},
+				},
+			}
+			server.AppendHandlers(
+				CombineHandlers(
+					VerifyRequest(http.MethodPost, "/v3/packages", "source_guid="+sourcePackageGUID),
+					VerifyJSONRepresenting(expectedBody),
+					RespondWith(http.StatusCreated, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
+				),
+			)
+
+		})
+
+		JustBeforeEach(func() {
+			targetPackage, warnings, executeErr = client.CopyPackage(sourcePackageGUID, targetAppGUID)
+		})
+
+		It("returns the created target package and warnings", func() {
+			Expect(executeErr).NotTo(HaveOccurred())
+			Expect(warnings).To(ConsistOf("this is a warning"))
+
+			expectedPackage := resources.Package{
+				GUID: "some-targetPackage-guid",
+			}
+			Expect(targetPackage).To(Equal(expectedPackage))
+		})
+
+		When("cc returns back an error or warnings", func() {
+			BeforeEach(func() {
+				response = ` {
+		 "errors": [
+		   {
+		     "code": 10008,
+		     "detail": "The request is semantically invalid: command presence",
+		     "title": "CF-UnprocessableEntity"
+		   },
+		   {
+		     "code": 10010,
+		     "detail": "Package not found",
+		     "title": "CF-ResourceNotFound"
+		   }
+		 ]
+		}`
+				server.Reset()
+				time.Sleep(10 * time.Millisecond) // guards against <ccerror.RequestError>: {Err: { ... { Err: {s: "EOF"},
+				server.AppendHandlers(
+					CombineHandlers(
+						VerifyRequest(http.MethodPost, "/v3/packages", "source_guid="+sourcePackageGUID),
+						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
+					),
+				)
+			})
+
+			It("returns the error and all warnings", func() {
+				Expect(executeErr).To(MatchError(ccerror.MultiError{
+					ResponseCode: http.StatusTeapot,
+					Errors: []ccerror.V3Error{
+						{
+							Code:   10008,
+							Detail: "The request is semantically invalid: command presence",
+							Title:  "CF-UnprocessableEntity",
+						},
+						{
+							Code:   10010,
+							Detail: "Package not found",
+							Title:  "CF-ResourceNotFound",
+						},
+					},
+				}))
+				Expect(warnings).To(ConsistOf("this is a warning"))
+			})
 		})
 	})
 })

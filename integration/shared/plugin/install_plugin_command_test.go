@@ -329,7 +329,7 @@ var _ = Describe("install-plugin command", func() {
 
 					When("the plugin has a command that is the same as another plugin command", func() {
 						BeforeEach(func() {
-							helpers.InstallConfigurablePlugin("existing-plugin", "1.1.1",
+							helpers.InstallConfigurablePlugin("configurable_plugin", "existing-plugin", "1.1.1",
 								[]helpers.PluginCommand{
 									{Name: "existing-command"},
 								})
@@ -356,7 +356,7 @@ var _ = Describe("install-plugin command", func() {
 
 					When("the plugin has a command that is the same as another plugin alias", func() {
 						BeforeEach(func() {
-							helpers.InstallConfigurablePlugin("existing-plugin", "1.1.1",
+							helpers.InstallConfigurablePlugin("configurable_plugin", "existing-plugin", "1.1.1",
 								[]helpers.PluginCommand{
 									{Name: "existing-command"},
 								})
@@ -430,7 +430,7 @@ var _ = Describe("install-plugin command", func() {
 
 					When("the plugin has an alias that is the same as another plugin command", func() {
 						BeforeEach(func() {
-							helpers.InstallConfigurablePlugin("existing-plugin", "1.1.1",
+							helpers.InstallConfigurablePlugin("configurable_plugin", "existing-plugin", "1.1.1",
 								[]helpers.PluginCommand{
 									{Name: "existing-command"},
 								})
@@ -457,7 +457,7 @@ var _ = Describe("install-plugin command", func() {
 
 					When("the plugin has an alias that is the same as another plugin alias", func() {
 						BeforeEach(func() {
-							helpers.InstallConfigurablePlugin("existing-plugin", "1.1.1",
+							helpers.InstallConfigurablePlugin("configurable_plugin", "existing-plugin", "1.1.1",
 								[]helpers.PluginCommand{
 									{Name: "existing-command", Alias: "existing-alias"},
 								})
@@ -486,7 +486,7 @@ var _ = Describe("install-plugin command", func() {
 				Context("alias and command conflicts", func() {
 					When("the plugin has a command and an alias that are both taken by another plugin", func() {
 						BeforeEach(func() {
-							helpers.InstallConfigurablePlugin("existing-plugin", "1.1.1",
+							helpers.InstallConfigurablePlugin("configurable_plugin", "existing-plugin", "1.1.1",
 								[]helpers.PluginCommand{
 									{Name: "existing-command", Alias: "existing-alias"},
 								})
@@ -615,19 +615,18 @@ var _ = Describe("install-plugin command", func() {
 						Eventually(session).Should(Say(`Do you want to install the plugin %s\? \[yN\]:`, helpers.ConvertPathToRegularExpression(pluginPath)))
 
 						session.Interrupt()
-
-						Eventually(session).Should(Say("FAILED"))
-
 						// There is a timing issue -- the exit code may be either 1 (processed error), 2 (config writing error), or 130 (Ctrl-C)
 						Eventually(session).Should(SatisfyAny(Exit(1), Exit(2), Exit(130)))
+
+						Expect(session).Should(Say("FAILED"))
 
 						// make sure cf plugins did not break
 						Eventually(helpers.CF("plugins", "--checksum")).Should(Exit(0))
 
 						// make sure a retry of the plugin install works
 						retrySession := helpers.CF("install-plugin", pluginPath, "-f")
-						Eventually(retrySession).Should(Say(`Plugin some-plugin 1\.0\.0 successfully installed\.`))
 						Eventually(retrySession).Should(Exit(0))
+						Expect(retrySession).To(Say(`Plugin some-plugin 1\.0\.0 successfully installed\.`))
 					})
 				})
 			})
@@ -911,10 +910,10 @@ var _ = Describe("install-plugin command", func() {
 
 					session.Interrupt()
 
-					Eventually(session).Should(Say("FAILED"))
-
 					// There is a timing issue -- the exit code may be either 1 (processed error), 2 (config writing error), or 130 (Ctrl-C)
 					Eventually(session).Should(SatisfyAny(Exit(1), Exit(2), Exit(130)))
+
+					Expect(session).To(Say("FAILED"))
 
 					Expect(server.ReceivedRequests()).To(HaveLen(0))
 

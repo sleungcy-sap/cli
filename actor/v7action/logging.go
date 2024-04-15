@@ -1,200 +1,128 @@
 package v7action
 
 import (
-	"sort"
-	"sync"
+	"context"
+	"errors"
+	"strings"
 	"time"
 
-	"code.cloudfoundry.org/cli/actor/actionerror"
-	noaaErrors "github.com/cloudfoundry/noaa/errors"
-	"github.com/cloudfoundry/sonde-go/events"
-	log "github.com/sirupsen/logrus"
+	"code.cloudfoundry.org/cli/actor/sharedaction"
+	"github.com/SermoDigital/jose/jws"
 )
 
-const StagingLog = "STG"
-
-var flushInterval = 300 * time.Millisecond
-
-type LogMessage struct {
-	message        string
-	messageType    events.LogMessage_MessageType
-	timestamp      time.Time
-	sourceType     string
-	sourceInstance string
-}
-
-func (log LogMessage) Message() string {
-	return log.message
-}
-
-func (log LogMessage) Type() string {
-	if log.messageType == events.LogMessage_OUT {
-		return "OUT"
-	}
-	return "ERR"
-}
-
-func (log LogMessage) Staging() bool {
-	return log.sourceType == StagingLog
-}
-
-func (log LogMessage) Timestamp() time.Time {
-	return log.timestamp
-}
-
-func (log LogMessage) SourceType() string {
-	return log.sourceType
-}
-
-func (log LogMessage) SourceInstance() string {
-	return log.sourceInstance
-}
-
-func NewLogMessage(message string, messageType int, timestamp time.Time, sourceType string, sourceInstance string) *LogMessage {
-	return &LogMessage{
-		message:        message,
-		messageType:    events.LogMessage_MessageType(messageType),
-		timestamp:      timestamp,
-		sourceType:     sourceType,
-		sourceInstance: sourceInstance,
-	}
-}
-
-type LogMessages []*LogMessage
-
-func (lm LogMessages) Len() int { return len(lm) }
-
-func (lm LogMessages) Less(i, j int) bool {
-	return lm[i].timestamp.Before(lm[j].timestamp)
-}
-
-func (lm LogMessages) Swap(i, j int) {
-	lm[i], lm[j] = lm[j], lm[i]
-}
-
-func (actor Actor) GetStreamingLogs(appGUID string, client NOAAClient) (<-chan *LogMessage, <-chan error) {
-	log.Info("Start Tailing Logs")
-
-	ready := actor.setOnConnectBlocker(client)
-
-	// Do not pass in token because client should have a TokenRefresher set
-	incomingLogStream, incomingErrStream := client.TailingLogs(appGUID, "")
-
-	outgoingLogStream, outgoingErrStream := actor.blockOnConnect(ready)
-
-	go actor.streamLogsBetween(incomingLogStream, incomingErrStream, outgoingLogStream, outgoingErrStream)
-
-	return outgoingLogStream, outgoingErrStream
-}
-
-func (actor Actor) GetStreamingLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client NOAAClient) (<-chan *LogMessage, <-chan error, Warnings, error) {
+func (actor Actor) GetStreamingLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client sharedaction.LogCacheClient) (<-chan sharedaction.LogMessage, <-chan error, context.CancelFunc, Warnings, error) {
 	app, allWarnings, err := actor.GetApplicationByNameAndSpace(appName, spaceGUID)
 	if err != nil {
-		return nil, nil, allWarnings, err
+		return nil, nil, nil, allWarnings, err
 	}
 
-	messages, logErrs := actor.GetStreamingLogs(app.GUID, client)
+	messages, logErrs, cancelFunc := sharedaction.GetStreamingLogs(app.GUID, client)
 
-	return messages, logErrs, allWarnings, err
+	return messages, logErrs, cancelFunc, allWarnings, err
 }
 
-func (actor Actor) blockOnConnect(ready <-chan bool) (chan *LogMessage, chan error) {
-	outgoingLogStream := make(chan *LogMessage)
-	outgoingErrStream := make(chan error, 1)
+func (actor Actor) GetRecentLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client sharedaction.LogCacheClient) ([]sharedaction.LogMessage, Warnings, error) {
+	app, allWarnings, err := actor.GetApplicationByNameAndSpace(appName, spaceGUID)
+	if err != nil {
+		return nil, allWarnings, err
+	}
 
-	ticker := time.NewTicker(actor.Config.DialTimeout())
+	logCacheMessages, err := sharedaction.GetRecentLogs(app.GUID, client)
+	if err != nil {
+		return nil, allWarnings, err
+	}
 
-dance:
-	for {
-		select {
-		case _, ok := <-ready:
-			if !ok {
-				break dance
+	var logMessages []sharedaction.LogMessage
+
+	for _, message := range logCacheMessages {
+		logMessages = append(logMessages, *sharedaction.NewLogMessage(
+			message.Message(),
+			message.Type(),
+			message.Timestamp(),
+			message.SourceType(),
+			message.SourceInstance(),
+		))
+	}
+
+	return logMessages, allWarnings, nil
+}
+
+func (actor Actor) ScheduleTokenRefresh(
+	after func(time.Duration) <-chan time.Time,
+	stop chan struct{},
+	stoppedRefreshingToken chan struct{}) (<-chan error, error) {
+
+	timeToRefresh, err := actor.refreshAccessTokenIfNecessary()
+	if err != nil {
+		close(stoppedRefreshingToken)
+		return nil, err
+	}
+
+	refreshErrs := make(chan error)
+
+	go func() {
+		defer close(stoppedRefreshingToken)
+		for {
+			select {
+			case <-after(*timeToRefresh):
+				d, err := actor.refreshAccessTokenIfNecessary()
+				if err == nil {
+					timeToRefresh = d
+				} else {
+					refreshErrs <- err
+				}
+			case <-stop:
+				return
 			}
-		case <-ticker.C:
-			outgoingErrStream <- actionerror.NOAATimeoutError{}
-			break dance
+		}
+	}()
+
+	return refreshErrs, nil
+}
+
+func (actor Actor) refreshAccessTokenIfNecessary() (*time.Duration, error) {
+	accessToken := actor.Config.AccessToken()
+
+	duration, err := actor.tokenExpiryTime(accessToken)
+	if err != nil || *duration < time.Minute {
+		accessToken, err = actor.RefreshAccessToken()
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	return outgoingLogStream, outgoingErrStream
-}
-
-func (Actor) flushLogs(logs LogMessages, messages chan<- *LogMessage) LogMessages {
-	sort.Stable(logs)
-	for _, l := range logs {
-		messages <- l
-	}
-	return LogMessages{}
-}
-
-func (Actor) setOnConnectBlocker(client NOAAClient) <-chan bool {
-	ready := make(chan bool)
-	var onlyRunOnInitialConnect sync.Once
-	callOnConnectOrRetry := func() {
-		onlyRunOnInitialConnect.Do(func() {
-			close(ready)
-		})
+	accessToken = strings.TrimPrefix(accessToken, "bearer ")
+	token, err := jws.ParseJWT([]byte(accessToken))
+	if err != nil {
+		return nil, err
 	}
 
-	client.SetOnConnectCallback(callOnConnectOrRetry)
-
-	return ready
+	var timeToRefresh time.Duration
+	expiration, ok := token.Claims().Expiration()
+	if !ok {
+		return nil, errors.New("Failed to get an expiry time from the current access token")
+	}
+	expiresIn := time.Until(expiration)
+	if expiresIn >= 2*time.Minute {
+		timeToRefresh = expiresIn - time.Minute
+	} else {
+		timeToRefresh = expiresIn * 9 / 10
+	}
+	return &timeToRefresh, nil
 }
 
-func (actor Actor) streamLogsBetween(incomingLogStream <-chan *events.LogMessage, incomingErrStream <-chan error, outgoingLogStream chan<- *LogMessage, outgoingErrStream chan<- error) {
-	log.Info("Processing Log Stream")
+func (actor Actor) tokenExpiryTime(accessToken string) (*time.Duration, error) {
+	var expiresIn time.Duration
 
-	defer close(outgoingLogStream)
-	defer close(outgoingErrStream)
-
-	ticker := time.NewTicker(flushInterval)
-	defer ticker.Stop()
-
-	var logsToBeSorted LogMessages
-	var eventClosed, errClosed bool
-
-dance:
-	for {
-		select {
-		case event, ok := <-incomingLogStream:
-			if !ok {
-				if !errClosed {
-					log.Debug("logging event stream closed")
-				}
-				eventClosed = true
-				break
-			}
-
-			logsToBeSorted = append(logsToBeSorted, &LogMessage{
-				message:        string(event.GetMessage()),
-				messageType:    event.GetMessageType(),
-				timestamp:      time.Unix(0, event.GetTimestamp()),
-				sourceInstance: event.GetSourceInstance(),
-				sourceType:     event.GetSourceType(),
-			})
-		case err, ok := <-incomingErrStream:
-			if !ok {
-				if !errClosed {
-					log.Debug("logging error stream closed")
-				}
-				errClosed = true
-				break
-			}
-
-			if _, ok := err.(noaaErrors.RetryError); ok {
-				break
-			}
-
-			if err != nil {
-				outgoingErrStream <- err
-			}
-		case <-ticker.C:
-			logsToBeSorted = actor.flushLogs(logsToBeSorted, outgoingLogStream)
-			if eventClosed && errClosed {
-				log.Debug("stopping log processing")
-				break dance
-			}
-		}
+	accessTokenString := strings.TrimPrefix(accessToken, "bearer ")
+	token, err := jws.ParseJWT([]byte(accessTokenString))
+	if err != nil {
+		return nil, err
 	}
+
+	expiration, ok := token.Claims().Expiration()
+	if ok {
+		expiresIn = time.Until(expiration)
+	}
+	return &expiresIn, nil
 }

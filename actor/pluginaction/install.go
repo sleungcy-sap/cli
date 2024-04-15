@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/blang/semver/v4"
+
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/api/plugin"
 	"code.cloudfoundry.org/cli/util/configv3"
@@ -14,13 +16,13 @@ import (
 	"code.cloudfoundry.org/gofileutils/fileutils"
 )
 
-//go:generate counterfeiter . PluginMetadata
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . PluginMetadata
 
 type PluginMetadata interface {
 	GetMetadata(pluginPath string) (configv3.Plugin, error)
 }
 
-//go:generate counterfeiter . CommandList
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . CommandList
 
 type CommandList interface {
 	HasCommand(string) bool
@@ -85,6 +87,27 @@ func (actor Actor) GetAndValidatePlugin(pluginMetadata PluginMetadata, commandLi
 	plugin, err := pluginMetadata.GetMetadata(path)
 	if err != nil || plugin.Name == "" || len(plugin.Commands) == 0 {
 		return configv3.Plugin{}, actionerror.PluginInvalidError{Err: err}
+	}
+
+	cliVersion, err := semver.Make(actor.config.BinaryVersion())
+	if err != nil {
+		return configv3.Plugin{}, actionerror.PluginInvalidError{Err: err}
+	}
+	var pluginLibraryMajorVersion int
+	hasPluginLibraryVersion := plugin.LibraryVersion != configv3.PluginVersion{}
+	if !hasPluginLibraryVersion {
+		pluginLibraryMajorVersion = 1
+	} else {
+		pluginLibraryMajorVersion = plugin.LibraryVersion.Major
+	}
+
+	switch cliVersion.Major {
+	case 6, 7, 8, 9:
+		if pluginLibraryMajorVersion > 1 {
+			return configv3.Plugin{}, actionerror.PluginInvalidLibraryVersionError{}
+		}
+	default:
+		panic("unrecognized major version")
 	}
 
 	installedPlugins := actor.config.Plugins()

@@ -17,14 +17,23 @@ func (c *Test1) Run(cliConnection plugin.CliConnection, args []string) {
 		result, _ := cliConnection.CliCommandWithoutTerminalOutput("target")
 		fmt.Println("Done CliCommandWithoutTerminalOutput:", result)
 	case "CliCommand":
-		result, _ := cliConnection.CliCommand("target")
+		var result []string
+		var err error
+		if len(args) > 1 {
+			result, err = cliConnection.CliCommand(args[1:]...)
+			if err != nil {
+				fmt.Println("Error in CliCommand()", err)
+			}
+		} else {
+			result, _ = cliConnection.CliCommand("target")
+		}
 		fmt.Println("Done CliCommand:", result)
 	case "GetCurrentOrg":
-		result, _ := cliConnection.GetCurrentOrg()
-		fmt.Println("Done GetCurrentOrg:", result)
+		result, err := cliConnection.GetCurrentOrg()
+		fmt.Printf("Done GetCurrentOrg: err:[%v], result:[%+v]\n", err, result)
 	case "GetCurrentSpace":
-		result, _ := cliConnection.GetCurrentSpace()
-		fmt.Println("Done GetCurrentSpace:", result)
+		result, err := cliConnection.GetCurrentSpace()
+		fmt.Printf("Done GetCurrentSpace: err:[%v], result:[%+v]\n", err, result)
 	case "Username":
 		result, _ := cliConnection.Username()
 		fmt.Println("Done Username:", result)
@@ -71,14 +80,17 @@ func (c *Test1) Run(cliConnection plugin.CliConnection, args []string) {
 		result, _ := cliConnection.AccessToken()
 		fmt.Println("Done AccessToken:", result)
 	case "GetApp":
-		result, _ := cliConnection.GetApp(args[1])
+		result, err := cliConnection.GetApp(args[1])
 		fmt.Println("Done GetApp:", result)
+		fmt.Println("err:", err)
 	case "GetApps":
-		result, _ := cliConnection.GetApps()
-		fmt.Println("Done GetApps:", result)
+		result, err := cliConnection.GetApps()
+		fmt.Println("Done GetApps:")
+		fmt.Printf("error: [%s], apps: [%+v]\n", err, result)
 	case "GetOrg":
-		result, _ := cliConnection.GetOrg(args[1])
-		fmt.Println("Done GetOrg:", result)
+		result, err := cliConnection.GetOrg(args[1])
+		fmt.Printf("Done GetOrg: %+v\n", result)
+		fmt.Println("err:", err)
 	case "GetOrgs":
 		result, _ := cliConnection.GetOrgs()
 		fmt.Println("Done GetOrgs:", result)
@@ -87,7 +99,7 @@ func (c *Test1) Run(cliConnection plugin.CliConnection, args []string) {
 		fmt.Println("Done GetSpace:", result)
 	case "GetSpaces":
 		result, _ := cliConnection.GetSpaces()
-		fmt.Println("Done GetSpaces:", result)
+		fmt.Printf("Done GetSpaces: %+v\n", result)
 	case "GetOrgUsers":
 		result, _ := cliConnection.GetOrgUsers(args[1], args[2:]...)
 		fmt.Println("Done GetOrgUsers:", result)

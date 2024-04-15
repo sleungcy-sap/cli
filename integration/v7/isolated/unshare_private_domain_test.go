@@ -1,6 +1,7 @@
 package isolated
 
 import (
+	. "code.cloudfoundry.org/cli/cf/util/testhelpers/matchers"
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -8,7 +9,7 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("Unshare Private Domain", func() {
+var _ = Describe("unshare-private-domain command", func() {
 	var (
 		domainName      string
 		owningOrgName   string
@@ -21,14 +22,23 @@ var _ = Describe("Unshare Private Domain", func() {
 	})
 
 	Describe("Help Text", func() {
-		It("Displays the help text", func() {
-			session := helpers.CF("unshare-private-domain", "--help")
-			Eventually(session).Should(Say("NAME:"))
-			Eventually(session).Should(Say("unshare-private-domain - Unshare a private domain with a specific org"))
-			Eventually(session).Should(Say("USAGE:"))
-			Eventually(session).Should(Say("cf unshare-private-domain ORG DOMAIN"))
-			Eventually(session).Should(Say("SEE ALSO:"))
-			Eventually(session).Should(Say("delete-private-domain, domains"))
+		When("--help flag is set", func() {
+			It("appears in cf help -a", func() {
+				session := helpers.CF("help", "-a")
+				Eventually(session).Should(Exit(0))
+				Expect(session).To(HaveCommandInCategoryWithDescription("unshare-private-domain", "ORG ADMIN", "Unshare a private domain with a specific org"))
+			})
+
+			It("Displays the help text", func() {
+				session := helpers.CF("unshare-private-domain", "--help")
+				Eventually(session).Should(Say("NAME:"))
+				Eventually(session).Should(Say("unshare-private-domain - Unshare a private domain with a specific org"))
+				Eventually(session).Should(Say("USAGE:"))
+				Eventually(session).Should(Say("cf unshare-private-domain ORG DOMAIN"))
+				Eventually(session).Should(Say("SEE ALSO:"))
+				Eventually(session).Should(Say("delete-private-domain, domains"))
+				Eventually(session).Should(Exit(0))
+			})
 		})
 	})
 
@@ -37,15 +47,22 @@ var _ = Describe("Unshare Private Domain", func() {
 			It("lets the user know", func() {
 				session := helpers.CF("unshare-private-domain", sharedToOrgName, domainName)
 				Eventually(session).Should(Say("FAILED"))
-				Eventually(session.Err).Should(Say("Not logged in. Use 'cf login' to log in."))
+				Eventually(session.Err).Should(Say("Not logged in. Use 'cf login' or 'cf login --sso' to log in."))
+				Eventually(session).Should(Exit(1))
 			})
 		})
 	})
 
 	Describe("When the environment is set up correctly", func() {
+		var userName string
+
+		BeforeEach(func() {
+			helpers.LoginCF()
+			userName, _ = helpers.GetCredentials()
+		})
+
 		When("the user says yes", func() {
 			BeforeEach(func() {
-				helpers.LoginCF()
 				owningOrgName = helpers.CreateAndTargetOrg()
 				helpers.CreateOrg(sharedToOrgName)
 				domain := helpers.NewDomain(owningOrgName, domainName)
@@ -60,19 +77,20 @@ var _ = Describe("Unshare Private Domain", func() {
 				session := helpers.CFWithStdin(buffer, "unshare-private-domain", sharedToOrgName, domainName)
 				Eventually(session).Should(Say(`Warning: org %s will no longer be able to access private domain %s`, sharedToOrgName, domainName))
 				Eventually(session).Should(Say(`Really unshare private domain %s\? \[yN\]`, domainName))
-				Eventually(session).Should(Say("Unsharing domain %s from org %s as admin...", domainName, sharedToOrgName))
+				Eventually(session).Should(Say("Unsharing domain %s from org %s as %s...", domainName, sharedToOrgName, userName))
 				Eventually(session).Should(Say("OK"))
 				Eventually(session).Should(Exit(0))
 
 				helpers.TargetOrg(sharedToOrgName)
 				session = helpers.CF("domains")
 				Consistently(session).Should(Not(Say("%s", domainName)))
+				Eventually(session).Should(Exit(0))
 			})
 
 		})
+
 		When("the user says no", func() {
 			BeforeEach(func() {
-				helpers.LoginCF()
 				owningOrgName = helpers.CreateAndTargetOrg()
 				helpers.CreateOrg(sharedToOrgName)
 				domain := helpers.NewDomain(owningOrgName, domainName)
@@ -85,7 +103,7 @@ var _ = Describe("Unshare Private Domain", func() {
 				_, err := buffer.Write([]byte("n\n"))
 				Expect(err).ToNot(HaveOccurred())
 				session := helpers.CFWithStdin(buffer, "unshare-private-domain", sharedToOrgName, domainName)
-				Consistently(session).ShouldNot(Say("Unsharing domain %s from org %s as admin...", domainName, sharedToOrgName))
+				Consistently(session).ShouldNot(Say("Unsharing domain %s from org %s as %s...", domainName, sharedToOrgName, userName))
 				Consistently(session).ShouldNot(Say("OK"))
 				Eventually(session).Should(Say(`Warning: org %s will no longer be able to access private domain %s`, sharedToOrgName, domainName))
 				Eventually(session).Should(Say(`Really unshare private domain %s\? \[yN\]`, domainName))
@@ -95,8 +113,8 @@ var _ = Describe("Unshare Private Domain", func() {
 				helpers.TargetOrg(sharedToOrgName)
 				session = helpers.CF("domains")
 				Eventually(session).Should(Say("%s", domainName))
+				Eventually(session).Should(Exit(0))
 			})
-
 		})
 	})
 })

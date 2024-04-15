@@ -2,22 +2,22 @@ package v7action
 
 import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
-	"code.cloudfoundry.org/cli/actor/v2action"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/util/batcher"
 )
 
-//go:generate counterfeiter . RouteActor
-
-type RouteActor interface {
-	GetApplicationRoutes(appGUID string) (v2action.Routes, v2action.Warnings, error)
+type ApplicationSummary struct {
+	resources.Application
+	ProcessSummaries ProcessSummaries
+	Routes           []resources.Route
 }
 
-// ApplicationSummary represents an application with its processes and droplet.
-type ApplicationSummary struct {
-	Application
-	CurrentDroplet   Droplet
-	ProcessSummaries ProcessSummaries
-	Routes           v2action.Routes
+// v7action.DetailedApplicationSummary represents an application with its processes and droplet.
+type DetailedApplicationSummary struct {
+	ApplicationSummary
+	CurrentDroplet resources.Droplet
 }
 
 func (a ApplicationSummary) GetIsolationSegmentName() (string, bool) {
@@ -33,13 +33,143 @@ func (a ApplicationSummary) hasIsolationSegment() bool {
 		len(a.ProcessSummaries[0].InstanceDetails[0].IsolationSegment) > 0
 }
 
-// GetApplicationSummaryByNameAndSpace returns an application with process and
-// instance stats.
-func (actor Actor) GetApplicationSummaryByNameAndSpace(appName string, spaceGUID string, withObfuscatedValues bool, routeActor RouteActor) (ApplicationSummary, Warnings, error) {
-	app, allWarnings, err := actor.GetApplicationByNameAndSpace(appName, spaceGUID)
-	if err != nil {
-		return ApplicationSummary{}, allWarnings, err
+func (actor Actor) GetAppSummariesForSpace(spaceGUID string, labelSelector string, omitStats bool) ([]ApplicationSummary, Warnings, error) {
+	var allWarnings Warnings
+	var allSummaries []ApplicationSummary
+
+	keys := []ccv3.Query{
+		{Key: ccv3.SpaceGUIDFilter, Values: []string{spaceGUID}},
+		{Key: ccv3.OrderBy, Values: []string{ccv3.NameOrder}},
+		{Key: ccv3.PerPage, Values: []string{ccv3.MaxPerPage}},
 	}
+	if len(labelSelector) > 0 {
+		keys = append(keys, ccv3.Query{Key: ccv3.LabelSelectorFilter, Values: []string{labelSelector}})
+	}
+	apps, ccv3Warnings, err := actor.CloudControllerClient.GetApplications(keys...)
+	allWarnings = append(allWarnings, ccv3Warnings...)
+	if err != nil {
+		return nil, allWarnings, err
+	}
+
+	var processSummariesByAppGUID map[string]ProcessSummaries
+	var warnings Warnings
+
+	if !omitStats {
+		processSummariesByAppGUID, warnings, err = actor.getProcessSummariesForApps(apps)
+		allWarnings = append(allWarnings, warnings...)
+		if err != nil {
+			return nil, allWarnings, err
+		}
+	}
+
+	var routes []resources.Route
+
+	ccv3Warnings, err = batcher.RequestByGUID(toAppGUIDs(apps), func(guids []string) (ccv3.Warnings, error) {
+		batch, warnings, err := actor.CloudControllerClient.GetRoutes(ccv3.Query{
+			Key: ccv3.AppGUIDFilter, Values: guids,
+		})
+		routes = append(routes, batch...)
+		return warnings, err
+	})
+	allWarnings = append(allWarnings, ccv3Warnings...)
+	if err != nil {
+		return nil, allWarnings, err
+	}
+
+	routesByAppGUID := make(map[string][]resources.Route)
+
+	for _, route := range routes {
+		for _, dest := range route.Destinations {
+			routesByAppGUID[dest.App.GUID] = append(routesByAppGUID[dest.App.GUID], route)
+		}
+	}
+
+	for _, app := range apps {
+		processSummariesByAppGUID[app.GUID].Sort()
+
+		summary := ApplicationSummary{
+			Application:      app,
+			ProcessSummaries: processSummariesByAppGUID[app.GUID],
+			Routes:           routesByAppGUID[app.GUID],
+		}
+
+		allSummaries = append(allSummaries, summary)
+	}
+
+	return allSummaries, allWarnings, nil
+}
+
+func (actor Actor) GetDetailedAppSummary(appName, spaceGUID string, withObfuscatedValues bool) (DetailedApplicationSummary, Warnings, error) {
+	var allWarnings Warnings
+
+	app, actorWarnings, err := actor.GetApplicationByNameAndSpace(appName, spaceGUID)
+	allWarnings = append(allWarnings, actorWarnings...)
+	if err != nil {
+		return DetailedApplicationSummary{}, actorWarnings, err
+	}
+
+	summary, warnings, err := actor.createSummary(app, withObfuscatedValues)
+	allWarnings = append(allWarnings, warnings...)
+	if err != nil {
+		return DetailedApplicationSummary{}, allWarnings, err
+	}
+
+	detailedSummary, warnings, err := actor.addDroplet(summary)
+	allWarnings = append(allWarnings, warnings...)
+	if err != nil {
+		return DetailedApplicationSummary{}, allWarnings, err
+	}
+
+	return detailedSummary, allWarnings, err
+}
+
+func (actor Actor) getProcessSummariesForApps(apps []resources.Application) (map[string]ProcessSummaries, Warnings, error) {
+	processSummariesByAppGUID := make(map[string]ProcessSummaries)
+	var allWarnings Warnings
+	var processes []resources.Process
+
+	warnings, err := batcher.RequestByGUID(toAppGUIDs(apps), func(guids []string) (ccv3.Warnings, error) {
+		batch, warnings, err := actor.CloudControllerClient.GetProcesses(ccv3.Query{
+			Key: ccv3.AppGUIDFilter, Values: guids,
+		})
+		processes = append(processes, batch...)
+		return warnings, err
+	})
+	allWarnings = append(allWarnings, warnings...)
+	if err != nil {
+		return nil, allWarnings, err
+	}
+
+	for _, process := range processes {
+		instances, warnings, err := actor.CloudControllerClient.GetProcessInstances(process.GUID)
+		allWarnings = append(allWarnings, Warnings(warnings)...)
+
+		if err != nil {
+			switch err.(type) {
+			case ccerror.ProcessNotFoundError, ccerror.InstanceNotFoundError:
+				continue
+			default:
+				return nil, allWarnings, err
+			}
+		}
+
+		var instanceDetails []ProcessInstance
+		for _, instance := range instances {
+			instanceDetails = append(instanceDetails, ProcessInstance(instance))
+		}
+
+		processSummary := ProcessSummary{
+			Process:         resources.Process(process),
+			InstanceDetails: instanceDetails,
+		}
+
+		processSummariesByAppGUID[process.AppGUID] = append(processSummariesByAppGUID[process.AppGUID], processSummary)
+	}
+	return processSummariesByAppGUID, allWarnings, nil
+}
+
+func (actor Actor) createSummary(app resources.Application, withObfuscatedValues bool) (ApplicationSummary, Warnings, error) {
+	var allWarnings Warnings
 
 	processSummaries, processWarnings, err := actor.getProcessSummariesForApp(app.GUID, withObfuscatedValues)
 	allWarnings = append(allWarnings, processWarnings...)
@@ -47,31 +177,41 @@ func (actor Actor) GetApplicationSummaryByNameAndSpace(appName string, spaceGUID
 		return ApplicationSummary{}, allWarnings, err
 	}
 
-	droplet, warnings, err := actor.GetCurrentDropletByApplication(app.GUID)
+	routes, warnings, err := actor.GetApplicationRoutes(app.GUID)
+	allWarnings = append(allWarnings, warnings...)
+	if err != nil {
+		return ApplicationSummary{}, allWarnings, err
+	}
+
+	return ApplicationSummary{
+		Application:      app,
+		ProcessSummaries: processSummaries,
+		Routes:           routes,
+	}, allWarnings, nil
+}
+
+func (actor Actor) addDroplet(summary ApplicationSummary) (DetailedApplicationSummary, Warnings, error) {
+	var allWarnings Warnings
+
+	droplet, warnings, err := actor.GetCurrentDropletByApplication(summary.GUID)
 	allWarnings = append(allWarnings, warnings...)
 	if err != nil {
 		if _, ok := err.(actionerror.DropletNotFoundError); !ok {
-			return ApplicationSummary{}, allWarnings, err
+			return DetailedApplicationSummary{}, allWarnings, err
 		}
 	}
+	return DetailedApplicationSummary{
+		ApplicationSummary: summary,
+		CurrentDroplet:     droplet,
+	}, allWarnings, nil
+}
 
-	var appRoutes v2action.Routes
-	if routeActor != nil {
-		routes, warnings, err := routeActor.GetApplicationRoutes(app.GUID)
-		allWarnings = append(allWarnings, Warnings(warnings)...)
-		if err != nil {
-			if _, ok := err.(ccerror.ResourceNotFoundError); !ok {
-				return ApplicationSummary{}, allWarnings, err
-			}
-		}
-		appRoutes = routes
+func toAppGUIDs(apps []resources.Application) []string {
+	guids := make([]string, len(apps))
+
+	for i, app := range apps {
+		guids[i] = app.GUID
 	}
 
-	summary := ApplicationSummary{
-		Application:      app,
-		ProcessSummaries: processSummaries,
-		CurrentDroplet:   droplet,
-		Routes:           appRoutes,
-	}
-	return summary, allWarnings, nil
+	return guids
 }

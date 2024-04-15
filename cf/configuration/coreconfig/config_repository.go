@@ -7,7 +7,7 @@ import (
 	"code.cloudfoundry.org/cli/cf/configuration"
 	"code.cloudfoundry.org/cli/cf/models"
 	"code.cloudfoundry.org/cli/version"
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 )
 
 type ConfigRepository struct {
@@ -23,6 +23,7 @@ type CCInfo struct {
 	APIVersion               string `json:"api_version"`
 	AuthorizationEndpoint    string `json:"authorization_endpoint"`
 	DopplerEndpoint          string `json:"doppler_logging_endpoint"`
+	LogCacheEndpoint         string `json:"log_cache_endpoint"`
 	MinCLIVersion            string `json:"min_cli_version"`
 	MinRecommendedCLIVersion string `json:"min_recommended_cli_version"`
 	SSHOAuthClient           string `json:"app_ssh_oauth_client"`
@@ -62,6 +63,7 @@ type Reader interface {
 
 	AuthenticationEndpoint() string
 	DopplerEndpoint() string
+	LogCacheEndpoint() string
 	UaaEndpoint() string
 	RoutingAPIEndpoint() string
 	AccessToken() string
@@ -97,7 +99,7 @@ type Reader interface {
 	PluginRepos() []models.PluginRepo
 }
 
-//go:generate counterfeiter . ReadWriter
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ReadWriter
 
 type ReadWriter interface {
 	Reader
@@ -110,6 +112,7 @@ type ReadWriter interface {
 	SetCLIVersion(string)
 	SetColorEnabled(string)
 	SetDopplerEndpoint(string)
+	SetLogCacheEndpoint(string)
 	SetLocale(string)
 	SetMinCLIVersion(string)
 	SetMinRecommendedCLIVersion(string)
@@ -129,7 +132,7 @@ type ReadWriter interface {
 	UnSetPluginRepo(int)
 }
 
-//go:generate counterfeiter . Repository
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Repository
 
 type Repository interface {
 	ReadWriter
@@ -195,6 +198,14 @@ func (c *ConfigRepository) AuthenticationEndpoint() (authEndpoint string) {
 func (c *ConfigRepository) DopplerEndpoint() (dopplerEndpoint string) {
 	c.read(func() {
 		dopplerEndpoint = c.data.DopplerEndPoint
+	})
+
+	return
+}
+
+func (c *ConfigRepository) LogCacheEndpoint() (logCacheEndpoint string) {
+	c.read(func() {
+		logCacheEndpoint = c.data.LogCacheEndPoint
 	})
 
 	return
@@ -296,7 +307,12 @@ func (c *ConfigRepository) UserGUID() (guid string) {
 
 func (c *ConfigRepository) Username() (name string) {
 	c.read(func() {
-		name = NewTokenInfo(c.data.AccessToken).Username
+		t := NewTokenInfo(c.data.AccessToken)
+		if t.Username != "" {
+			name = t.Username
+		} else {
+			name = t.ClientID
+		}
 	})
 	return
 }
@@ -471,6 +487,12 @@ func (c *ConfigRepository) SetAuthenticationEndpoint(endpoint string) {
 func (c *ConfigRepository) SetDopplerEndpoint(endpoint string) {
 	c.write(func() {
 		c.data.DopplerEndPoint = endpoint
+	})
+}
+
+func (c *ConfigRepository) SetLogCacheEndpoint(endpoint string) {
+	c.write(func() {
+		c.data.LogCacheEndPoint = endpoint
 	})
 }
 

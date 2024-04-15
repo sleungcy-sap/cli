@@ -2,27 +2,21 @@ package v7
 
 import (
 	"code.cloudfoundry.org/cli/actor/sharedaction"
-	"code.cloudfoundry.org/cli/actor/v7action"
 	"code.cloudfoundry.org/cli/command"
 	"code.cloudfoundry.org/cli/command/flag"
 	"code.cloudfoundry.org/cli/command/translatableerror"
-	"code.cloudfoundry.org/cli/command/v7/shared"
 	"code.cloudfoundry.org/cli/util/clissh"
 )
 
-//go:generate counterfeiter . SharedSSHActor
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . SharedSSHActor
 
 type SharedSSHActor interface {
 	ExecuteSecureShell(sshClient sharedaction.SecureShellClient, sshOptions sharedaction.SSHOptions) error
 }
 
-//go:generate counterfeiter . SSHActor
-
-type SSHActor interface {
-	GetSecureShellConfigurationByApplicationNameSpaceProcessTypeAndIndex(appName string, spaceGUID string, processType string, processIndex uint) (v7action.SSHAuthentication, v7action.Warnings, error)
-}
-
 type SSHCommand struct {
+	BaseCommand
+
 	RequiredArgs          flag.AppName             `positional-args:"yes"`
 	ProcessIndex          uint                     `long:"app-instance-index" short:"i" default:"0" description:"App process instance index"`
 	Commands              []string                 `long:"command" short:"c" description:"Command to run"`
@@ -38,28 +32,19 @@ type SSHCommand struct {
 	relatedCommands interface{} `related_commands:"allow-space-ssh, enable-ssh, space-ssh-allowed, ssh-code, ssh-enabled"`
 	allproxy        interface{} `environmentName:"all_proxy" environmentDescription:"Specify a proxy server to enable proxying for all requests"`
 
-	UI          command.UI
-	Config      command.Config
-	SharedActor command.SharedActor
-	Actor       SSHActor
-	SSHActor    SharedSSHActor
-	SSHClient   *clissh.SecureShell
+	SSHActor  SharedSSHActor
+	SSHClient *clissh.SecureShell
 }
 
 func (cmd *SSHCommand) Setup(config command.Config, ui command.UI) error {
-	cmd.UI = ui
-	cmd.Config = config
-	sharedActor := sharedaction.NewActor(config)
-	cmd.SharedActor = sharedActor
-	cmd.SSHActor = sharedActor
-
-	ccClient, uaaClient, err := shared.NewClients(config, ui, true, "")
+	err := cmd.BaseCommand.Setup(config, ui)
 	if err != nil {
 		return err
 	}
 
-	cmd.Actor = v7action.NewActor(ccClient, config, sharedActor, uaaClient)
-
+	sharedActor := sharedaction.NewActor(config)
+	cmd.SharedActor = sharedActor
+	cmd.SSHActor = sharedActor
 	cmd.SSHClient = clissh.NewDefaultSecureShell()
 
 	return nil

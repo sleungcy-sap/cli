@@ -1,41 +1,16 @@
 package v7
 
 import (
-	"code.cloudfoundry.org/cli/actor/sharedaction"
-	"code.cloudfoundry.org/cli/actor/v7action"
-	"code.cloudfoundry.org/cli/command"
 	"code.cloudfoundry.org/cli/command/v7/shared"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/util/ui"
 )
 
-//go:generate counterfeiter . FeatureFlagsActor
-
-type FeatureFlagsActor interface {
-	GetFeatureFlags() ([]v7action.FeatureFlag, v7action.Warnings, error)
-}
-
 type FeatureFlagsCommand struct {
+	BaseCommand
+
 	usage           interface{} `usage:"CF_NAME feature-flags"`
-	relatedCommands interface{} `related_commands:"disable-feature-flag, enable-feature-flag"`
-
-	UI          command.UI
-	Config      command.Config
-	SharedActor command.SharedActor
-	Actor       FeatureFlagsActor
-}
-
-func (cmd *FeatureFlagsCommand) Setup(config command.Config, ui command.UI) error {
-	cmd.UI = ui
-	cmd.Config = config
-	cmd.SharedActor = sharedaction.NewActor(config)
-
-	ccClient, _, err := shared.NewClients(config, ui, true, "")
-	if err != nil {
-		return err
-	}
-	cmd.Actor = v7action.NewActor(ccClient, config, nil, nil)
-
-	return nil
+	relatedCommands interface{} `related_commands:"disable-feature-flag, enable-feature-flag, feature-flag"`
 }
 
 func (cmd FeatureFlagsCommand) Execute(args []string) error {
@@ -44,7 +19,7 @@ func (cmd FeatureFlagsCommand) Execute(args []string) error {
 		return err
 	}
 
-	user, err := cmd.Config.CurrentUser()
+	user, err := cmd.Actor.GetCurrentUser()
 	if err != nil {
 		return err
 	}
@@ -65,16 +40,13 @@ func (cmd FeatureFlagsCommand) Execute(args []string) error {
 	return nil
 }
 
-func (cmd FeatureFlagsCommand) displayTable(featureFlags []v7action.FeatureFlag) {
+func (cmd FeatureFlagsCommand) displayTable(featureFlags []resources.FeatureFlag) {
 	if len(featureFlags) > 0 {
 		var keyValueTable = [][]string{
 			{"name", "state"},
 		}
 		for _, flag := range featureFlags {
-			state := "disabled"
-			if flag.Enabled {
-				state = "enabled"
-			}
+			state := shared.FlagBoolToString(flag.Enabled)
 			keyValueTable = append(keyValueTable, []string{flag.Name, state})
 		}
 

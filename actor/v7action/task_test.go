@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -18,11 +19,13 @@ var _ = Describe("Task Actions", func() {
 	var (
 		actor                     *Actor
 		fakeCloudControllerClient *v7actionfakes.FakeCloudControllerClient
+		fakeConfig                *v7actionfakes.FakeConfig
 	)
 
 	BeforeEach(func() {
 		fakeCloudControllerClient = new(v7actionfakes.FakeCloudControllerClient)
-		actor = NewActor(fakeCloudControllerClient, nil, nil, nil)
+		fakeConfig = new(v7actionfakes.FakeConfig)
+		actor = NewActor(fakeCloudControllerClient, fakeConfig, nil, nil, nil, nil)
 	})
 
 	Describe("RunTask", func() {
@@ -41,7 +44,7 @@ var _ = Describe("Task Actions", func() {
 			})
 
 			It("creates and returns the task and all warnings", func() {
-				expectedTask := Task{
+				expectedTask := resources.Task{
 					Command:    "some command",
 					Name:       "some-task-name",
 					MemoryInMB: 123,
@@ -50,7 +53,7 @@ var _ = Describe("Task Actions", func() {
 				task, warnings, err := actor.RunTask("some-app-guid", expectedTask)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(task).To(Equal(Task{
+				Expect(task).To(Equal(resources.Task{
 					SequenceID: 3,
 				}))
 				Expect(warnings).To(ConsistOf("warning-1", "warning-2"))
@@ -68,7 +71,7 @@ var _ = Describe("Task Actions", func() {
 			var expectedErr error
 
 			JustBeforeEach(func() {
-				_, warnings, err = actor.RunTask("some-app-guid", Task{Command: "some command"})
+				_, warnings, err = actor.RunTask("some-app-guid", resources.Task{Command: "some command"})
 			})
 
 			When("the cloud controller error is generic", func() {
@@ -149,13 +152,13 @@ var _ = Describe("Task Actions", func() {
 					tasks, warnings, err := actor.GetApplicationTasks("some-app-guid", Descending)
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(tasks).To(Equal([]Task{Task(task3), Task(task2), Task(task1)}))
+					Expect(tasks).To(Equal([]resources.Task{resources.Task(task3), resources.Task(task2), resources.Task(task1)}))
 					Expect(warnings).To(ConsistOf("warning-1", "warning-2"))
 
 					tasks, warnings, err = actor.GetApplicationTasks("some-app-guid", Ascending)
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(tasks).To(Equal([]Task{Task(task1), Task(task2), Task(task3)}))
+					Expect(tasks).To(Equal([]resources.Task{resources.Task(task1), resources.Task(task2), resources.Task(task3)}))
 					Expect(warnings).To(ConsistOf("warning-1", "warning-2"))
 
 					Expect(fakeCloudControllerClient.GetApplicationTasksCallCount()).To(Equal(2))
@@ -222,7 +225,7 @@ var _ = Describe("Task Actions", func() {
 				It("returns the task and warnings", func() {
 					task, warnings, err := actor.GetTaskBySequenceIDAndApplication(1, "some-app-guid")
 					Expect(err).ToNot(HaveOccurred())
-					Expect(task).To(Equal(Task(task1)))
+					Expect(task).To(Equal(resources.Task(task1)))
 					Expect(warnings).To(ConsistOf("get-task-warning-1"))
 				})
 			})
@@ -283,7 +286,7 @@ var _ = Describe("Task Actions", func() {
 				task, warnings, err := actor.TerminateTask("some-task-guid")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(warnings).To(ConsistOf("update-task-warning"))
-				Expect(task).To(Equal(Task(returnedTask)))
+				Expect(task).To(Equal(resources.Task(returnedTask)))
 			})
 		})
 
@@ -303,6 +306,65 @@ var _ = Describe("Task Actions", func() {
 				Expect(err).To(MatchError(expectedErr))
 				Expect(warnings).To(ConsistOf("update-task-warning"))
 			})
+		})
+	})
+
+	Describe("PollTask", func() {
+
+		It("polls for SUCCEDED state", func() {
+			firstTaskResponse := resources.Task{State: constant.TaskRunning}
+			secondTaskResponse := resources.Task{State: constant.TaskSucceeded}
+
+			fakeCloudControllerClient.GetTaskReturnsOnCall(0, firstTaskResponse, nil, nil)
+			fakeCloudControllerClient.GetTaskReturnsOnCall(1, secondTaskResponse, nil, nil)
+
+			task, _, _ := actor.PollTask(resources.Task{})
+
+			Expect(task.State).To(Equal(constant.TaskSucceeded))
+		})
+
+		It("polls for FAILED state", func() {
+			firstTaskResponse := resources.Task{State: constant.TaskRunning}
+			secondTaskResponse := resources.Task{State: constant.TaskFailed}
+
+			fakeCloudControllerClient.GetTaskReturnsOnCall(0, firstTaskResponse, nil, nil)
+			fakeCloudControllerClient.GetTaskReturnsOnCall(1, secondTaskResponse, nil, nil)
+
+			task, _, _ := actor.PollTask(resources.Task{})
+
+			Expect(task.State).To(Equal(constant.TaskFailed))
+		})
+
+		It("aggregates warnings from all requests made while polling", func() {
+			firstTaskResponse := resources.Task{State: constant.TaskRunning}
+			secondTaskResponse := resources.Task{State: constant.TaskSucceeded}
+
+			fakeCloudControllerClient.GetTaskReturnsOnCall(0, firstTaskResponse, ccv3.Warnings{"warning-1"}, nil)
+			fakeCloudControllerClient.GetTaskReturnsOnCall(1, secondTaskResponse, ccv3.Warnings{"warning-2"}, nil)
+
+			_, warnings, _ := actor.PollTask(resources.Task{})
+
+			Expect(warnings).To(ConsistOf("warning-1", "warning-2"))
+		})
+
+		It("handles errors from requests to cc", func() {
+			firstTaskResponse := resources.Task{State: constant.TaskSucceeded}
+
+			fakeCloudControllerClient.GetTaskReturnsOnCall(0, firstTaskResponse, nil, errors.New("request-error"))
+
+			_, _, err := actor.PollTask(resources.Task{})
+
+			Expect(err).To(MatchError("request-error"))
+		})
+
+		It("returns an error if the task failed", func() {
+			firstTaskResponse := resources.Task{State: constant.TaskFailed}
+
+			fakeCloudControllerClient.GetTaskReturnsOnCall(0, firstTaskResponse, nil, nil)
+
+			_, _, err := actor.PollTask(resources.Task{})
+
+			Expect(err).To(MatchError("Task failed to complete successfully"))
 		})
 	})
 })

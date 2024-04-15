@@ -10,9 +10,10 @@ import (
 )
 
 type commandList struct {
-	App     appCommand     `command:"app" description:"Display health and status for an app"`
-	Restage restageCommand `command:"restage" alias:"rg" description:"Restage an app"`
-	Help    helpCommand    `command:"help" alias:"h" description:"Show help"`
+	App     appCommand         `command:"app" description:"Display health and status for an app"`
+	Restage restageCommand     `command:"restage" alias:"rg" description:"Restage an app"`
+	Help    helpCommand        `command:"help" alias:"h" description:"Show help"`
+	Usage   usageMethodCommand `command:"fancy"`
 }
 
 type appCommand struct {
@@ -29,6 +30,30 @@ type restageCommand struct {
 type helpCommand struct {
 	AllCommands bool        `short:"a" description:"All available CLI commands"`
 	usage       interface{} `usage:"CF_NAME help [COMMAND]"`
+}
+
+type usageMethodCommand struct {
+}
+
+func (c usageMethodCommand) Usage() string {
+	return `
+Usage line 1
+Usage line 2
+`
+}
+
+func (c usageMethodCommand) Examples() string {
+	return `
+Examples line 1
+Examples line 2
+`
+}
+
+func (c usageMethodCommand) Resources() string {
+	return `
+Resource 1
+Resource 2
+`
 }
 
 var _ = Describe("Help Actions", func() {
@@ -86,6 +111,33 @@ var _ = Describe("Help Actions", func() {
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(commandInfo.Environment).To(BeEmpty())
+					})
+				})
+
+				When("the command has a Usage() method", func() {
+					It("retrieves the usage text from the method", func() {
+						commandInfo, err := actor.CommandInfoByName(commandList{}, "fancy")
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(commandInfo.Usage).To(Equal("Usage line 1\n   Usage line 2"))
+					})
+				})
+
+				When("the command has a Examples() method", func() {
+					It("retrieves the examples text from the method", func() {
+						commandInfo, err := actor.CommandInfoByName(commandList{}, "fancy")
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(commandInfo.Examples).To(Equal("Examples line 1\n   Examples line 2"))
+					})
+				})
+
+				When("the command has a Resources() method", func() {
+					It("retrieves the resources text from the method", func() {
+						commandInfo, err := actor.CommandInfoByName(commandList{}, "fancy")
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(commandInfo.Resources).To(Equal("Resource 1\n   Resource 2"))
 					})
 				})
 			})

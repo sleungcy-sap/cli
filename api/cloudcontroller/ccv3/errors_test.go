@@ -83,6 +83,52 @@ var _ = Describe("Error Wrapper", func() {
 			})
 
 			When("the error is a 4XX error", func() {
+				Context("(400) Bad Request", func() {
+					BeforeEach(func() {
+						serverResponseCode = http.StatusBadRequest
+					})
+
+					When("the query parameter is invalid", func() {
+						BeforeEach(func() {
+							serverResponse = `
+{
+   "errors": [
+      {
+         "detail": "The query parameter is invalid: Missing label_selector value",
+         "title": "CF-BadQueryParameter",
+         "code": 10005
+      }
+   ]
+}`
+						})
+
+						It("returns a BadRequestError", func() {
+							Expect(makeError).To(MatchError(ccerror.BadRequestError{Message: "The query parameter is invalid: Missing label_selector value"}))
+						})
+
+					})
+
+					When("service instance fetch params not supported", func() {
+						BeforeEach(func() {
+							serverResponse = `
+{
+   "errors": [
+      {
+         "detail": "This service does not support fetching service instance parameters.",
+         "title": "CF-ServiceFetchInstanceParametersNotSupported",
+         "code": 120004
+      }
+   ]
+}`
+						})
+
+						It("returns a ServiceInstanceParametersFetchNotSupportedError", func() {
+							Expect(makeError).To(MatchError(ccerror.ServiceInstanceParametersFetchNotSupportedError{
+								Message: "This service does not support fetching service instance parameters."}))
+						})
+					})
+				})
+
 				Context("(401) Unauthorized", func() {
 					BeforeEach(func() {
 						serverResponseCode = http.StatusUnauthorized
@@ -223,10 +269,55 @@ var _ = Describe("Error Wrapper", func() {
 						})
 					})
 
-					Context("generic not found", func() {
+					When("a user is not found", func() {
+						BeforeEach(func() {
+							serverResponse = `
+							{
+							  "errors": [
+							    {
+							      "code": 10010,
+							      "detail": "User not found",
+							      "title": "CF-ResourceNotFound"
+							    }
+							  ]
+							}`
+						})
 
+						It("returns a UserNotFoundError", func() {
+							Expect(makeError).To(MatchError(ccerror.UserNotFoundError{}))
+						})
+					})
+
+					Context("generic not found", func() {
 						It("returns a ResourceNotFoundError", func() {
 							Expect(makeError).To(MatchError(ccerror.ResourceNotFoundError{Message: "SomeCC Error Message"}))
+						})
+					})
+				})
+
+				Context("(409) Conflict", func() {
+					BeforeEach(func() {
+						serverResponseCode = http.StatusConflict
+					})
+
+					When("a service instance operation is in progress", func() {
+						BeforeEach(func() {
+							serverResponse = `
+{
+  "errors": [
+    {
+      "code": 60016,
+      "detail": "An operation for service instance foo is in progress.",
+      "title": "CF-AsyncServiceInstanceOperationInProgress"
+    }
+  ]
+}`
+						})
+
+						It("returns a ServiceInstanceOperationInProgressError", func() {
+							Expect(makeError).To(MatchError(ccerror.ServiceInstanceOperationInProgressError{
+								Message: "An operation for service instance foo is in progress.",
+							}))
 						})
 					})
 				})
@@ -236,7 +327,7 @@ var _ = Describe("Error Wrapper", func() {
 						serverResponseCode = http.StatusUnprocessableEntity
 					})
 
-					When("the name isn't unique to space", func() {
+					When("the name isn't unique to space (old error message)", func() {
 						BeforeEach(func() {
 							serverResponse = `
 {
@@ -251,7 +342,128 @@ var _ = Describe("Error Wrapper", func() {
 						})
 
 						It("returns a NameNotUniqueInSpaceError", func() {
-							Expect(makeError).To(MatchError(ccerror.NameNotUniqueInSpaceError{}))
+							Expect(makeError).To(Equal(
+								ccerror.NameNotUniqueInSpaceError{
+									UnprocessableEntityError: ccerror.UnprocessableEntityError{
+										Message: "name must be unique in space",
+									},
+								},
+							))
+						})
+					})
+
+					When("the name isn't unique to space (new error message)", func() {
+						BeforeEach(func() {
+							serverResponse = `
+{
+  "errors": [
+    {
+      "code": 10008,
+      "detail": "App with the name 'eli' already exists.",
+      "title": "CF-UnprocessableEntity"
+    }
+  ]
+}`
+						})
+
+						It("returns a NameNotUniqueInSpaceError", func() {
+							Expect(makeError).To(Equal(
+								ccerror.NameNotUniqueInSpaceError{
+									UnprocessableEntityError: ccerror.UnprocessableEntityError{
+										Message: "App with the name 'eli' already exists.",
+									},
+								},
+							))
+						})
+					})
+
+					When("the name isn't unique to organization", func() {
+						BeforeEach(func() {
+							serverResponse = `
+{
+  "errors": [
+    {
+      "code": 10008,
+      "detail": "Name must be unique per organization",
+      "title": "CF-UnprocessableEntity"
+    }
+  ]
+}`
+						})
+
+						It("returns a NameNotUniqueInOrgError", func() {
+							Expect(makeError).To(MatchError(ccerror.NameNotUniqueInOrgError{}))
+						})
+					})
+
+					When("the role already exists", func() {
+						BeforeEach(func() {
+							serverResponse = `
+{
+  "errors": [
+    {
+      "code": 10008,
+      "detail": "User 'wow' already has 'organization_auditor' role in organization 'wow'.",
+      "title": "CF-UnprocessableEntity"
+    }
+  ]
+}`
+						})
+
+						It("returns a RoleAlreadyExistsError", func() {
+							Expect(makeError).To(Equal(
+								ccerror.RoleAlreadyExistsError{
+									UnprocessableEntityError: ccerror.UnprocessableEntityError{
+										Message: "User 'wow' already has 'organization_auditor' role in organization 'wow'.",
+									},
+								}),
+							)
+						})
+					})
+
+					When("the quota already exists", func() {
+						BeforeEach(func() {
+							serverResponse = `
+{
+  "errors": [
+    {
+      "code": 10008,
+      "detail": "Organization Quota 'default' already exists.",
+      "title": "CF-UnprocessableEntity"
+    }
+  ]
+}`
+						})
+
+						It("returns a QuotaAlreadyExists error", func() {
+							Expect(makeError).To(Equal(
+								ccerror.QuotaAlreadyExists{
+									Message: "Organization Quota 'default' already exists.",
+								}),
+							)
+						})
+					})
+
+					When("the security group already exists", func() {
+						BeforeEach(func() {
+							serverResponse = `
+{
+  "errors": [
+    {
+      "detail": "Security group with name 'sec-group' already exists.",
+      "title": "CF-UnprocessableEntity",
+      "code": 10008
+    }
+  ]
+}`
+						})
+
+						It("returns a SecurityGroupAlreadyExists error", func() {
+							Expect(makeError).To(Equal(
+								ccerror.SecurityGroupAlreadyExists{
+									Message: "Security group with name 'sec-group' already exists.",
+								}),
+							)
 						})
 					})
 
@@ -274,6 +486,67 @@ var _ = Describe("Error Wrapper", func() {
 						})
 					})
 
+					When("the service instance name is taken", func() {
+						BeforeEach(func() {
+							serverResponse = `
+{
+  "errors": [
+    {
+      "code": 10008,
+      "detail": "The service instance name is taken",
+      "title": "CF-UnprocessableEntity"
+    }
+  ]
+}`
+						})
+
+						It("returns an ServiceInstanceNameTakenError", func() {
+							Expect(makeError).To(MatchError(ccerror.ServiceInstanceNameTakenError{
+								Message: "The service instance name is taken",
+							}))
+						})
+					})
+
+					When("the buildpack is invalid", func() {
+						BeforeEach(func() {
+							serverResponse = `
+{
+  "errors": [
+    {
+      "code": 10008,
+      "detail": "Assign a droplet before starting this app.",
+      "title": "CF-UnprocessableEntity"
+    }
+  ]
+}`
+						})
+
+						It("returns an InvalidStartError", func() {
+							Expect(makeError).To(MatchError(ccerror.InvalidStartError{}))
+						})
+					})
+
+					When("a route binding already exists", func() {
+						BeforeEach(func() {
+							serverResponse = `
+{
+  "errors": [
+    {
+      "code": 130008,
+      "detail": "The route and service instance are already bound.",
+      "title": "CF-ServiceInstanceAlreadyBoundToSameRoute"
+    }
+  ]
+}`
+						})
+
+						It("returns an ResourceAlreadyExistsError", func() {
+							Expect(makeError).To(MatchError(ccerror.ResourceAlreadyExistsError{
+								Message: "The route and service instance are already bound.",
+							}))
+						})
+					})
+
 					When("the detail describes something else", func() {
 						BeforeEach(func() {
 							serverResponse = `
@@ -290,6 +563,48 @@ var _ = Describe("Error Wrapper", func() {
 
 						It("returns a UnprocessableEntityError", func() {
 							Expect(makeError).To(MatchError(ccerror.UnprocessableEntityError{Message: "SomeCC Error Message"}))
+						})
+					})
+
+					When("a service app binding already exists", func() {
+						BeforeEach(func() {
+							serverResponse = `
+{
+  "errors": [
+    {
+      "code": 10008,
+      "detail": "The app is already bound to the service instance",
+      "title": "CF-UnprocessableEntity"
+    }
+  ]
+}`
+						})
+
+						It("returns an ResourceAlreadyExistsError", func() {
+							Expect(makeError).To(MatchError(ccerror.ResourceAlreadyExistsError{
+								Message: "The app is already bound to the service instance",
+							}))
+						})
+					})
+
+					When("the service key name already exists", func() {
+						BeforeEach(func() {
+							serverResponse = `
+{
+  "errors": [
+    {
+      "code": 10008,
+      "detail": "The binding name is invalid. Key binding names must be unique. The service instance already has a key binding with name 'my-key'.",
+      "title": "CF-UnprocessableEntity"
+    }
+  ]
+}`
+						})
+
+						It("returns an ServiceKeyTakenError", func() {
+							Expect(makeError).To(MatchError(ccerror.ServiceKeyTakenError{
+								Message: "The binding name is invalid. Key binding names must be unique. The service instance already has a key binding with name 'my-key'.",
+							}))
 						})
 					})
 				})

@@ -9,17 +9,14 @@ import (
 // Warnings is a list of warnings returned back from the cloud controller
 type Warnings []string
 
-// Actor handles all business logic for Cloud Controller v2 operations.
+// Actor handles all business logic for Cloud Controller operations.
 type Actor struct {
 	SharedActor SharedActor
-	V2Actor     V2Actor
 	V7Actor     V7Actor
 
-	PushPlanFuncs []UpdatePushPlanFunc
-
-	ChangeApplicationFuncs []ChangeApplicationFunc
-	StartFuncs             []ChangeApplicationFunc
-	NoStartFuncs           []ChangeApplicationFunc
+	PreparePushPlanSequence   []UpdatePushPlanFunc
+	ChangeApplicationSequence func(plan PushPlan) []ChangeApplicationFunc
+	TransformManifestSequence []HandleFlagOverrideFunc
 
 	startWithProtocol *regexp.Regexp
 	urlValidator      *regexp.Regexp
@@ -29,43 +26,62 @@ const ProtocolRegexp = "^https?://|^tcp://"
 const URLRegexp = "^(?:https?://|tcp://)?(?:(?:[\\w-]+\\.)|(?:[*]\\.))+\\w+(?:\\:\\d+)?(?:/.*)*(?:\\.\\w+)?$"
 
 // NewActor returns a new actor.
-func NewActor(v2Actor V2Actor, v3Actor V7Actor, sharedActor SharedActor) *Actor {
+func NewActor(v3Actor V7Actor, sharedActor SharedActor) *Actor {
 	actor := &Actor{
 		SharedActor: sharedActor,
-		V2Actor:     v2Actor,
 		V7Actor:     v3Actor,
 
 		startWithProtocol: regexp.MustCompile(ProtocolRegexp),
 		urlValidator:      regexp.MustCompile(URLRegexp),
 	}
 
-	actor.PushPlanFuncs = []UpdatePushPlanFunc{
-		SetupApplicationForPushPlan,
-		SetupDockerImageCredentialsForPushPlan,
-		SetupBitsPathForPushPlan,
+	actor.TransformManifestSequence = []HandleFlagOverrideFunc{
+		// app name override must come first, so it can trim the manifest
+		// from multiple apps down to just one
+		HandleAppNameOverride,
+
+		HandleInstancesOverride,
+		HandleStartCommandOverride,
+
+		// Type must come before endpoint because endpoint validates against type
+		HandleHealthCheckTypeOverride,
+		HandleHealthCheckEndpointOverride,
+
+		HandleHealthCheckTimeoutOverride,
+		HandleMemoryOverride,
+		HandleDiskOverride,
+		HandleLogRateLimitOverride,
+		HandleNoRouteOverride,
+		HandleRandomRouteOverride,
+		HandleTaskOverride,
+
+		// this must come after all routing related transforms
+		HandleDefaultRouteOverride,
+
+		HandleDockerImageOverride,
+		HandleDockerUsernameOverride,
+		HandleStackOverride,
+		HandleBuildpacksOverride,
+		HandleStrategyOverride,
+		HandleAppPathOverride,
+		HandleDropletPathOverride,
+	}
+
+	actor.PreparePushPlanSequence = []UpdatePushPlanFunc{
+		SetDefaultBitsPathForPushPlan,
+		SetupDropletPathForPushPlan,
 		actor.SetupAllResourcesForPushPlan,
+		SetupDeploymentStrategyForPushPlan,
 		SetupNoStartForPushPlan,
-		SetupSkipRouteCreationForPushPlan,
-		SetupScaleWebProcessForPushPlan,
-		SetupUpdateWebProcessForPushPlan,
+		SetupNoWaitForPushPlan,
+		SetupTaskAppForPushPlan,
 	}
 
-	actor.ChangeApplicationFuncs = []ChangeApplicationFunc{
-		actor.UpdateApplication,
-		actor.UpdateRoutesForApplication,
-		actor.ScaleWebProcessForApplication,
-		actor.UpdateWebProcessForApplication,
-		actor.CreateBitsPackageForApplication,
-		actor.CreateDockerPackageForApplication,
-	}
-
-	actor.StartFuncs = []ChangeApplicationFunc{
-		actor.StagePackageForApplication,
-		actor.SetDropletForApplication,
-	}
-
-	actor.NoStartFuncs = []ChangeApplicationFunc{
-		actor.StopApplication,
+	actor.ChangeApplicationSequence = func(plan PushPlan) []ChangeApplicationFunc {
+		var sequence []ChangeApplicationFunc
+		sequence = append(sequence, actor.GetPrepareApplicationSourceSequence(plan)...)
+		sequence = append(sequence, actor.GetRuntimeSequence(plan)...)
+		return sequence
 	}
 
 	return actor

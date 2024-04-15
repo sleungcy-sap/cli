@@ -3,23 +3,28 @@ package ccv3_test
 import (
 	"code.cloudfoundry.org/cli/resources"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	. "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/ccv3fakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/internal"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/ghttp"
 )
 
 var _ = Describe("Application", func() {
-	var client *Client
+	var (
+		client    *Client
+		requester *ccv3fakes.FakeRequester
+	)
 
 	BeforeEach(func() {
-		client, _ = NewTestClient()
+		requester = new(ccv3fakes.FakeRequester)
+		client, _ = NewFakeRequesterTestClient(requester)
 	})
 
 	Describe("Application", func() {
@@ -119,7 +124,7 @@ var _ = Describe("Application", func() {
 						Metadata: &resources.Metadata{
 							Labels: map[string]types.NullString{
 								"some-key":  types.NewNullString("some-value"),
-								"other-key": types.NewNullString("other-value")},
+								"other-key": types.NewNullString("other-value\nwith a newline & a \" quote")},
 						},
 					}
 				})
@@ -129,7 +134,7 @@ var _ = Describe("Application", func() {
 						"metadata": {
 							"labels": {
 								"some-key":"some-value",
-								"other-key":"other-value"
+								"other-key":"other-value\nwith a newline & a \" quote"
 							}
 						}
 					}`))
@@ -141,19 +146,19 @@ var _ = Describe("Application", func() {
 							Metadata: &resources.Metadata{
 								Labels: map[string]types.NullString{
 									"some-key":      types.NewNullString("some-value"),
-									"other-key":     types.NewNullString("other-value"),
+									"other-key":     types.NewNullString("other-value\nwith a newline & a \" quote"),
 									"key-to-delete": types.NewNullString(),
 								},
 							},
 						}
 					})
 
-					It("should send nulls for those lables", func() {
+					It("should send nulls for those labels", func() {
 						Expect(string(appBytes)).To(MatchJSON(`{
 						"metadata": {
 							"labels": {
 								"some-key":"some-value",
-								"other-key":"other-value",
+								"other-key":"other-value\nwith a newline & a \" quote",
 								"key-to-delete":null
 							}
 						}
@@ -217,7 +222,7 @@ var _ = Describe("Application", func() {
 				})
 			})
 
-			When("Labels are provided", func() {
+			When("labels are provided", func() {
 				BeforeEach(func() {
 					appBytes = []byte(`{"metadata":{"labels":{"some-key":"some-value"}}}`)
 				})
@@ -250,33 +255,24 @@ var _ = Describe("Application", func() {
 
 		When("the application successfully is created", func() {
 			BeforeEach(func() {
-				response := `{
-					"guid": "some-app-guid",
-					"name": "some-app-name"
-				}`
-
-				expectedBody := map[string]interface{}{
-					"name": "some-app-name",
-					"relationships": map[string]interface{}{
-						"space": map[string]interface{}{
-							"data": map[string]string{
-								"guid": "some-space-guid",
-							},
-						},
-					},
-				}
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/apps"),
-						VerifyJSONRepresenting(expectedBody),
-						RespondWith(http.StatusCreated, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
-				)
-
+				requester.MakeRequestCalls(func(requestParams RequestParams) (JobURL, Warnings, error) {
+					requestParams.ResponseBody.(*resources.Application).GUID = "some-app-guid"
+					requestParams.ResponseBody.(*resources.Application).Name = requestParams.RequestBody.(resources.Application).Name
+					return "", Warnings{"this is a warning"}, nil
+				})
 				appToCreate = resources.Application{
 					Name:      "some-app-name",
 					SpaceGUID: "some-space-guid",
 				}
+			})
+
+			It("makes the correct request", func() {
+				Expect(requester.MakeRequestCallCount()).To(Equal(1))
+				actualParams := requester.MakeRequestArgsForCall(0)
+				Expect(actualParams.RequestName).To(Equal(internal.PostApplicationRequest))
+				Expect(actualParams.RequestBody).To(Equal(appToCreate))
+				_, ok := actualParams.ResponseBody.(*resources.Application)
+				Expect(ok).To(BeTrue())
 			})
 
 			It("returns the created app and warnings", func() {
@@ -290,85 +286,123 @@ var _ = Describe("Application", func() {
 			})
 		})
 
-		When("the caller specifies a buildpack", func() {
+		When("cc returns back an error or warnings", func() {
 			BeforeEach(func() {
-				response := `{
-					"guid": "some-app-guid",
-					"name": "some-app-name",
-					"lifecycle": {
-						"type": "buildpack",
-						"data": {
-							"buildpacks": ["some-buildpack"]
-					  }
-					}
-				}`
-
-				expectedBody := map[string]interface{}{
-					"name": "some-app-name",
-					"lifecycle": map[string]interface{}{
-						"type": "buildpack",
-						"data": map[string]interface{}{
-							"buildpacks": []string{"some-buildpack"},
-						},
+				errors := []ccerror.V3Error{
+					{
+						Code:   10008,
+						Detail: "The request is semantically invalid: command presence",
+						Title:  "CF-UnprocessableEntity",
 					},
-					"relationships": map[string]interface{}{
-						"space": map[string]interface{}{
-							"data": map[string]string{
-								"guid": "some-space-guid",
-							},
-						},
+					{
+						Code:   10010,
+						Detail: "App not found",
+						Title:  "CF-ResourceNotFound",
 					},
 				}
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/apps"),
-						VerifyJSONRepresenting(expectedBody),
-						RespondWith(http.StatusCreated, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
+
+				requester.MakeRequestReturns(
+					"",
+					Warnings{"this is a warning"},
+					ccerror.MultiError{ResponseCode: http.StatusTeapot, Errors: errors},
 				)
-
-				appToCreate = resources.Application{
-					Name:                "some-app-name",
-					LifecycleType:       constant.AppLifecycleTypeBuildpack,
-					LifecycleBuildpacks: []string{"some-buildpack"},
-					SpaceGUID:           "some-space-guid",
-				}
 			})
 
-			It("returns the created app and warnings", func() {
+			It("returns the error and all warnings", func() {
+				Expect(executeErr).To(MatchError(ccerror.MultiError{
+					ResponseCode: http.StatusTeapot,
+					Errors: []ccerror.V3Error{
+						{
+							Code:   10008,
+							Detail: "The request is semantically invalid: command presence",
+							Title:  "CF-UnprocessableEntity",
+						},
+						{
+							Code:   10010,
+							Detail: "App not found",
+							Title:  "CF-ResourceNotFound",
+						},
+					},
+				}))
+				Expect(warnings).To(ConsistOf("this is a warning"))
+			})
+		})
+	})
+
+	Describe("GetApplicationByNameAndSpace", func() {
+		var (
+			appName   = "some-app-name"
+			spaceGUID = "some-space-guid"
+
+			app        resources.Application
+			warnings   Warnings
+			executeErr error
+		)
+
+		JustBeforeEach(func() {
+			app, warnings, executeErr = client.GetApplicationByNameAndSpace(appName, spaceGUID)
+		})
+
+		When("the application exists", func() {
+			BeforeEach(func() {
+				requester.MakeListRequestCalls(func(requestParams RequestParams) (IncludedResources, Warnings, error) {
+					err := requestParams.AppendToList(resources.Application{GUID: "app-guid-2"})
+					Expect(err).NotTo(HaveOccurred())
+					return IncludedResources{}, Warnings{"this is a warning"}, nil
+				})
+			})
+
+			It("makes the correct request", func() {
+				Expect(requester.MakeListRequestCallCount()).To(Equal(1))
+				actualParams := requester.MakeListRequestArgsForCall(0)
+				Expect(actualParams.RequestName).To(Equal(internal.GetApplicationsRequest))
+				Expect(actualParams.Query).To(Equal([]Query{
+					{Key: NameFilter, Values: []string{"some-app-name"}},
+					{Key: SpaceGUIDFilter, Values: []string{"some-space-guid"}},
+					{Key: PerPage, Values: []string{"1"}},
+					{Key: Page, Values: []string{"1"}},
+				}))
+				_, ok := actualParams.ResponseBody.(resources.Application)
+				Expect(ok).To(BeTrue())
+			})
+
+			It("returns the queried application and all warnings", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 				Expect(warnings).To(ConsistOf("this is a warning"))
-
-				Expect(createdApp).To(Equal(resources.Application{
-					Name:                "some-app-name",
-					GUID:                "some-app-guid",
-					LifecycleType:       constant.AppLifecycleTypeBuildpack,
-					LifecycleBuildpacks: []string{"some-buildpack"},
-				}))
+				Expect(app).To(Equal(resources.Application{GUID: "app-guid-2"}))
 			})
 		})
 
-		When("cc returns back an error or warnings", func() {
+		When("the application does not exist", func() {
 			BeforeEach(func() {
-				response := `{
-  "errors": [
-    {
-      "code": 10008,
-      "detail": "The request is semantically invalid: command presence",
-      "title": "CF-UnprocessableEntity"
-    },
-    {
-      "code": 10010,
-      "detail": "App not found",
-      "title": "CF-ResourceNotFound"
-    }
-  ]
-}`
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/apps"),
-						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
+				requester.MakeListRequestReturns(IncludedResources{}, Warnings{"this is a warning"}, nil)
+			})
+
+			It("returns an error and warnings", func() {
+				Expect(executeErr).To(MatchError(ccerror.ApplicationNotFoundError{Name: appName}))
+				Expect(warnings).To(ConsistOf("this is a warning"))
+			})
+		})
+
+		When("the cloud controller returns errors and warnings", func() {
+			BeforeEach(func() {
+				errors := []ccerror.V3Error{
+					{
+						Code:   10008,
+						Detail: "The request is semantically invalid: command presence",
+						Title:  "CF-UnprocessableEntity",
+					},
+					{
+						Code:   10010,
+						Detail: "App not found",
+						Title:  "CF-ResourceNotFound",
+					},
+				}
+
+				requester.MakeListRequestReturns(
+					IncludedResources{},
+					Warnings{"this is a warning"},
+					ccerror.MultiError{ResponseCode: http.StatusTeapot, Errors: errors},
 				)
 			})
 
@@ -408,53 +442,11 @@ var _ = Describe("Application", func() {
 
 		When("applications exist", func() {
 			BeforeEach(func() {
-				response1 := fmt.Sprintf(`{
-	"pagination": {
-		"next": {
-			"href": "%s/v3/apps?space_guids=some-space-guid&names=some-app-name&page=2&per_page=2"
-		}
-	},
-  "resources": [
-    {
-      "name": "app-name-1",
-      "guid": "app-guid-1",
-			"lifecycle": {
-				"type": "buildpack",
-				"data": {
-					"buildpacks": ["some-buildpack"],
-					"stack": "some-stack"
-				}
-			}
-    },
-    {
-      "name": "app-name-2",
-      "guid": "app-guid-2"
-    }
-  ]
-}`, server.URL())
-				response2 := `{
-	"pagination": {
-		"next": null
-	},
-	"resources": [
-	  {
-      "name": "app-name-3",
-		  "guid": "app-guid-3"
-		}
-	]
-}`
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodGet, "/v3/apps", "space_guids=some-space-guid&names=some-app-name"),
-						RespondWith(http.StatusOK, response1, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
-				)
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodGet, "/v3/apps", "space_guids=some-space-guid&names=some-app-name&page=2&per_page=2"),
-						RespondWith(http.StatusOK, response2, http.Header{"X-Cf-Warnings": {"this is another warning"}}),
-					),
-				)
+				requester.MakeListRequestCalls(func(requestParams RequestParams) (IncludedResources, Warnings, error) {
+					err := requestParams.AppendToList(resources.Application{GUID: "app-guid-1"})
+					Expect(err).NotTo(HaveOccurred())
+					return IncludedResources{}, Warnings{"this is a warning", "this is another warning"}, nil
+				})
 
 				filters = []Query{
 					{Key: SpaceGUIDFilter, Values: []string{"some-space-guid"}},
@@ -462,45 +454,42 @@ var _ = Describe("Application", func() {
 				}
 			})
 
+			It("makes the correct request", func() {
+				Expect(requester.MakeListRequestCallCount()).To(Equal(1))
+				actualParams := requester.MakeListRequestArgsForCall(0)
+				Expect(actualParams.RequestName).To(Equal(internal.GetApplicationsRequest))
+				Expect(actualParams.Query).To(Equal(filters))
+				_, ok := actualParams.ResponseBody.(resources.Application)
+				Expect(ok).To(BeTrue())
+			})
+
 			It("returns the queried applications and all warnings", func() {
 				Expect(executeErr).NotTo(HaveOccurred())
 				Expect(warnings).To(ConsistOf("this is a warning", "this is another warning"))
 
-				Expect(apps).To(ConsistOf(
-					resources.Application{
-						Name:                "app-name-1",
-						GUID:                "app-guid-1",
-						StackName:           "some-stack",
-						LifecycleType:       constant.AppLifecycleTypeBuildpack,
-						LifecycleBuildpacks: []string{"some-buildpack"},
-					},
-					resources.Application{Name: "app-name-2", GUID: "app-guid-2"},
-					resources.Application{Name: "app-name-3", GUID: "app-guid-3"},
-				))
+				Expect(apps).To(ConsistOf(resources.Application{GUID: "app-guid-1"}))
 			})
 		})
 
 		When("the cloud controller returns errors and warnings", func() {
 			BeforeEach(func() {
-				response := `{
-  "errors": [
-    {
-      "code": 10008,
-      "detail": "The request is semantically invalid: command presence",
-      "title": "CF-UnprocessableEntity"
-    },
-    {
-      "code": 10010,
-      "detail": "App not found",
-      "title": "CF-ResourceNotFound"
-    }
-  ]
-}`
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodGet, "/v3/apps"),
-						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
+				errors := []ccerror.V3Error{
+					{
+						Code:   10008,
+						Detail: "The request is semantically invalid: command presence",
+						Title:  "CF-UnprocessableEntity",
+					},
+					{
+						Code:   10010,
+						Detail: "App not found",
+						Title:  "CF-ResourceNotFound",
+					},
+				}
+
+				requester.MakeListRequestReturns(
+					IncludedResources{},
+					Warnings{"this is a warning"},
+					ccerror.MultiError{ResponseCode: http.StatusTeapot, Errors: errors},
 				)
 			})
 
@@ -540,42 +529,15 @@ var _ = Describe("Application", func() {
 
 		When("the application successfully is updated", func() {
 			BeforeEach(func() {
-				response := `{
-					"guid": "some-app-guid",
-					"name": "some-app-name",
-					"lifecycle": {
-						"type": "buildpack",
-						"data": {
-							"buildpacks": ["some-buildpack"],
-							"stack": "some-stack-name"
-						}
-					}
-				}`
-
-				expectedBody := map[string]interface{}{
-					"name": "some-app-name",
-					"lifecycle": map[string]interface{}{
-						"type": "buildpack",
-						"data": map[string]interface{}{
-							"buildpacks": []string{"some-buildpack"},
-							"stack":      "some-stack-name",
-						},
-					},
-					"relationships": map[string]interface{}{
-						"space": map[string]interface{}{
-							"data": map[string]string{
-								"guid": "some-space-guid",
-							},
-						},
-					},
-				}
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodPatch, "/v3/apps/some-app-guid"),
-						VerifyJSONRepresenting(expectedBody),
-						RespondWith(http.StatusOK, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
-				)
+				requester.MakeRequestCalls(func(requestParams RequestParams) (JobURL, Warnings, error) {
+					requestParams.ResponseBody.(*resources.Application).GUID = "some-app-guid"
+					requestParams.ResponseBody.(*resources.Application).Name = requestParams.RequestBody.(resources.Application).Name
+					requestParams.ResponseBody.(*resources.Application).StackName = requestParams.RequestBody.(resources.Application).StackName
+					requestParams.ResponseBody.(*resources.Application).LifecycleType = requestParams.RequestBody.(resources.Application).LifecycleType
+					requestParams.ResponseBody.(*resources.Application).LifecycleBuildpacks = requestParams.RequestBody.(resources.Application).LifecycleBuildpacks
+					requestParams.ResponseBody.(*resources.Application).SpaceGUID = requestParams.RequestBody.(resources.Application).SpaceGUID
+					return "", Warnings{"this is a warning"}, nil
+				})
 
 				appToUpdate = resources.Application{
 					GUID:                "some-app-guid",
@@ -585,6 +547,16 @@ var _ = Describe("Application", func() {
 					LifecycleBuildpacks: []string{"some-buildpack"},
 					SpaceGUID:           "some-space-guid",
 				}
+			})
+
+			It("makes the correct request", func() {
+				Expect(requester.MakeRequestCallCount()).To(Equal(1))
+				actualParams := requester.MakeRequestArgsForCall(0)
+				Expect(actualParams.RequestName).To(Equal(internal.PatchApplicationRequest))
+				Expect(actualParams.URIParams).To(Equal(internal.Params{"app_guid": "some-app-guid"}))
+				Expect(actualParams.RequestBody).To(Equal(appToUpdate))
+				_, ok := actualParams.ResponseBody.(*resources.Application)
+				Expect(ok).To(BeTrue())
 			})
 
 			It("returns the updated app and warnings", func() {
@@ -597,36 +569,129 @@ var _ = Describe("Application", func() {
 					LifecycleBuildpacks: []string{"some-buildpack"},
 					LifecycleType:       constant.AppLifecycleTypeBuildpack,
 					Name:                "some-app-name",
+					SpaceGUID:           "some-space-guid",
 				}))
 			})
 		})
 
 		When("cc returns back an error or warnings", func() {
 			BeforeEach(func() {
-				response := `{
-  "errors": [
-    {
-      "code": 10008,
-      "detail": "The request is semantically invalid: command presence",
-      "title": "CF-UnprocessableEntity"
-    },
-    {
-      "code": 10010,
-      "detail": "App not found",
-      "title": "CF-ResourceNotFound"
-    }
-  ]
-}`
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodPatch, "/v3/apps/some-app-guid"),
-						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
-				)
-
-				appToUpdate = resources.Application{
-					GUID: "some-app-guid",
+				errors := []ccerror.V3Error{
+					{
+						Code:   10008,
+						Detail: "The request is semantically invalid: command presence",
+						Title:  "CF-UnprocessableEntity",
+					},
+					{
+						Code:   10010,
+						Detail: "App not found",
+						Title:  "CF-ResourceNotFound",
+					},
 				}
+
+				requester.MakeRequestReturns(
+					"",
+					Warnings{"this is a warning"},
+					ccerror.MultiError{ResponseCode: http.StatusTeapot, Errors: errors},
+				)
+			})
+
+			It("returns the error and all warnings", func() {
+				Expect(executeErr).To(MatchError(ccerror.MultiError{
+					ResponseCode: http.StatusTeapot,
+					Errors: []ccerror.V3Error{
+						{
+							Code:   10008,
+							Detail: "The request is semantically invalid: command presence",
+							Title:  "CF-UnprocessableEntity",
+						},
+						{
+							Code:   10010,
+							Detail: "App not found",
+							Title:  "CF-ResourceNotFound",
+						},
+					},
+				}))
+				Expect(warnings).To(ConsistOf("this is a warning"))
+			})
+		})
+	})
+
+	Describe("UpdateApplicationName", func() {
+		var (
+			newAppName string
+			appGUID    string
+
+			updatedApp resources.Application
+			warnings   Warnings
+			executeErr error
+		)
+
+		JustBeforeEach(func() {
+			newAppName = "some-new-app-name"
+			appGUID = "some-app-guid"
+
+			updatedApp, warnings, executeErr = client.UpdateApplicationName(newAppName, appGUID)
+		})
+
+		When("the application successfully is updated", func() {
+			BeforeEach(func() {
+				requester.MakeRequestCalls(func(requestParams RequestParams) (JobURL, Warnings, error) {
+					requestParams.ResponseBody.(*resources.Application).GUID = appGUID
+					requestParams.ResponseBody.(*resources.Application).Name = requestParams.RequestBody.(resources.ApplicationNameOnly).Name
+					requestParams.ResponseBody.(*resources.Application).StackName = "some-stack-name"
+					requestParams.ResponseBody.(*resources.Application).LifecycleType = constant.AppLifecycleTypeBuildpack
+					requestParams.ResponseBody.(*resources.Application).LifecycleBuildpacks = []string{"some-buildpack"}
+					requestParams.ResponseBody.(*resources.Application).SpaceGUID = "some-space-guid"
+					return "", Warnings{"this is a warning"}, nil
+				})
+			})
+
+			It("makes the correct request", func() {
+				Expect(requester.MakeRequestCallCount()).To(Equal(1))
+				actualParams := requester.MakeRequestArgsForCall(0)
+				Expect(actualParams.RequestName).To(Equal(internal.PatchApplicationRequest))
+				Expect(actualParams.URIParams).To(Equal(internal.Params{"app_guid": "some-app-guid"}))
+				Expect(actualParams.RequestBody).To(Equal(resources.ApplicationNameOnly{Name: newAppName}))
+				_, ok := actualParams.ResponseBody.(*resources.Application)
+				Expect(ok).To(BeTrue())
+			})
+
+			It("returns the updated app and warnings", func() {
+				Expect(executeErr).NotTo(HaveOccurred())
+				Expect(warnings).To(ConsistOf("this is a warning"))
+
+				Expect(updatedApp).To(Equal(resources.Application{
+					GUID:                "some-app-guid",
+					StackName:           "some-stack-name",
+					LifecycleBuildpacks: []string{"some-buildpack"},
+					LifecycleType:       constant.AppLifecycleTypeBuildpack,
+					Name:                "some-new-app-name",
+					SpaceGUID:           "some-space-guid",
+				}))
+			})
+		})
+
+		When("cc returns back an error or warnings", func() {
+			BeforeEach(func() {
+				errors := []ccerror.V3Error{
+					{
+						Code:   10008,
+						Detail: "The request is semantically invalid: command presence",
+						Title:  "CF-UnprocessableEntity",
+					},
+					{
+						Code:   10010,
+						Detail: "App not found",
+						Title:  "CF-ResourceNotFound",
+					},
+				}
+
+				requester.MakeRequestReturns(
+					"",
+					Warnings{"this is a warning"},
+					ccerror.MultiError{ResponseCode: http.StatusTeapot, Errors: errors},
+				)
 			})
 
 			It("returns the error and all warnings", func() {
@@ -663,18 +728,21 @@ var _ = Describe("Application", func() {
 
 		When("the response succeeds", func() {
 			BeforeEach(func() {
-				response := `
-{
-	"guid": "some-app-guid",
-	"name": "some-app",
-	"state": "STOPPED"
-}`
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/apps/some-app-guid/actions/stop"),
-						RespondWith(http.StatusOK, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
-				)
+				requester.MakeRequestCalls(func(requestParams RequestParams) (JobURL, Warnings, error) {
+					requestParams.ResponseBody.(*resources.Application).GUID = "some-app-guid"
+					requestParams.ResponseBody.(*resources.Application).Name = "some-app"
+					requestParams.ResponseBody.(*resources.Application).State = constant.ApplicationStopped
+					return "", Warnings{"this is a warning"}, nil
+				})
+			})
+
+			It("makes the correct request", func() {
+				Expect(requester.MakeRequestCallCount()).To(Equal(1))
+				actualParams := requester.MakeRequestArgsForCall(0)
+				Expect(actualParams.RequestName).To(Equal(internal.PostApplicationActionStopRequest))
+				Expect(actualParams.URIParams).To(Equal(internal.Params{"app_guid": "some-app-guid"}))
+				_, ok := actualParams.ResponseBody.(*resources.Application)
+				Expect(ok).To(BeTrue())
 			})
 
 			It("returns the application, warnings, and no error", func() {
@@ -690,25 +758,23 @@ var _ = Describe("Application", func() {
 
 		When("the CC returns an error", func() {
 			BeforeEach(func() {
-				response := `{
-  "errors": [
-    {
-      "code": 10008,
-      "detail": "The request is semantically invalid: command presence",
-      "title": "CF-UnprocessableEntity"
-    },
-    {
-      "code": 10010,
-      "detail": "App not found",
-      "title": "CF-ResourceNotFound"
-    }
-  ]
-}`
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/apps/some-app-guid/actions/stop"),
-						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
+				errors := []ccerror.V3Error{
+					{
+						Code:   10008,
+						Detail: "The request is semantically invalid: command presence",
+						Title:  "CF-UnprocessableEntity",
+					},
+					{
+						Code:   10010,
+						Detail: "App not found",
+						Title:  "CF-ResourceNotFound",
+					},
+				}
+
+				requester.MakeRequestReturns(
+					"",
+					Warnings{"this is a warning"},
+					ccerror.MultiError{ResponseCode: http.StatusTeapot, Errors: errors},
 				)
 			})
 
@@ -735,58 +801,62 @@ var _ = Describe("Application", func() {
 
 	Describe("UpdateApplicationStart", func() {
 		var (
-			app        resources.Application
-			warnings   Warnings
-			executeErr error
+			responseApp resources.Application
+			warnings    Warnings
+			executeErr  error
 		)
 
 		JustBeforeEach(func() {
-			app, warnings, executeErr = client.UpdateApplicationStart("some-app-guid")
+			responseApp, warnings, executeErr = client.UpdateApplicationStart("some-app-guid")
 		})
 
 		When("the response succeeds", func() {
 			BeforeEach(func() {
-				response := `
-{
-	"guid": "some-app-guid",
-	"name": "some-app"
-}`
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/apps/some-app-guid/actions/start"),
-						RespondWith(http.StatusOK, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
-				)
+				requester.MakeRequestCalls(func(requestParams RequestParams) (JobURL, Warnings, error) {
+					requestParams.ResponseBody.(*resources.Application).GUID = "some-app-guid"
+					requestParams.ResponseBody.(*resources.Application).Name = "some-app"
+					return "", Warnings{"this is a warning"}, nil
+				})
+			})
+
+			It("makes the correct request", func() {
+				Expect(requester.MakeRequestCallCount()).To(Equal(1))
+				actualParams := requester.MakeRequestArgsForCall(0)
+				Expect(actualParams.RequestName).To(Equal(internal.PostApplicationActionStartRequest))
+				Expect(actualParams.URIParams).To(Equal(internal.Params{"app_guid": "some-app-guid"}))
+				_, ok := actualParams.ResponseBody.(*resources.Application)
+				Expect(ok).To(BeTrue())
 			})
 
 			It("returns warnings and no error", func() {
 				Expect(executeErr).ToNot(HaveOccurred())
 				Expect(warnings).To(ConsistOf("this is a warning"))
-				Expect(app.GUID).To(Equal("some-app-guid"))
+				Expect(responseApp).To(Equal(resources.Application{
+					GUID: "some-app-guid",
+					Name: "some-app",
+				}))
 			})
 		})
 
 		When("cc returns back an error or warnings", func() {
 			BeforeEach(func() {
-				response := `{
-  "errors": [
-    {
-      "code": 10008,
-      "detail": "The request is semantically invalid: command presence",
-      "title": "CF-UnprocessableEntity"
-    },
-    {
-      "code": 10010,
-      "detail": "App not found",
-      "title": "CF-ResourceNotFound"
-    }
-  ]
-}`
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/apps/some-app-guid/actions/start"),
-						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
+				errors := []ccerror.V3Error{
+					{
+						Code:   10008,
+						Detail: "The request is semantically invalid: command presence",
+						Title:  "CF-UnprocessableEntity",
+					},
+					{
+						Code:   10010,
+						Detail: "App not found",
+						Title:  "CF-ResourceNotFound",
+					},
+				}
+
+				requester.MakeRequestReturns(
+					"",
+					Warnings{"this is a warning"},
+					ccerror.MultiError{ResponseCode: http.StatusTeapot, Errors: errors},
 				)
 			})
 
@@ -824,18 +894,21 @@ var _ = Describe("Application", func() {
 
 		When("the response succeeds", func() {
 			BeforeEach(func() {
-				response := `
-{
-	"guid": "some-app-guid",
-	"name": "some-app",
-	"state": "STARTED"
-}`
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/apps/some-app-guid/actions/restart"),
-						RespondWith(http.StatusOK, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
-				)
+				requester.MakeRequestCalls(func(requestParams RequestParams) (JobURL, Warnings, error) {
+					requestParams.ResponseBody.(*resources.Application).GUID = "some-app-guid"
+					requestParams.ResponseBody.(*resources.Application).Name = "some-app"
+					requestParams.ResponseBody.(*resources.Application).State = constant.ApplicationStarted
+					return "", Warnings{"this is a warning"}, nil
+				})
+			})
+
+			It("makes the correct request", func() {
+				Expect(requester.MakeRequestCallCount()).To(Equal(1))
+				actualParams := requester.MakeRequestArgsForCall(0)
+				Expect(actualParams.RequestName).To(Equal(internal.PostApplicationActionRestartRequest))
+				Expect(actualParams.URIParams).To(Equal(internal.Params{"app_guid": "some-app-guid"}))
+				_, ok := actualParams.ResponseBody.(*resources.Application)
+				Expect(ok).To(BeTrue())
 			})
 
 			It("returns the application, warnings, and no error", func() {
@@ -851,25 +924,23 @@ var _ = Describe("Application", func() {
 
 		When("the CC returns an error", func() {
 			BeforeEach(func() {
-				response := `{
-  "errors": [
-    {
-      "code": 10008,
-      "detail": "The request is semantically invalid: command presence",
-      "title": "CF-UnprocessableEntity"
-    },
-    {
-      "code": 10010,
-      "detail": "App not found",
-      "title": "CF-ResourceNotFound"
-    }
-  ]
-}`
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodPost, "/v3/apps/some-app-guid/actions/restart"),
-						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
+				errors := []ccerror.V3Error{
+					{
+						Code:   10008,
+						Detail: "The request is semantically invalid: command presence",
+						Title:  "CF-UnprocessableEntity",
+					},
+					{
+						Code:   10010,
+						Detail: "App not found",
+						Title:  "CF-ResourceNotFound",
+					},
+				}
+
+				requester.MakeRequestReturns(
+					"",
+					Warnings{"this is a warning"},
+					ccerror.MultiError{ResponseCode: http.StatusTeapot, Errors: errors},
 				)
 			})
 

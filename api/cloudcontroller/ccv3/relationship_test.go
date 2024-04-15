@@ -7,6 +7,7 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	. "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/ghttp"
@@ -79,85 +80,6 @@ var _ = Describe("Relationship", func() {
 				Expect(relationship).To(Equal(resources.Relationship{
 					GUID: "some-isolation-segment-guid",
 				}))
-			})
-		})
-	})
-
-	Describe("DeleteServiceInstanceRelationshipsSharedSpace", func() {
-		var (
-			serviceInstanceGUID string
-			spaceGUID           string
-
-			warnings   Warnings
-			executeErr error
-		)
-
-		BeforeEach(func() {
-			serviceInstanceGUID = "some-service-instance-guid"
-			spaceGUID = "some-space-guid"
-		})
-
-		JustBeforeEach(func() {
-			warnings, executeErr = client.DeleteServiceInstanceRelationshipsSharedSpace(serviceInstanceGUID, spaceGUID)
-		})
-
-		When("no errors occur deleting the shared space relationship", func() {
-			BeforeEach(func() {
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodDelete, "/v3/service_instances/some-service-instance-guid/relationships/shared_spaces/some-space-guid"),
-						RespondWith(http.StatusNoContent, "{}", http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
-				)
-			})
-
-			It("does not return any errors and returns all warnings", func() {
-				Expect(executeErr).NotTo(HaveOccurred())
-				Expect(warnings).To(ConsistOf("this is a warning"))
-			})
-		})
-
-		When("an error occurs deleting the shared space relationship", func() {
-			BeforeEach(func() {
-				response := `{
-						"errors": [
-							{
-								"code": 10008,
-								"detail": "The request is semantically invalid: command presence",
-								"title": "CF-UnprocessableEntity"
-							},
-							{
-								"code": 10008,
-								"detail": "The request is semantically invalid: command presence",
-								"title": "CF-UnprocessableEntity"
-							}
-						]
-					}`
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodDelete, "/v3/service_instances/some-service-instance-guid/relationships/shared_spaces/some-space-guid"),
-						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
-					),
-				)
-			})
-
-			It("returns the errors and all warnings", func() {
-				Expect(executeErr).To(MatchError(ccerror.MultiError{
-					ResponseCode: http.StatusTeapot,
-					Errors: []ccerror.V3Error{
-						{
-							Code:   10008,
-							Detail: "The request is semantically invalid: command presence",
-							Title:  "CF-UnprocessableEntity",
-						},
-						{
-							Code:   10008,
-							Detail: "The request is semantically invalid: command presence",
-							Title:  "CF-UnprocessableEntity",
-						},
-					},
-				}))
-				Expect(warnings).To(ConsistOf("this is a warning"))
 			})
 		})
 	})
@@ -349,7 +271,7 @@ var _ = Describe("Relationship", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(warnings).To(ConsistOf("this is a warning"))
 
-				Expect(server.ReceivedRequests()).To(HaveLen(3))
+				Expect(server.ReceivedRequests()).To(HaveLen(1))
 			})
 		})
 

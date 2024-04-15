@@ -1,13 +1,14 @@
 package v7action
 
 import (
-	"gopkg.in/cheggaaa/pb.v1"
 	"io"
 	"os"
 	"time"
+
+	"gopkg.in/cheggaaa/pb.v1"
 )
 
-//go:generate counterfeiter . SimpleProgressBar
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . SimpleProgressBar
 
 type SimpleProgressBar interface {
 	Initialize(path string) (io.Reader, int64, error)

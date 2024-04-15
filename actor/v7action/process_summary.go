@@ -6,12 +6,15 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 	log "github.com/sirupsen/logrus"
 )
 
 // ProcessSummary represents a process with instance details.
 type ProcessSummary struct {
-	Process
+	resources.Process
+
+	Sidecars []resources.Sidecar
 
 	InstanceDetails []ProcessInstance
 }
@@ -83,9 +86,9 @@ func (actor Actor) getProcessSummariesForApp(appGUID string, withObfuscatedValue
 
 	var processSummaries ProcessSummaries
 	for _, ccv3Process := range ccv3Processes {
-		process := Process(ccv3Process)
+		process := resources.Process(ccv3Process)
 		if withObfuscatedValues {
-			fullProcess, warnings, err := actor.GetProcessByTypeAndApplication(ccv3Process.Type, appGUID)
+			fullProcess, warnings, err := actor.GetProcess(ccv3Process.GUID)
 			allWarnings = append(allWarnings, warnings...)
 			if err != nil {
 				return nil, allWarnings, err
@@ -106,9 +109,15 @@ func (actor Actor) getProcessSummariesForApp(appGUID string, withObfuscatedValue
 	return processSummaries, allWarnings, nil
 }
 
-func (actor Actor) getProcessSummary(process Process) (ProcessSummary, Warnings, error) {
-	instances, warnings, err := actor.CloudControllerClient.GetProcessInstances(process.GUID)
+func (actor Actor) getProcessSummary(process resources.Process) (ProcessSummary, Warnings, error) {
+	sidecars, warnings, err := actor.CloudControllerClient.GetProcessSidecars(process.GUID)
 	allWarnings := Warnings(warnings)
+	if err != nil {
+		return ProcessSummary{}, allWarnings, err
+	}
+
+	instances, warnings, err := actor.CloudControllerClient.GetProcessInstances(process.GUID)
+	allWarnings = append(allWarnings, Warnings(warnings)...)
 	if err != nil {
 		return ProcessSummary{}, allWarnings, err
 	}
@@ -116,8 +125,12 @@ func (actor Actor) getProcessSummary(process Process) (ProcessSummary, Warnings,
 	processSummary := ProcessSummary{
 		Process: process,
 	}
+	for _, sidecar := range sidecars {
+		processSummary.Sidecars = append(processSummary.Sidecars, resources.Sidecar(sidecar))
+	}
 	for _, instance := range instances {
 		processSummary.InstanceDetails = append(processSummary.InstanceDetails, ProcessInstance(instance))
 	}
+
 	return processSummary, allWarnings, nil
 }

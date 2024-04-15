@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,7 +25,67 @@ var _ = Describe("Process Actions", func() {
 
 	BeforeEach(func() {
 		fakeCloudControllerClient = new(v7actionfakes.FakeCloudControllerClient)
-		actor = NewActor(fakeCloudControllerClient, nil, nil, nil)
+		actor = NewActor(fakeCloudControllerClient, nil, nil, nil, nil, nil)
+	})
+
+	Describe("GetProcess", func() {
+		var (
+			processGUID string
+
+			process  resources.Process
+			warnings Warnings
+			err      error
+		)
+
+		BeforeEach(func() {
+			processGUID = "some-process-guid"
+		})
+
+		JustBeforeEach(func() {
+			process, warnings, err = actor.GetProcess(processGUID)
+		})
+
+		When("getting the process is successful", func() {
+			BeforeEach(func() {
+				fakeCloudControllerClient.GetProcessReturns(
+					resources.Process{
+						GUID: "some-process-guid",
+					},
+					ccv3.Warnings{"some-process-warning"},
+					nil,
+				)
+			})
+
+			It("returns the process and warnings", func() {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(warnings).To(ConsistOf("some-process-warning"))
+				Expect(process).To(Equal(resources.Process{
+					GUID: "some-process-guid",
+				}))
+
+				Expect(fakeCloudControllerClient.GetProcessCallCount()).To(Equal(1))
+				passedProcessGUID := fakeCloudControllerClient.GetProcessArgsForCall(0)
+				Expect(passedProcessGUID).To(Equal("some-process-guid"))
+			})
+		})
+
+		When("getting application process by type returns an error", func() {
+			var expectedErr error
+
+			BeforeEach(func() {
+				expectedErr = errors.New("some-error")
+				fakeCloudControllerClient.GetProcessReturns(
+					resources.Process{},
+					ccv3.Warnings{"some-process-warning"},
+					expectedErr,
+				)
+			})
+
+			It("returns the error and warnings", func() {
+				Expect(err).To(Equal(expectedErr))
+				Expect(warnings).To(ConsistOf("some-process-warning"))
+			})
+		})
 	})
 
 	Describe("GetProcessByTypeAndApplication", func() {
@@ -32,7 +93,7 @@ var _ = Describe("Process Actions", func() {
 			processType string
 			appGUID     string
 
-			process  Process
+			process  resources.Process
 			warnings Warnings
 			err      error
 		)
@@ -60,7 +121,7 @@ var _ = Describe("Process Actions", func() {
 			It("returns the process and warnings", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(warnings).To(ConsistOf("some-process-warning"))
-				Expect(process).To(Equal(Process{
+				Expect(process).To(Equal(resources.Process{
 					GUID: "some-process-guid",
 				}))
 
@@ -109,13 +170,13 @@ var _ = Describe("Process Actions", func() {
 
 	Describe("ScaleProcessByApplication", func() {
 		var (
-			passedProcess Process
+			passedProcess resources.Process
 			warnings      Warnings
 			executeErr    error
 		)
 
 		BeforeEach(func() {
-			passedProcess = Process{
+			passedProcess = resources.Process{
 				Type:       constant.ProcessTypeWeb,
 				Instances:  types.NullInt{Value: 2, IsSet: true},
 				MemoryInMB: types.NullUint64{Value: 100, IsSet: true},
@@ -188,7 +249,7 @@ var _ = Describe("Process Actions", func() {
 		var (
 			processType  string
 			appGUID      string
-			inputProcess Process
+			inputProcess resources.Process
 
 			warnings Warnings
 			err      error
@@ -197,7 +258,7 @@ var _ = Describe("Process Actions", func() {
 		BeforeEach(func() {
 			processType = "web"
 			appGUID = "some-app-guid"
-			inputProcess = Process{}
+			inputProcess = resources.Process{}
 		})
 
 		JustBeforeEach(func() {

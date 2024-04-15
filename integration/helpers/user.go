@@ -8,13 +8,16 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
+const NonUAAOrigin = "cli-oidc-provider"
+
 type User struct {
 	GUID      string
 	Username  string
+	Origin    string
 	CreatedAt time.Time
 }
 
-// GetUsers returns all the users in the targeted environment
+// ListUsers returns all the users in the targeted environment.
 func GetUsers() []User {
 	var userPagesResponse struct {
 		NextURL   *string `json:"next_url"`
@@ -55,6 +58,44 @@ func GetUsers() []User {
 	return allUsers
 }
 
+func GetUsersV3() []User {
+	var userPagesResponse struct {
+		Pagination struct {
+			NextURL *string `json:"next_url"`
+		} `json:"pagination"`
+		Resources []struct {
+			GUID     string `json:"guid"`
+			Origin   string `json:"origin"`
+			Username string `json:"username"`
+		} `json:"resources"`
+	}
+
+	var allUsers []User
+	nextURL := "/v3/users?per_page=50"
+
+	for {
+		session := CF("curl", nextURL)
+		Eventually(session).Should(Exit(0))
+
+		err := json.Unmarshal(session.Out.Contents(), &userPagesResponse)
+		Expect(err).NotTo(HaveOccurred())
+		for _, resource := range userPagesResponse.Resources {
+			allUsers = append(allUsers, User{
+				Origin:   resource.Origin,
+				Username: resource.Username,
+			})
+		}
+
+		if userPagesResponse.Pagination.NextURL == nil {
+			break
+		}
+		nextURL = *userPagesResponse.Pagination.NextURL
+	}
+
+	return allUsers
+}
+
+// CreateUser creates a user with a random username and password and returns both.
 func CreateUser() (string, string) {
 	username := NewUsername()
 	password := RandomName()
@@ -70,11 +111,14 @@ func CreateUser() (string, string) {
 	return username, password
 }
 
+// DeleteUser deletes the user specified by username.
 func DeleteUser(username string) {
 	session := CF("delete-user", username, "-f")
 	Eventually(session).Should(Exit(0))
 }
 
+// CreateUserInOrgRole creates a user with a random username and password and gives them the specified role within
+// a specific org. The new user's username and password are returned.
 func CreateUserInOrgRole(org, role string) (string, string) {
 	username, password := CreateUser()
 
@@ -84,6 +128,8 @@ func CreateUserInOrgRole(org, role string) (string, string) {
 	return username, password
 }
 
+// CreateUserInSpaceRole creates a user with a random username and password and gives them the specified role within
+// a specific space. The new user's username and password are returned.
 func CreateUserInSpaceRole(org, space, role string) (string, string) {
 	username, password := CreateUser()
 
