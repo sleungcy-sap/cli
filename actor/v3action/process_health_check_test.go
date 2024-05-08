@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -69,7 +70,7 @@ var _ = Describe("Process Health Check Actions", func() {
 		When("application does not exist", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{},
+					[]resources.Application{},
 					ccv3.Warnings{"some-warning"},
 					nil,
 				)
@@ -87,7 +88,7 @@ var _ = Describe("Process Health Check Actions", func() {
 			BeforeEach(func() {
 				expectedErr = errors.New("some-error")
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{},
+					[]resources.Application{},
 					ccv3.Warnings{"some-warning"},
 					expectedErr,
 				)
@@ -102,7 +103,7 @@ var _ = Describe("Process Health Check Actions", func() {
 		When("application exists", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{
+					[]resources.Application{
 						{
 							GUID: "some-app-guid",
 						},
@@ -118,7 +119,7 @@ var _ = Describe("Process Health Check Actions", func() {
 				BeforeEach(func() {
 					expectedErr = errors.New("some-error")
 					fakeCloudControllerClient.GetApplicationProcessesReturns(
-						[]ccv3.Process{},
+						[]resources.Process{},
 						ccv3.Warnings{"some-process-warning"},
 						expectedErr,
 					)
@@ -133,7 +134,7 @@ var _ = Describe("Process Health Check Actions", func() {
 			When("application has processes", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.GetApplicationProcessesReturns(
-						[]ccv3.Process{
+						[]resources.Process{
 							{
 								GUID:                         "process-guid-1",
 								Type:                         "process-type-1",
@@ -215,7 +216,7 @@ var _ = Describe("Process Health Check Actions", func() {
 		When("application does not exist", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{},
+					[]resources.Application{},
 					ccv3.Warnings{"some-warning"},
 					nil,
 				)
@@ -236,7 +237,7 @@ var _ = Describe("Process Health Check Actions", func() {
 			BeforeEach(func() {
 				expectedErr = errors.New("some-error")
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{},
+					[]resources.Application{},
 					ccv3.Warnings{"some-warning"},
 					expectedErr,
 				)
@@ -249,15 +250,15 @@ var _ = Describe("Process Health Check Actions", func() {
 		})
 
 		When("application exists", func() {
-			var ccv3App ccv3.Application
+			var ccv3App resources.Application
 
 			BeforeEach(func() {
-				ccv3App = ccv3.Application{
+				ccv3App = resources.Application{
 					GUID: "some-app-guid",
 				}
 
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{ccv3App},
+					[]resources.Application{ccv3App},
 					ccv3.Warnings{"some-warning"},
 					nil,
 				)
@@ -269,7 +270,7 @@ var _ = Describe("Process Health Check Actions", func() {
 				When("the api returns a ProcessNotFoundError", func() {
 					BeforeEach(func() {
 						fakeCloudControllerClient.GetApplicationProcessByTypeReturns(
-							ccv3.Process{},
+							resources.Process{},
 							ccv3.Warnings{"some-process-warning"},
 							ccerror.ProcessNotFoundError{},
 						)
@@ -285,7 +286,7 @@ var _ = Describe("Process Health Check Actions", func() {
 					BeforeEach(func() {
 						expectedErr = errors.New("some-error")
 						fakeCloudControllerClient.GetApplicationProcessByTypeReturns(
-							ccv3.Process{},
+							resources.Process{},
 							ccv3.Warnings{"some-process-warning"},
 							expectedErr,
 						)
@@ -301,7 +302,7 @@ var _ = Describe("Process Health Check Actions", func() {
 			When("application process exists", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.GetApplicationProcessByTypeReturns(
-						ccv3.Process{
+						resources.Process{
 							GUID: "some-process-guid",
 						},
 						ccv3.Warnings{"some-process-warning"},
@@ -315,7 +316,7 @@ var _ = Describe("Process Health Check Actions", func() {
 					BeforeEach(func() {
 						expectedErr = errors.New("some-error")
 						fakeCloudControllerClient.UpdateProcessReturns(
-							ccv3.Process{},
+							resources.Process{},
 							ccv3.Warnings{"some-health-check-warning"},
 							expectedErr,
 						)
@@ -330,7 +331,7 @@ var _ = Describe("Process Health Check Actions", func() {
 				When("setting process health check type succeeds", func() {
 					BeforeEach(func() {
 						fakeCloudControllerClient.UpdateProcessReturns(
-							ccv3.Process{GUID: "some-process-guid"},
+							resources.Process{GUID: "some-process-guid"},
 							ccv3.Warnings{"some-health-check-warning"},
 							nil,
 						)

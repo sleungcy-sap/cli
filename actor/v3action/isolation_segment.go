@@ -4,6 +4,7 @@ import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 )
 
 type IsolationSegmentSummary struct {
@@ -12,7 +13,7 @@ type IsolationSegmentSummary struct {
 }
 
 // IsolationSegment represents a V3 actor IsolationSegment.
-type IsolationSegment ccv3.IsolationSegment
+type IsolationSegment resources.IsolationSegment
 
 // GetEffectiveIsolationSegmentBySpace returns the space's effective isolation
 // segment.
@@ -51,7 +52,7 @@ func (actor Actor) GetEffectiveIsolationSegmentBySpace(spaceGUID string, orgDefa
 
 // CreateIsolationSegmentByName creates a given isolation segment.
 func (actor Actor) CreateIsolationSegmentByName(isolationSegment IsolationSegment) (Warnings, error) {
-	_, warnings, err := actor.CloudControllerClient.CreateIsolationSegment(ccv3.IsolationSegment(isolationSegment))
+	_, warnings, err := actor.CloudControllerClient.CreateIsolationSegment(resources.IsolationSegment(isolationSegment))
 	if _, ok := err.(ccerror.UnprocessableEntityError); ok {
 		return Warnings(warnings), actionerror.IsolationSegmentAlreadyExistsError{Name: isolationSegment.Name}
 	}
@@ -148,7 +149,7 @@ func (actor Actor) GetIsolationSegmentSummaries() ([]IsolationSegmentSummary, Wa
 
 func (actor Actor) GetIsolationSegmentsByOrganization(orgGUID string) ([]IsolationSegment, Warnings, error) {
 	ccv3IsolationSegments, warnings, err := actor.CloudControllerClient.GetIsolationSegments(
-		ccv3.Query{Key: ccv3.OrganizationGUIDFilter, Values: []string{orgGUID}},
+		ccv3.Query{Key: resources.OrganizationGUIDFilter, Values: []string{orgGUID}},
 	)
 	if err != nil {
 		return []IsolationSegment{}, Warnings(warnings), err

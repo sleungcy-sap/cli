@@ -1,10 +1,11 @@
 package v7action_test
 
 import (
-	"code.cloudfoundry.org/cli/resources"
 	"errors"
 	"io"
 	"strings"
+
+	"code.cloudfoundry.org/cli/resources"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/actor/sharedaction"

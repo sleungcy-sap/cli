@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/cli/actor/v3action/v3actionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -28,7 +29,7 @@ var _ = Describe("Space", func() {
 		When("the organization does not have a default isolation segment", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.UpdateSpaceIsolationSegmentRelationshipReturns(
-					ccv3.Relationship{GUID: ""},
+					resources.Relationship{GUID: ""},
 					ccv3.Warnings{"warning-1", "warning-2"}, nil)
 			})
 
@@ -55,13 +56,13 @@ var _ = Describe("Space", func() {
 		When("the organization has a default isolation segment", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.UpdateSpaceIsolationSegmentRelationshipReturns(
-					ccv3.Relationship{GUID: ""},
+					resources.Relationship{GUID: ""},
 					ccv3.Warnings{"warning-1", "warning-2"}, nil)
 				fakeCloudControllerClient.GetOrganizationDefaultIsolationSegmentReturns(
-					ccv3.Relationship{GUID: "some-iso-guid"},
+					resources.Relationship{GUID: "some-iso-guid"},
 					ccv3.Warnings{"warning-3", "warning-4"}, nil)
 				fakeCloudControllerClient.GetIsolationSegmentReturns(
-					ccv3.IsolationSegment{Name: "some-iso-name"},
+					resources.IsolationSegment{Name: "some-iso-name"},
 					ccv3.Warnings{"warning-5", "warning-6"}, nil)
 			})
 
@@ -93,7 +94,7 @@ var _ = Describe("Space", func() {
 			BeforeEach(func() {
 				expectedErr = errors.New("some error")
 				fakeCloudControllerClient.UpdateSpaceIsolationSegmentRelationshipReturns(
-					ccv3.Relationship{GUID: ""},
+					resources.Relationship{GUID: ""},
 					ccv3.Warnings{"warning-1", "warning-2"}, expectedErr)
 			})
 
@@ -110,10 +111,10 @@ var _ = Describe("Space", func() {
 			BeforeEach(func() {
 				expectedErr = errors.New("some error")
 				fakeCloudControllerClient.UpdateSpaceIsolationSegmentRelationshipReturns(
-					ccv3.Relationship{GUID: ""},
+					resources.Relationship{GUID: ""},
 					ccv3.Warnings{"warning-1", "warning-2"}, nil)
 				fakeCloudControllerClient.GetOrganizationDefaultIsolationSegmentReturns(
-					ccv3.Relationship{GUID: "some-iso-guid"},
+					resources.Relationship{GUID: "some-iso-guid"},
 					ccv3.Warnings{"warning-3", "warning-4"}, expectedErr)
 			})
 
@@ -130,13 +131,13 @@ var _ = Describe("Space", func() {
 			BeforeEach(func() {
 				expectedErr = errors.New("some error")
 				fakeCloudControllerClient.UpdateSpaceIsolationSegmentRelationshipReturns(
-					ccv3.Relationship{GUID: ""},
+					resources.Relationship{GUID: ""},
 					ccv3.Warnings{"warning-1", "warning-2"}, nil)
 				fakeCloudControllerClient.GetOrganizationDefaultIsolationSegmentReturns(
-					ccv3.Relationship{GUID: "some-iso-guid"},
+					resources.Relationship{GUID: "some-iso-guid"},
 					ccv3.Warnings{"warning-3", "warning-4"}, nil)
 				fakeCloudControllerClient.GetIsolationSegmentReturns(
-					ccv3.IsolationSegment{Name: "some-iso-name"},
+					resources.IsolationSegment{Name: "some-iso-name"},
 					ccv3.Warnings{"warning-5", "warning-6"}, expectedErr)
 			})
 
@@ -171,7 +172,7 @@ var _ = Describe("Space", func() {
 			When("the cloud controller returns back one space", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.GetSpacesReturns(
-						[]ccv3.Space{{GUID: "some-space-guid", Name: spaceName}},
+						[]resources.Space{{GUID: "some-space-guid", Name: spaceName}},
 						ccv3.Warnings{"some-space-warning"}, nil)
 				})
 
@@ -187,7 +188,7 @@ var _ = Describe("Space", func() {
 					Expect(fakeCloudControllerClient.GetSpacesCallCount()).To(Equal(1))
 					Expect(fakeCloudControllerClient.GetSpacesArgsForCall(0)).To(ConsistOf(
 						ccv3.Query{Key: ccv3.NameFilter, Values: []string{spaceName}},
-						ccv3.Query{Key: ccv3.OrganizationGUIDFilter, Values: []string{orgGUID}},
+						ccv3.Query{Key: resources.OrganizationGUIDFilter, Values: []string{orgGUID}},
 					))
 				})
 			})
@@ -244,19 +245,19 @@ var _ = Describe("Space", func() {
 				When("the cloud controller returns back multiple spaces", func() {
 					BeforeEach(func() {
 						fakeCloudControllerClient.GetSpacesReturns(
-							[]ccv3.Space{
+							[]resources.Space{
 								{
 									GUID: "space-guid-1",
 									Name: "space-1",
-									Relationships: ccv3.Relationships{
-										constant.RelationshipTypeOrganization: ccv3.Relationship{GUID: "org-guid-1"},
+									Relationships: resources.Relationships{
+										constant.RelationshipTypeOrganization: resources.Relationship{GUID: "org-guid-1"},
 									},
 								},
 								{
 									GUID: "space-guid-2",
 									Name: "space-2",
-									Relationships: ccv3.Relationships{
-										constant.RelationshipTypeOrganization: ccv3.Relationship{GUID: "org-guid-2"},
+									Relationships: resources.Relationships{
+										constant.RelationshipTypeOrganization: resources.Relationship{GUID: "org-guid-2"},
 									},
 								},
 							},
@@ -314,33 +315,33 @@ var _ = Describe("Space", func() {
 				When("the cloud controller returns back multiple spaces", func() {
 					BeforeEach(func() {
 						fakeCloudControllerClient.GetSpacesReturns(
-							[]ccv3.Space{
+							[]resources.Space{
 								{
 									GUID: "space-guid-1",
 									Name: "space-1",
-									Relationships: ccv3.Relationships{
-										constant.RelationshipTypeOrganization: ccv3.Relationship{GUID: "org-guid-1"},
+									Relationships: resources.Relationships{
+										constant.RelationshipTypeOrganization: resources.Relationship{GUID: "org-guid-1"},
 									},
 								},
 								{
 									GUID: "space-guid-2",
 									Name: "space-2",
-									Relationships: ccv3.Relationships{
-										constant.RelationshipTypeOrganization: ccv3.Relationship{GUID: "org-guid-2"},
+									Relationships: resources.Relationships{
+										constant.RelationshipTypeOrganization: resources.Relationship{GUID: "org-guid-2"},
 									},
 								},
 								{
 									GUID: "space-guid-3",
 									Name: "space-3",
-									Relationships: ccv3.Relationships{
-										constant.RelationshipTypeOrganization: ccv3.Relationship{GUID: "org-guid-3"},
+									Relationships: resources.Relationships{
+										constant.RelationshipTypeOrganization: resources.Relationship{GUID: "org-guid-3"},
 									},
 								},
 								{
 									GUID: "space-guid-4",
 									Name: "space-4",
-									Relationships: ccv3.Relationships{
-										constant.RelationshipTypeOrganization: ccv3.Relationship{GUID: "org-guid-4"},
+									Relationships: resources.Relationships{
+										constant.RelationshipTypeOrganization: resources.Relationship{GUID: "org-guid-4"},
 									},
 								},
 							},

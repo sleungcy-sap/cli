@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/cli/actor/sharedaction"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,7 +18,7 @@ const (
 	DefaultArchiveFilePermissions = 0744
 )
 
-type Package ccv3.Package
+type Package resources.Package
 
 type DockerImageCredentials struct {
 	Path     string
@@ -30,10 +31,10 @@ func (actor Actor) CreateDockerPackageByApplicationNameAndSpace(appName string, 
 	if err != nil {
 		return Package{}, allWarnings, err
 	}
-	inputPackage := ccv3.Package{
+	inputPackage := resources.Package{
 		Type: constant.PackageTypeDocker,
-		Relationships: ccv3.Relationships{
-			constant.RelationshipTypeApplication: ccv3.Relationship{GUID: app.GUID},
+		Relationships: resources.Relationships{
+			constant.RelationshipTypeApplication: resources.Relationship{GUID: app.GUID},
 		},
 		DockerImage:    dockerImageCredentials.Path,
 		DockerUsername: dockerImageCredentials.Username,
@@ -89,10 +90,10 @@ func (actor Actor) CreateAndUploadBitsPackageByApplicationNameAndSpace(appName s
 	}
 	defer os.RemoveAll(archivePath)
 
-	inputPackage := ccv3.Package{
+	inputPackage := resources.Package{
 		Type: constant.PackageTypeBits,
-		Relationships: ccv3.Relationships{
-			constant.RelationshipTypeApplication: ccv3.Relationship{GUID: app.GUID},
+		Relationships: resources.Relationships{
+			constant.RelationshipTypeApplication: resources.Relationship{GUID: app.GUID},
 		},
 	}
 
@@ -153,10 +154,10 @@ func (actor *Actor) GetApplicationPackages(appName string, spaceGUID string) ([]
 }
 
 func (actor Actor) CreateBitsPackageByApplication(appGUID string) (Package, Warnings, error) {
-	inputPackage := ccv3.Package{
+	inputPackage := resources.Package{
 		Type: constant.PackageTypeBits,
-		Relationships: ccv3.Relationships{
-			constant.RelationshipTypeApplication: ccv3.Relationship{GUID: appGUID},
+		Relationships: resources.Relationships{
+			constant.RelationshipTypeApplication: resources.Relationship{GUID: appGUID},
 		},
 	}
 
@@ -175,7 +176,7 @@ func (actor Actor) UploadBitsPackage(pkg Package, existingResources []sharedacti
 		apiResources = append(apiResources, ccv3.Resource(resource.ToV3Resource()))
 	}
 
-	appPkg, warnings, err := actor.CloudControllerClient.UploadBitsPackage(ccv3.Package(pkg), apiResources, newResources, newResourcesLength)
+	appPkg, warnings, err := actor.CloudControllerClient.UploadBitsPackage(resources.Package(pkg), apiResources, newResources, newResourcesLength)
 	return Package(appPkg), Warnings(warnings), err
 }
 

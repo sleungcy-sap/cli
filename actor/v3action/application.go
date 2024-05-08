@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 )
 
 // Application represents a V3 actor application.
@@ -104,13 +105,13 @@ func (actor Actor) GetApplicationsByGUIDs(appGUIDs ...string) ([]Application, Wa
 // name in the given space.
 func (actor Actor) CreateApplicationInSpace(app Application, spaceGUID string) (Application, Warnings, error) {
 	createdApp, warnings, err := actor.CloudControllerClient.CreateApplication(
-		ccv3.Application{
+		resources.Application{
 			LifecycleType:       app.LifecycleType,
 			LifecycleBuildpacks: app.LifecycleBuildpacks,
 			StackName:           app.StackName,
 			Name:                app.Name,
-			Relationships: ccv3.Relationships{
-				constant.RelationshipTypeSpace: ccv3.Relationship{GUID: spaceGUID},
+			Relationships: resources.Relationships{
+				constant.RelationshipTypeSpace: resources.Relationship{GUID: spaceGUID},
 			},
 		})
 
@@ -180,7 +181,7 @@ func (actor Actor) PollStart(appGUID string, warningsChannel chan<- Warnings) er
 
 // UpdateApplication updates the buildpacks on an application
 func (actor Actor) UpdateApplication(app Application) (Application, Warnings, error) {
-	ccApp := ccv3.Application{
+	ccApp := resources.Application{
 		GUID:                app.GUID,
 		StackName:           app.StackName,
 		LifecycleType:       app.LifecycleType,
@@ -195,7 +196,7 @@ func (actor Actor) UpdateApplication(app Application) (Application, Warnings, er
 	return actor.convertCCToActorApplication(updatedApp), Warnings(warnings), nil
 }
 
-func (Actor) convertCCToActorApplication(app ccv3.Application) Application {
+func (Actor) convertCCToActorApplication(app resources.Application) Application {
 	return Application{
 		GUID:                app.GUID,
 		StackName:           app.StackName,
@@ -207,7 +208,7 @@ func (Actor) convertCCToActorApplication(app ccv3.Application) Application {
 	}
 }
 
-func (actor Actor) processStatus(process ccv3.Process, warningsChannel chan<- Warnings) (bool, error) {
+func (actor Actor) processStatus(process resources.Process, warningsChannel chan<- Warnings) (bool, error) {
 	instances, warnings, err := actor.CloudControllerClient.GetProcessInstances(process.GUID)
 	warningsChannel <- Warnings(warnings)
 	if err != nil {

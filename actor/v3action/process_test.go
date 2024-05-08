@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 
 	. "github.com/onsi/ginkgo"
@@ -41,7 +42,7 @@ var _ = Describe("Process Actions", func() {
 		When("no errors are encountered scaling the application process", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.CreateApplicationProcessScaleReturns(
-					ccv3.Process{GUID: "some-process-guid"},
+					resources.Process{GUID: "some-process-guid"},
 					ccv3.Warnings{"scale-process-warning"},
 					nil)
 			})
@@ -55,7 +56,7 @@ var _ = Describe("Process Actions", func() {
 				Expect(fakeCloudControllerClient.CreateApplicationProcessScaleCallCount()).To(Equal(1))
 				appGUIDArg, processArg := fakeCloudControllerClient.CreateApplicationProcessScaleArgsForCall(0)
 				Expect(appGUIDArg).To(Equal("some-app-guid"))
-				Expect(processArg).To(Equal(ccv3.Process{
+				Expect(processArg).To(Equal(resources.Process{
 					Type:       constant.ProcessTypeWeb,
 					Instances:  passedProcess.Instances,
 					MemoryInMB: passedProcess.MemoryInMB,
@@ -70,7 +71,7 @@ var _ = Describe("Process Actions", func() {
 			BeforeEach(func() {
 				expectedErr = errors.New("scale process error")
 				fakeCloudControllerClient.CreateApplicationProcessScaleReturns(
-					ccv3.Process{GUID: "some-process-guid"},
+					resources.Process{GUID: "some-process-guid"},
 					ccv3.Warnings{"scale-process-warning"},
 					expectedErr)
 			})
@@ -85,7 +86,7 @@ var _ = Describe("Process Actions", func() {
 		When("a ProcessNotFoundError error is encountered scaling the application process", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.CreateApplicationProcessScaleReturns(
-					ccv3.Process{GUID: "some-process-guid"},
+					resources.Process{GUID: "some-process-guid"},
 					ccv3.Warnings{"scale-process-warning"},
 					ccerror.ProcessNotFoundError{},
 				)

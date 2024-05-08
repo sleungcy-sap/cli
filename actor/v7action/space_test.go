@@ -1,8 +1,9 @@
 package v7action_test
 
 import (
-	"code.cloudfoundry.org/cli/resources"
 	"errors"
+
+	"code.cloudfoundry.org/cli/resources"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	. "code.cloudfoundry.org/cli/actor/v7action"
@@ -187,7 +188,7 @@ var _ = Describe("Space", func() {
 					Expect(fakeCloudControllerClient.GetSpacesCallCount()).To(Equal(1))
 					Expect(fakeCloudControllerClient.GetSpacesArgsForCall(0)).To(ConsistOf(
 						ccv3.Query{Key: ccv3.NameFilter, Values: []string{spaceName}},
-						ccv3.Query{Key: ccv3.OrganizationGUIDFilter, Values: []string{orgGUID}},
+						ccv3.Query{Key: resources.OrganizationGUIDFilter, Values: []string{orgGUID}},
 					))
 				})
 			})
@@ -261,7 +262,7 @@ var _ = Describe("Space", func() {
 				Expect(fakeCloudControllerClient.GetSpacesArgsForCall(0)).To(Equal(
 					[]ccv3.Query{
 						{
-							Key:    ccv3.OrganizationGUIDFilter,
+							Key:    resources.OrganizationGUIDFilter,
 							Values: []string{"some-org-guid"},
 						},
 					}))

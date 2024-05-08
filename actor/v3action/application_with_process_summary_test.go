@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/cli/actor/v3action/v3actionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,7 +28,7 @@ var _ = Describe("Application with ProcessSummary Actions", func() {
 		When("there are apps", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{
+					[]resources.Application{
 						{
 							Name:  "some-app-name-1",
 							GUID:  "some-app-guid-1",
@@ -45,7 +46,7 @@ var _ = Describe("Application with ProcessSummary Actions", func() {
 
 				fakeCloudControllerClient.GetApplicationProcessesReturnsOnCall(
 					0,
-					[]ccv3.Process{
+					[]resources.Process{
 						{
 							GUID: "some-process-guid-1",
 							Type: "some-process-type-1",
@@ -60,7 +61,7 @@ var _ = Describe("Application with ProcessSummary Actions", func() {
 				)
 				fakeCloudControllerClient.GetApplicationProcessesReturnsOnCall(
 					1,
-					[]ccv3.Process{
+					[]resources.Process{
 						{
 							GUID: "some-process-guid-3",
 							Type: "some-process-type-3",
@@ -148,7 +149,7 @@ var _ = Describe("Application with ProcessSummary Actions", func() {
 
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{
+					[]resources.Application{
 						{
 							Name:  "some-app-name",
 							GUID:  "some-app-guid",
@@ -161,7 +162,7 @@ var _ = Describe("Application with ProcessSummary Actions", func() {
 
 				expectedErr = errors.New("some error")
 				fakeCloudControllerClient.GetApplicationProcessesReturns(
-					[]ccv3.Process{},
+					[]resources.Process{},
 					ccv3.Warnings{"some-process-warning"},
 					expectedErr,
 				)
@@ -179,7 +180,7 @@ var _ = Describe("Application with ProcessSummary Actions", func() {
 
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetApplicationsReturns(
-					[]ccv3.Application{
+					[]resources.Application{
 						{
 							Name:  "some-app-name",
 							GUID:  "some-app-guid",
@@ -191,7 +192,7 @@ var _ = Describe("Application with ProcessSummary Actions", func() {
 				)
 
 				fakeCloudControllerClient.GetApplicationProcessesReturns(
-					[]ccv3.Process{
+					[]resources.Process{
 						{
 							GUID: "some-process-guid",
 							Type: "some-type",
