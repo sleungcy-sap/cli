@@ -3,9 +3,10 @@ package v3action
 import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 )
 
-type ServiceInstance ccv3.ServiceInstance
+type ServiceInstance resources.ServiceInstance
 
 func (actor Actor) GetServiceInstanceByNameAndSpace(serviceInstanceName string, spaceGUID string) (ServiceInstance, Warnings, error) {
 	serviceInstances, warnings, err := actor.CloudControllerClient.GetServiceInstances(

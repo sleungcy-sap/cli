@@ -7,6 +7,7 @@ import (
 	. "code.cloudfoundry.org/cli/actor/v3action"
 	"code.cloudfoundry.org/cli/actor/v3action/v3actionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -45,7 +46,7 @@ var _ = Describe("Service Instance Actions", func() {
 		When("the cloud controller request is successful", func() {
 			When("the cloud controller returns one service instance", func() {
 				BeforeEach(func() {
-					fakeCloudControllerClient.GetServiceInstancesReturns([]ccv3.ServiceInstance{
+					fakeCloudControllerClient.GetServiceInstancesReturns([]resources.ServiceInstance{
 						{
 							Name: "some-service-instance",
 							GUID: "some-service-instance-guid",

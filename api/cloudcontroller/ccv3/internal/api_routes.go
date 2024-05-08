@@ -11,12 +11,22 @@ import "net/http"
 const (
 	DeleteApplicationProcessInstanceRequest                     = "DeleteApplicationProcessInstance"
 	DeleteApplicationRequest                                    = "DeleteApplication"
-	DeleteSharedOrgFromDomainRequest                            = "DeleteSharedOrgFromDomain"
 	DeleteBuildpackRequest                                      = "DeleteBuildpack"
 	DeleteDomainRequest                                         = "DeleteDomainRequest"
 	DeleteIsolationSegmentRelationshipOrganizationRequest       = "DeleteIsolationSegmentRelationshipOrganization"
 	DeleteIsolationSegmentRequest                               = "DeleteIsolationSegment"
+	DeleteRoleRequest                                           = "DeleteRoleRequest"
+	DeleteSecurityGroupRequest                                  = "DeleteSecurityGroup"
+	DeleteSecurityGroupRunningSpaceRequest                      = "DeleteSecurityGroupRunningSpace"
+	DeleteSecurityGroupStagingSpaceRequest                      = "DeleteSecurityGroupStagingSpace"
+	DeleteServiceBrokerRequest                                  = "DeleteServiceBrokerRequest"
 	DeleteServiceInstanceRelationshipsSharedSpaceRequest        = "DeleteServiceInstanceRelationshipsSharedSpace"
+	DeleteServicePlanVisibilityRequest                          = "DeleteServicePlanVisibility"
+	DeleteSharedOrgFromDomainRequest                            = "DeleteSharedOrgFromDomain"
+	DeleteSpaceQuotaFromSpaceRequest                            = "DeleteSpaceQuotaFromSpace"
+	DeleteSpaceQuotaRequest                                     = "DeleteSpaceQuota"
+	DeleteUserRequest                                           = "DeleteUser"
+	DeleteSidecarRequest                                        = "DeleteSidecar"
 	GetApplicationDropletCurrentRequest                         = "GetApplicationDropletCurrent"
 	GetApplicationEnvRequest                                    = "GetApplicationEnv"
 	GetApplicationManifestRequest                               = "GetApplicationManifest"
@@ -31,6 +41,7 @@ const (
 	GetDomainsRequest                                           = "GetDomains"
 	GetDropletRequest                                           = "GetDroplet"
 	GetDropletsRequest                                          = "GetDroplets"
+	GetEventsRequest                                            = "GetEvents"
 	GetFeatureFlagRequest                                       = "GetFeatureFlag"
 	GetFeatureFlagsRequest                                      = "GetFeatureFlags"
 	GetIsolationSegmentOrganizationsRequest                     = "GetIsolationSegmentOrganizations"
@@ -41,20 +52,42 @@ const (
 	GetOrganizationsRequest                                     = "GetOrganizations"
 	GetPackageRequest                                           = "GetPackage"
 	GetPackagesRequest                                          = "GetPackages"
+	GetProcessSidecarsRequest                                   = "GetProcessSidecars"
 	GetProcessStatsRequest                                      = "GetProcessStats"
+	GetRolesRequest                                             = "GetRoles"
+	GetSecurityGroupsRequest                                    = "GetSecurityGroups"
+	GetServiceBrokersRequest                                    = "GetServiceBrokers"
 	GetServiceInstancesRequest                                  = "GetServiceInstances"
+	GetServicePlanVisibilityRequest                             = "GetServicePlanVisibility"
+	GetSpaceFeatureRequest                                      = "GetSpaceFeatureRequest"
+	GetSpaceQuotaRequest                                        = "GetSpaceQuota"
+	GetSpaceQuotasRequest                                       = "GetSpaceQuotas"
 	GetSpaceRelationshipIsolationSegmentRequest                 = "GetSpaceRelationshipIsolationSegment"
+	GetSpaceRunningSecurityGroupsRequest                        = "GetSpaceRunningSecurityGroups"
 	GetSpacesRequest                                            = "GetSpaces"
+	GetSpaceStagingSecurityGroupsRequest                        = "GetSpaceStagingSecurityGroups"
 	GetStacksRequest                                            = "GetStacks"
+	GetUserRequest                                              = "GetUser"
+	GetUsersRequest                                             = "GetUsers"
+	GetSidecarRequest                                           = "GetSidecar"
 	PatchApplicationCurrentDropletRequest                       = "PatchApplicationCurrentDroplet"
 	PatchApplicationEnvironmentVariablesRequest                 = "PatchApplicationEnvironmentVariables"
 	PatchApplicationRequest                                     = "PatchApplication"
 	PatchBuildpackRequest                                       = "PatchBuildpack"
+	PatchDomainRequest                                          = "PatchDomain"
 	PatchFeatureFlagRequest                                     = "PatchFeatureFlag"
-	PatchOrganizationRequest                                    = "PatchOrganization"
 	PatchOrganizationRelationshipDefaultIsolationSegmentRequest = "PatchOrganizationRelationshipDefaultIsolationSegment"
+	PatchOrganizationRequest                                    = "PatchOrganization"
 	PatchProcessRequest                                         = "PatchProcess"
+	PatchSecurityGroupRequest                                   = "PatchSecurityGroup"
+	PatchServiceBrokerRequest                                   = "PatchServiceBrokerRequest"
+	PatchServiceOfferingRequest                                 = "PatchServiceOfferingRequest"
+	PatchServicePlanRequest                                     = "PatchServicePlanRequest"
+	PatchSpaceFeaturesRequest                                   = "PatchSpaceFeatures"
+	PatchSpaceQuotaRequest                                      = "PatchSpaceQuota"
 	PatchSpaceRelationshipIsolationSegmentRequest               = "PatchSpaceRelationshipIsolationSegment"
+	PatchStackRequest                                           = "PatchStack"
+	PatchSidecarRequest                                         = "PatchSidecar"
 	PostApplicationActionApplyManifest                          = "PostApplicationActionApplyM"
 	PostApplicationActionRestartRequest                         = "PostApplicationActionRestart"
 	PostApplicationActionStartRequest                           = "PostApplicationActionStart"
@@ -64,17 +97,26 @@ const (
 	PostApplicationProcessActionScaleRequest                    = "PostApplicationProcessActionScale"
 	PostApplicationRequest                                      = "PostApplication"
 	PostApplicationTasksRequest                                 = "PostApplicationTasks"
-	PostBuildRequest                                            = "PostBuild"
 	PostBuildpackBitsRequest                                    = "PostBuildpackBits"
 	PostBuildpackRequest                                        = "PostBuildpack"
+	PostBuildRequest                                            = "PostBuild"
 	PostDomainRequest                                           = "PostDomain"
 	PostIsolationSegmentRelationshipOrganizationsRequest        = "PostIsolationSegmentRelationshipOrganizations"
 	PostIsolationSegmentsRequest                                = "PostIsolationSegments"
 	PostPackageRequest                                          = "PostPackage"
 	PostResourceMatchesRequest                                  = "PostResourceMatches"
+	PostRoleRequest                                             = "PostRole"
+	PostSecurityGroupRequest                                    = "PostSecurityGroup"
+	PostSecurityGroupRunningSpaceRequest                        = "PostSecurityGroupRunningSpace"
+	PostSecurityGroupStagingSpaceRequest                        = "PostSecurityGroupStagingSpace"
+	PostServiceBrokerRequest                                    = "PostServiceBroker"
 	PostServiceInstanceRelationshipsSharedSpacesRequest         = "PostServiceInstanceRelationshipsSharedSpaces"
+	PostServicePlanVisibilityRequest                            = "PostServicePlanVisibility"
 	PostSpaceActionApplyManifestRequest                         = "PostSpaceActionApplyManifest"
 	PostSpaceDiffManifestRequest                                = "PostSpaceDiffManifest"
+	PostSpaceQuotaRelationshipsRequest                          = "PostSpaceQuotaRelationships"
+	PostSpaceQuotaRequest                                       = "PostSpaceQuota"
+	PostUserRequest                                             = "PostUser"
 	PutTaskCancelRequest                                        = "PutTaskCancel"
 	SharePrivateDomainRequest                                   = "SharePrivateDomainRequest"
 
@@ -159,153 +201,168 @@ const (
 )
 
 // APIRoutes is a list of routes used by the router to construct request URLs.
-var APIRoutes = []Route{
-	// v3 droplet
-	{Resource: DropletsResource, Path: "/", Method: http.MethodPost, Name: PostDropletRequest},
-	{Resource: PackagesResource, Path: "/:package_guid/droplets", Method: http.MethodGet, Name: GetPackageDropletsRequest},
-	{Resource: DropletsResource, Path: "/:droplet_guid/upload", Method: http.MethodPost, Name: PostDropletBitsRequest},
-	{Resource: DropletsResource, Path: "/:droplet_guid/download", Method: http.MethodGet, Name: GetDropletBitsRequest},
-
-	// v3 package
-	{Resource: PackagesResource, Path: "/:package_guid/upload", Method: http.MethodPost, Name: PostPackageBitsRequest},
-
-	// v3 service credential binding
-	{Resource: ServiceCredentialBindingsResource, Path: "/", Method: http.MethodGet, Name: GetServiceCredentialBindingsRequest},
-	{Resource: ServiceCredentialBindingsResource, Path: "/:service_credential_binding_guid/details", Method: http.MethodGet, Name: GetServiceCredentialBindingDetailsRequest},
-	{Resource: ServiceCredentialBindingsResource, Path: "/:service_credential_binding_guid", Method: http.MethodDelete, Name: DeleteServiceCredentialBindingRequest},
-	{Resource: ServiceCredentialBindingsResource, Path: "/", Method: http.MethodPost, Name: PostServiceCredentialBindingRequest},
-
-	// v3 service instance
-	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/parameters", Method: http.MethodGet, Name: GetServiceInstanceParametersRequest},
-	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/credentials", Method: http.MethodGet, Name: GetServiceInstanceCredentialsRequest},
-	{Resource: ServiceInstancesResource, Path: "/", Method: http.MethodPost, Name: PostServiceInstanceRequest},
-	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid", Method: http.MethodPatch, Name: PatchServiceInstanceRequest},
-	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid", Method: http.MethodDelete, Name: DeleteServiceInstanceRequest},
-	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/relationships/shared_spaces", Method: http.MethodGet, Name: GetServiceInstanceRelationshipsSharedSpacesRequest},
-	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/relationships/shared_spaces/usage_summary", Method: http.MethodGet, Name: GetServiceInstanceSharedSpacesUsageSummaryRequest},
-
-	// v3 process add missing endpoints
-	{Resource: ProcessesResource, Path: "/", Method: http.MethodGet, Name: GetProcessesRequest},
-	{Resource: ProcessesResource, Path: "/:process_guid", Method: http.MethodGet, Name: GetProcessRequest},
-
-	{Resource: RoutesResource, Path: "/:route_guid/destinations/:destination_guid", Method: http.MethodDelete, Name: UnmapRouteRequest},
-	{Resource: RoutesResource, Path: "/:route_guid/destinations", Method: http.MethodPost, Name: MapRouteRequest},
-	{Resource: RoutesResource, Path: "/", Method: http.MethodGet, Name: GetRoutesRequest},
-	{Resource: RoutesResource, Path: "/:route_guid/destinations", Method: http.MethodGet, Name: GetRouteDestinationsRequest},
-	{Resource: AppsResource, Path: "/:app_guid/routes", Method: http.MethodGet, Name: GetApplicationRoutesRequest},
-	{Resource: SpacesResource, Path: "/:space_guid/routes", Method: http.MethodDelete, Name: DeleteOrphanedRoutesRequest},
-	{Resource: RoutesResource, Path: "/", Method: http.MethodPost, Name: PostRouteRequest},
-	{Resource: RoutesResource, Path: "/:route_guid", Method: http.MethodDelete, Name: DeleteRouteRequest},
-	{Resource: RoutesResource, Path: "/:route_guid", Method: http.MethodPatch, Name: PatchRouteRequest},
-
-	// v3 application feature
-	{Resource: AppsResource, Path: "/:app_guid/ssh_enabled", Method: http.MethodGet, Name: GetSSHEnabled},
-	{Resource: AppsResource, Path: "/:app_guid/features/:name", Method: http.MethodGet, Name: GetApplicationFeaturesRequest},
-	{Resource: AppsResource, Path: "/:app_guid/features/:name", Method: http.MethodPatch, Name: PatchApplicationFeaturesRequest},
-
-	// v3 environment varirable
-	{Resource: EnvironmentVariableGroupsResource, Path: "/:group_name", Method: http.MethodGet, Name: GetEnvironmentVariableGroupRequest},
-	{Resource: EnvironmentVariableGroupsResource, Path: "/:group_name", Method: http.MethodPatch, Name: PatchEnvironmentVariableGroupRequest},
-
-	// v3 domain add missing
-	{Resource: DomainsResource, Path: "/:domain_guid/route_reservations", Method: http.MethodGet, Name: GetDomainRouteReservationsRequest},
-	{Resource: DomainsResource, Path: "/:domain_guid", Method: http.MethodGet, Name: GetDomainRequest},
-
-	// v3 space add missing
-	{Resource: SpacesResource, Path: "/", Method: http.MethodPost, Name: PostSpaceRequest},
-	{Resource: SpacesResource, Path: "/:space_guid", Method: http.MethodDelete, Name: DeleteSpaceRequest},
-	{Resource: SpacesResource, Path: "/:space_guid", Method: http.MethodPatch, Name: PatchSpaceRequest},
-
-	// v3 org add missing
-	{Resource: OrgsResource, Path: "/:organization_guid", Method: http.MethodGet, Name: GetOrganizationRequest},
-
-	// v3 revision
-	{Resource: AppsResource, Path: "/:app_guid/revisions", Method: http.MethodGet, Name: GetApplicationRevisionsRequest},
-	{Resource: AppsResource, Path: "/:app_guid/revisions/deployed", Method: http.MethodGet, Name: GetApplicationRevisionsDeployedRequest},
-
-	// v3 organization quota
-	{Resource: OrgQuotasResource, Path: "/:quota_guid/relationships/organizations", Method: http.MethodPost, Name: PostOrganizationQuotaApplyRequest},
-	{Resource: OrgQuotasResource, Path: "/", Method: http.MethodPost, Name: PostOrganizationQuotaRequest},
-	{Resource: OrgQuotasResource, Path: "/:quota_guid", Method: http.MethodDelete, Name: DeleteOrganizationQuotaRequest},
-	{Resource: OrgQuotasResource, Path: "/:quota_guid", Method: http.MethodGet, Name: GetOrganizationQuotaRequest},
-	{Resource: OrgQuotasResource, Path: "/", Method: http.MethodGet, Name: GetOrganizationQuotasRequest},
-	{Resource: OrgQuotasResource, Path: "/:quota_guid", Method: http.MethodPatch, Name: PatchOrganizationQuotaRequest},
-
-	{Resource: ServicePlansResource, Path: "/", Method: http.MethodGet, Name: GetServicePlansRequest},
-
-	{Resource: ServiceOfferingsResource, Path: "/", Method: http.MethodGet, Name: GetServiceOfferingsRequest},
-	{Resource: ServiceOfferingsResource, Path: "/:service_offering_guid", Method: http.MethodDelete, Name: DeleteServiceOfferingRequest},
-
-	{Resource: OrgsResource, Path: "/", Method: http.MethodGet, Name: GetOrganizationsRequest},
-	{Resource: OrgsResource, Path: "/:organization_guid/", Method: http.MethodDelete, Name: DeleteOrganizationRequest},
-	{Resource: OrgsResource, Path: "/", Method: http.MethodPost, Name: PostOrganizationRequest},
-	{Resource: OrgsResource, Path: "/:organization_guid/domains/default", Method: http.MethodGet, Name: GetDefaultDomainRequest},
-
-	{Resource: AppsResource, Path: "/", Method: http.MethodGet, Name: GetApplicationsRequest},
-	{Resource: AppsResource, Path: "/", Method: http.MethodPost, Name: PostApplicationRequest},
-	{Resource: AppsResource, Path: "/:app_guid", Method: http.MethodDelete, Name: DeleteApplicationRequest},
-	{Resource: AppsResource, Path: "/:app_guid", Method: http.MethodPatch, Name: PatchApplicationRequest},
-	{Resource: AppsResource, Path: "/:app_guid/actions/apply_manifest", Method: http.MethodPost, Name: PostApplicationActionApplyManifest},
-	{Resource: AppsResource, Path: "/:app_guid/actions/restart", Method: http.MethodPost, Name: PostApplicationActionRestartRequest},
-	{Resource: AppsResource, Path: "/:app_guid/actions/start", Method: http.MethodPost, Name: PostApplicationActionStartRequest},
-	{Resource: AppsResource, Path: "/:app_guid/actions/stop", Method: http.MethodPost, Name: PostApplicationActionStopRequest},
-	{Resource: AppsResource, Path: "/:app_guid/droplets/current", Method: http.MethodGet, Name: GetApplicationDropletCurrentRequest},
-	{Resource: AppsResource, Path: "/:app_guid/env", Method: http.MethodGet, Name: GetApplicationEnvRequest},
-	{Resource: AppsResource, Path: "/:app_guid/environment_variables", Method: http.MethodPatch, Name: PatchApplicationEnvironmentVariablesRequest},
-	{Resource: AppsResource, Path: "/:app_guid/manifest", Method: http.MethodGet, Name: GetApplicationManifestRequest},
-	{Resource: AppsResource, Path: "/:app_guid/processes", Method: http.MethodGet, Name: GetApplicationProcessesRequest},
-	{Resource: AppsResource, Path: "/:app_guid/processes/:type", Method: http.MethodGet, Name: GetApplicationProcessRequest},
-	{Resource: AppsResource, Path: "/:app_guid/processes/:type/actions/scale", Method: http.MethodPost, Name: PostApplicationProcessActionScaleRequest},
-	{Resource: AppsResource, Path: "/:app_guid/processes/:type/instances/:index", Method: http.MethodDelete, Name: DeleteApplicationProcessInstanceRequest},
-	{Resource: AppsResource, Path: "/:app_guid/relationships/current_droplet", Method: http.MethodPatch, Name: PatchApplicationCurrentDropletRequest},
-	{Resource: AppsResource, Path: "/:app_guid/tasks", Method: http.MethodGet, Name: GetApplicationTasksRequest},
-	{Resource: AppsResource, Path: "/:app_guid/tasks", Method: http.MethodPost, Name: PostApplicationTasksRequest},
-	{Resource: BuildpacksResource, Path: "/", Method: http.MethodGet, Name: GetBuildpacksRequest},
-	{Resource: BuildpacksResource, Path: "/", Method: http.MethodPost, Name: PostBuildpackRequest},
-	{Resource: BuildpacksResource, Path: "/:buildpack_guid", Method: http.MethodPatch, Name: PatchBuildpackRequest},
-	{Resource: BuildpacksResource, Path: "/:buildpack_guid/upload", Method: http.MethodPost, Name: PostBuildpackBitsRequest},
-	{Resource: BuildpacksResource, Path: "/:buildpack_guid", Method: http.MethodDelete, Name: DeleteBuildpackRequest},
-	{Resource: BuildsResource, Path: "/", Method: http.MethodPost, Name: PostBuildRequest},
-	{Resource: BuildsResource, Path: "/:build_guid", Method: http.MethodGet, Name: GetBuildRequest},
-	{Resource: DeploymentsResource, Path: "/", Method: http.MethodGet, Name: GetDeploymentsRequest},
-	{Resource: DeploymentsResource, Path: "/", Method: http.MethodPost, Name: PostApplicationDeploymentRequest},
-	{Resource: DeploymentsResource, Path: "/:deployment_guid", Method: http.MethodGet, Name: GetDeploymentRequest},
-	{Resource: DeploymentsResource, Path: "/:deployment_guid/actions/cancel", Method: http.MethodPost, Name: PostApplicationDeploymentActionCancelRequest},
-	{Resource: DomainsResource, Path: "/", Method: http.MethodPost, Name: PostDomainRequest},
-	{Resource: DomainsResource, Path: "/", Method: http.MethodGet, Name: GetDomainsRequest},
-	{Resource: DomainsResource, Path: "/:domain_guid", Method: http.MethodDelete, Name: DeleteDomainRequest},
-	{Resource: DomainsResource, Path: "/:domain_guid/relationships/shared_organizations", Method: http.MethodPost, Name: SharePrivateDomainRequest},
-	{Resource: DomainsResource, Path: "/:domain_guid/relationships/shared_organizations/:org_guid", Method: http.MethodDelete, Name: DeleteSharedOrgFromDomainRequest},
-	{Resource: DropletsResource, Path: "/", Method: http.MethodGet, Name: GetDropletsRequest},
-	{Resource: DropletsResource, Path: "/:droplet_guid", Method: http.MethodGet, Name: GetDropletRequest},
-	{Resource: FeatureFlagsResource, Path: "/:name", Method: http.MethodGet, Name: GetFeatureFlagRequest},
-	{Resource: FeatureFlagsResource, Path: "/:name", Method: http.MethodPatch, Name: PatchFeatureFlagRequest},
-	{Resource: FeatureFlagsResource, Path: "/", Method: http.MethodGet, Name: GetFeatureFlagsRequest},
-	{Resource: IsolationSegmentsResource, Path: "/", Method: http.MethodGet, Name: GetIsolationSegmentsRequest},
-	{Resource: IsolationSegmentsResource, Path: "/", Method: http.MethodPost, Name: PostIsolationSegmentsRequest},
-	{Resource: IsolationSegmentsResource, Path: "/:isolation_segment_guid", Method: http.MethodDelete, Name: DeleteIsolationSegmentRequest},
-	{Resource: IsolationSegmentsResource, Path: "/:isolation_segment_guid", Method: http.MethodGet, Name: GetIsolationSegmentRequest},
-	{Resource: IsolationSegmentsResource, Path: "/:isolation_segment_guid/organizations", Method: http.MethodGet, Name: GetIsolationSegmentOrganizationsRequest},
-	{Resource: IsolationSegmentsResource, Path: "/:isolation_segment_guid/relationships/organizations", Method: http.MethodPost, Name: PostIsolationSegmentRelationshipOrganizationsRequest},
-	{Resource: IsolationSegmentsResource, Path: "/:isolation_segment_guid/relationships/organizations/:organization_guid", Method: http.MethodDelete, Name: DeleteIsolationSegmentRelationshipOrganizationRequest},
-	{Resource: OrgsResource, Path: "/", Method: http.MethodGet, Name: GetOrganizationsRequest},
-	{Resource: OrgsResource, Path: "/:organization_guid/domains", Method: http.MethodGet, Name: GetOrganizationDomainsRequest},
-	{Resource: OrgsResource, Path: "/:organization_guid/relationships/default_isolation_segment", Method: http.MethodGet, Name: GetOrganizationRelationshipDefaultIsolationSegmentRequest},
-	{Resource: OrgsResource, Path: "/:organization_guid/relationships/default_isolation_segment", Method: http.MethodPatch, Name: PatchOrganizationRelationshipDefaultIsolationSegmentRequest},
-	{Resource: OrgsResource, Path: "/:organization_guid/", Method: http.MethodPatch, Name: PatchOrganizationRequest},
-	{Resource: PackagesResource, Path: "/", Method: http.MethodGet, Name: GetPackagesRequest},
-	{Resource: PackagesResource, Path: "/", Method: http.MethodPost, Name: PostPackageRequest},
-	{Resource: PackagesResource, Path: "/:package_guid", Method: http.MethodGet, Name: GetPackageRequest},
-	{Resource: ProcessesResource, Path: "/:process_guid", Method: http.MethodPatch, Name: PatchProcessRequest},
-	{Resource: ProcessesResource, Path: "/:process_guid/stats", Method: http.MethodGet, Name: GetProcessStatsRequest},
-	{Resource: ResourceMatches, Path: "/", Method: http.MethodPost, Name: PostResourceMatchesRequest},
-	{Resource: ServiceInstancesResource, Path: "/", Method: http.MethodGet, Name: GetServiceInstancesRequest},
-	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/relationships/shared_spaces", Method: http.MethodPost, Name: PostServiceInstanceRelationshipsSharedSpacesRequest},
-	{Resource: ServiceInstancesResource, Path: "/:service_instance_guid/relationships/shared_spaces/:space_guid", Method: http.MethodDelete, Name: DeleteServiceInstanceRelationshipsSharedSpaceRequest},
-	{Resource: SpacesResource, Path: "/", Method: http.MethodGet, Name: GetSpacesRequest},
-	{Resource: SpacesResource, Path: "/:space_guid/relationships/isolation_segment", Method: http.MethodGet, Name: GetSpaceRelationshipIsolationSegmentRequest},
-	{Resource: SpacesResource, Path: "/:space_guid/relationships/isolation_segment", Method: http.MethodPatch, Name: PatchSpaceRelationshipIsolationSegmentRequest},
-	{Resource: SpacesResource, Path: "/:space_guid/actions/apply_manifest", Method: http.MethodPost, Name: PostSpaceActionApplyManifestRequest},
-	{Resource: StacksResource, Path: "/", Method: http.MethodGet, Name: GetStacksRequest},
-	{Resource: TasksResource, Path: "/:task_guid/cancel", Method: http.MethodPut, Name: PutTaskCancelRequest},
+var APIRoutes = map[string]Route{
+	GetApplicationsRequest:                                      {Path: "/v3/apps", Method: http.MethodGet},
+	PostApplicationRequest:                                      {Path: "/v3/apps", Method: http.MethodPost},
+	PostApplicationSidecarRequest:                               {Path: "/v3/apps/:app_guid/sidecars", Method: http.MethodPost},
+	GetApplicationRevisionsDeployedRequest:                      {Path: "/v3/apps/:app_guid/revisions/deployed", Method: http.MethodGet},
+	DeleteApplicationRequest:                                    {Path: "/v3/apps/:app_guid", Method: http.MethodDelete},
+	PatchApplicationRequest:                                     {Path: "/v3/apps/:app_guid", Method: http.MethodPatch},
+	PatchApplicationFeaturesRequest:                             {Path: "/v3/apps/:app_guid/features/:name", Method: http.MethodPatch},
+	GetApplicationFeaturesRequest:                               {Path: "/v3/apps/:app_guid/features/:name", Method: http.MethodGet},
+	PostApplicationActionApplyManifest:                          {Path: "/v3/apps/:app_guid/actions/apply_manifest", Method: http.MethodPost},
+	PostApplicationActionRestartRequest:                         {Path: "/v3/apps/:app_guid/actions/restart", Method: http.MethodPost},
+	PostApplicationActionStartRequest:                           {Path: "/v3/apps/:app_guid/actions/start", Method: http.MethodPost},
+	PostApplicationActionStopRequest:                            {Path: "/v3/apps/:app_guid/actions/stop", Method: http.MethodPost},
+	GetApplicationDropletCurrentRequest:                         {Path: "/v3/apps/:app_guid/droplets/current", Method: http.MethodGet},
+	GetApplicationEnvRequest:                                    {Path: "/v3/apps/:app_guid/env", Method: http.MethodGet},
+	PatchApplicationEnvironmentVariablesRequest:                 {Path: "/v3/apps/:app_guid/environment_variables", Method: http.MethodPatch},
+	GetApplicationManifestRequest:                               {Path: "/v3/apps/:app_guid/manifest", Method: http.MethodGet},
+	GetApplicationProcessesRequest:                              {Path: "/v3/apps/:app_guid/processes", Method: http.MethodGet},
+	GetApplicationProcessRequest:                                {Path: "/v3/apps/:app_guid/processes/:type", Method: http.MethodGet},
+	PostApplicationProcessActionScaleRequest:                    {Path: "/v3/apps/:app_guid/processes/:type/actions/scale", Method: http.MethodPost},
+	DeleteApplicationProcessInstanceRequest:                     {Path: "/v3/apps/:app_guid/processes/:type/instances/:index", Method: http.MethodDelete},
+	PatchApplicationCurrentDropletRequest:                       {Path: "/v3/apps/:app_guid/relationships/current_droplet", Method: http.MethodPatch},
+	GetApplicationRevisionsRequest:                              {Path: "/v3/apps/:app_guid/revisions", Method: http.MethodGet},
+	GetApplicationRoutesRequest:                                 {Path: "/v3/apps/:app_guid/routes", Method: http.MethodGet},
+	GetSSHEnabled:                                               {Path: "/v3/apps/:app_guid/ssh_enabled", Method: http.MethodGet},
+	GetApplicationTasksRequest:                                  {Path: "/v3/apps/:app_guid/tasks", Method: http.MethodGet},
+	GetApplicationSidecarsRequest:                               {Path: "/v3/apps/:app_guid/sidecars", Method: http.MethodGet},
+	PostApplicationTasksRequest:                                 {Path: "/v3/apps/:app_guid/tasks", Method: http.MethodPost},
+	GetBuildpacksRequest:                                        {Path: "/v3/buildpacks", Method: http.MethodGet},
+	PostBuildpackRequest:                                        {Path: "/v3/buildpacks/", Method: http.MethodPost},
+	DeleteBuildpackRequest:                                      {Path: "/v3/buildpacks/:buildpack_guid", Method: http.MethodDelete},
+	PatchBuildpackRequest:                                       {Path: "/v3/buildpacks/:buildpack_guid", Method: http.MethodPatch},
+	PostBuildpackBitsRequest:                                    {Path: "/v3/buildpacks/:buildpack_guid/upload", Method: http.MethodPost},
+	PostBuildRequest:                                            {Path: "/v3/builds", Method: http.MethodPost},
+	GetBuildRequest:                                             {Path: "/v3/builds/:build_guid", Method: http.MethodGet},
+	GetDeploymentsRequest:                                       {Path: "/v3/deployments", Method: http.MethodGet},
+	PostApplicationDeploymentRequest:                            {Path: "/v3/deployments", Method: http.MethodPost},
+	GetDeploymentRequest:                                        {Path: "/v3/deployments/:deployment_guid", Method: http.MethodGet},
+	PostApplicationDeploymentActionCancelRequest:                {Path: "/v3/deployments/:deployment_guid/actions/cancel", Method: http.MethodPost},
+	GetDomainsRequest:                                           {Path: "/v3/domains", Method: http.MethodGet},
+	PostDomainRequest:                                           {Path: "/v3/domains", Method: http.MethodPost},
+	DeleteDomainRequest:                                         {Path: "/v3/domains/:domain_guid", Method: http.MethodDelete},
+	GetDomainRequest:                                            {Path: "/v3/domains/:domain_guid", Method: http.MethodGet},
+	PatchDomainRequest:                                          {Path: "/v3/domains/:domain_guid", Method: http.MethodPatch},
+	SharePrivateDomainRequest:                                   {Path: "/v3/domains/:domain_guid/relationships/shared_organizations", Method: http.MethodPost},
+	DeleteSharedOrgFromDomainRequest:                            {Path: "/v3/domains/:domain_guid/relationships/shared_organizations/:org_guid", Method: http.MethodDelete},
+	GetDomainRouteReservationsRequest:                           {Path: "/v3/domains/:domain_guid/route_reservations", Method: http.MethodGet},
+	GetDropletsRequest:                                          {Path: "/v3/droplets", Method: http.MethodGet},
+	PostDropletRequest:                                          {Path: "/v3/droplets", Method: http.MethodPost},
+	GetDropletRequest:                                           {Path: "/v3/droplets/:droplet_guid", Method: http.MethodGet},
+	PostDropletBitsRequest:                                      {Path: "/v3/droplets/:droplet_guid/upload", Method: http.MethodPost},
+	GetDropletBitsRequest:                                       {Path: "/v3/droplets/:droplet_guid/download", Method: http.MethodGet},
+	GetEnvironmentVariableGroupRequest:                          {Path: "/v3/environment_variable_groups/:group_name", Method: http.MethodGet},
+	PatchEnvironmentVariableGroupRequest:                        {Path: "/v3/environment_variable_groups/:group_name", Method: http.MethodPatch},
+	GetEventsRequest:                                            {Path: "/v3/audit_events", Method: http.MethodGet},
+	GetFeatureFlagsRequest:                                      {Path: "/v3/feature_flags", Method: http.MethodGet},
+	GetFeatureFlagRequest:                                       {Path: "/v3/feature_flags/:name", Method: http.MethodGet},
+	PatchFeatureFlagRequest:                                     {Path: "/v3/feature_flags/:name", Method: http.MethodPatch},
+	GetIsolationSegmentsRequest:                                 {Path: "/v3/isolation_segments", Method: http.MethodGet},
+	PostIsolationSegmentsRequest:                                {Path: "/v3/isolation_segments", Method: http.MethodPost},
+	DeleteIsolationSegmentRequest:                               {Path: "/v3/isolation_segments/:isolation_segment_guid", Method: http.MethodDelete},
+	GetIsolationSegmentRequest:                                  {Path: "/v3/isolation_segments/:isolation_segment_guid", Method: http.MethodGet},
+	GetIsolationSegmentOrganizationsRequest:                     {Path: "/v3/isolation_segments/:isolation_segment_guid/organizations", Method: http.MethodGet},
+	PostIsolationSegmentRelationshipOrganizationsRequest:        {Path: "/v3/isolation_segments/:isolation_segment_guid/relationships/organizations", Method: http.MethodPost},
+	DeleteIsolationSegmentRelationshipOrganizationRequest:       {Path: "/v3/isolation_segments/:isolation_segment_guid/relationships/organizations/:organization_guid", Method: http.MethodDelete},
+	GetOrganizationsRequest:                                     {Path: "/v3/organizations", Method: http.MethodGet},
+	PostOrganizationRequest:                                     {Path: "/v3/organizations", Method: http.MethodPost},
+	GetOrganizationRequest:                                      {Path: "/v3/organizations/:organization_guid", Method: http.MethodGet},
+	DeleteOrganizationRequest:                                   {Path: "/v3/organizations/:organization_guid/", Method: http.MethodDelete},
+	PatchOrganizationRequest:                                    {Path: "/v3/organizations/:organization_guid/", Method: http.MethodPatch},
+	GetOrganizationDomainsRequest:                               {Path: "/v3/organizations/:organization_guid/domains", Method: http.MethodGet},
+	GetDefaultDomainRequest:                                     {Path: "/v3/organizations/:organization_guid/domains/default", Method: http.MethodGet},
+	GetOrganizationRelationshipDefaultIsolationSegmentRequest:   {Path: "/v3/organizations/:organization_guid/relationships/default_isolation_segment", Method: http.MethodGet},
+	PatchOrganizationRelationshipDefaultIsolationSegmentRequest: {Path: "/v3/organizations/:organization_guid/relationships/default_isolation_segment", Method: http.MethodPatch},
+	PatchOrganizationQuotaRequest:                               {Path: "/v3/organization_quotas/:quota_guid", Method: http.MethodPatch},
+	PostOrganizationQuotaRequest:                                {Path: "/v3/organization_quotas", Method: http.MethodPost},
+	PostOrganizationQuotaApplyRequest:                           {Path: "/v3/organization_quotas/:quota_guid/relationships/organizations", Method: http.MethodPost},
+	GetOrganizationQuotaRequest:                                 {Path: "/v3/organization_quotas/:quota_guid", Method: http.MethodGet},
+	GetOrganizationQuotasRequest:                                {Path: "/v3/organization_quotas", Method: http.MethodGet},
+	DeleteOrganizationQuotaRequest:                              {Path: "/v3/organization_quotas/:quota_guid", Method: http.MethodDelete},
+	GetPackagesRequest:                                          {Path: "/v3/packages", Method: http.MethodGet},
+	PostPackageRequest:                                          {Path: "/v3/packages", Method: http.MethodPost},
+	GetPackageRequest:                                           {Path: "/v3/packages/:package_guid", Method: http.MethodGet},
+	PostPackageBitsRequest:                                      {Path: "/v3/packages/:package_guid/upload", Method: http.MethodPost},
+	GetPackageDropletsRequest:                                   {Path: "/v3/packages/:package_guid/droplets", Method: http.MethodGet},
+	GetProcessRequest:                                           {Path: "/v3/processes/:process_guid", Method: http.MethodGet},
+	GetProcessesRequest:                                         {Path: "/v3/processes", Method: http.MethodGet},
+	PatchProcessRequest:                                         {Path: "/v3/processes/:process_guid", Method: http.MethodPatch},
+	GetProcessStatsRequest:                                      {Path: "/v3/processes/:process_guid/stats", Method: http.MethodGet},
+	GetProcessSidecarsRequest:                                   {Path: "/v3/processes/:process_guid/sidecars", Method: http.MethodGet},
+	PostResourceMatchesRequest:                                  {Path: "/v3/resource_matches", Method: http.MethodPost},
+	GetRolesRequest:                                             {Path: "/v3/roles", Method: http.MethodGet},
+	PostRoleRequest:                                             {Path: "/v3/roles", Method: http.MethodPost},
+	DeleteRoleRequest:                                           {Path: "/v3/roles/:role_guid", Method: http.MethodDelete},
+	GetRoutesRequest:                                            {Path: "/v3/routes", Method: http.MethodGet},
+	PostRouteRequest:                                            {Path: "/v3/routes", Method: http.MethodPost},
+	DeleteRouteRequest:                                          {Path: "/v3/routes/:route_guid", Method: http.MethodDelete},
+	PatchRouteRequest:                                           {Path: "/v3/routes/:route_guid", Method: http.MethodPatch},
+	GetRouteDestinationsRequest:                                 {Path: "/v3/routes/:route_guid/destinations", Method: http.MethodGet},
+	MapRouteRequest:                                             {Path: "/v3/routes/:route_guid/destinations", Method: http.MethodPost},
+	UnmapRouteRequest:                                           {Path: "/v3/routes/:route_guid/destinations/:destination_guid", Method: http.MethodDelete},
+	GetSecurityGroupsRequest:                                    {Path: "/v3/security_groups", Method: http.MethodGet},
+	PostSecurityGroupRequest:                                    {Path: "/v3/security_groups", Method: http.MethodPost},
+	DeleteSecurityGroupRequest:                                  {Path: "/v3/security_groups/:security_group_guid", Method: http.MethodDelete},
+	PostSecurityGroupStagingSpaceRequest:                        {Path: "/v3/security_groups/:security_group_guid/relationships/staging_spaces", Method: http.MethodPost},
+	PostSecurityGroupRunningSpaceRequest:                        {Path: "/v3/security_groups/:security_group_guid/relationships/running_spaces", Method: http.MethodPost},
+	DeleteSecurityGroupStagingSpaceRequest:                      {Path: "/v3/security_groups/:security_group_guid/relationships/staging_spaces/:space_guid", Method: http.MethodDelete},
+	DeleteSecurityGroupRunningSpaceRequest:                      {Path: "/v3/security_groups/:security_group_guid/relationships/running_spaces/:space_guid", Method: http.MethodDelete},
+	PatchSecurityGroupRequest:                                   {Path: "/v3/security_groups/:security_group_guid", Method: http.MethodPatch},
+	GetServiceBrokersRequest:                                    {Path: "/v3/service_brokers", Method: http.MethodGet},
+	PostServiceBrokerRequest:                                    {Path: "/v3/service_brokers", Method: http.MethodPost},
+	DeleteServiceBrokerRequest:                                  {Path: "/v3/service_brokers/:service_broker_guid", Method: http.MethodDelete},
+	PatchServiceBrokerRequest:                                   {Path: "/v3/service_brokers/:service_broker_guid", Method: http.MethodPatch},
+	GetServiceInstancesRequest:                                  {Path: "/v3/service_instances", Method: http.MethodGet},
+	PostServiceInstanceRequest:                                  {Path: "/v3/service_instances", Method: http.MethodPost},
+	PatchServiceInstanceRequest:                                 {Path: "/v3/service_instances/:service_instance_guid", Method: http.MethodPatch},
+	DeleteServiceInstanceRequest:                                {Path: "/v3/service_instances/:service_instance_guid", Method: http.MethodDelete},
+	GetServiceInstanceRelationshipsSharedSpacesRequest:          {Path: "/v3/service_instances/:service_instance_guid/relationships/shared_spaces", Method: http.MethodGet},
+	PostServiceInstanceRelationshipsSharedSpacesRequest:         {Path: "/v3/service_instances/:service_instance_guid/relationships/shared_spaces", Method: http.MethodPost},
+	DeleteServiceInstanceRelationshipsSharedSpaceRequest:        {Path: "/v3/service_instances/:service_instance_guid/relationships/shared_spaces/:space_guid", Method: http.MethodDelete},
+	GetServiceInstanceCredentialsRequest:                        {Path: "/v3/service_instances/:service_instance_guid/credentials", Method: http.MethodGet},
+	GetServiceInstanceParametersRequest:                         {Path: "/v3/service_instances/:service_instance_guid/parameters", Method: http.MethodGet},
+	GetServiceInstanceSharedSpacesUsageSummaryRequest:           {Path: "/v3/service_instances/:service_instance_guid/relationships/shared_spaces/usage_summary", Method: http.MethodGet},
+	GetServiceCredentialBindingsRequest:                         {Path: "/v3/service_credential_bindings", Method: http.MethodGet},
+	PostServiceCredentialBindingRequest:                         {Path: "/v3/service_credential_bindings", Method: http.MethodPost},
+	DeleteServiceCredentialBindingRequest:                       {Path: "/v3/service_credential_bindings/:service_credential_binding_guid", Method: http.MethodDelete},
+	GetServiceCredentialBindingDetailsRequest:                   {Path: "/v3/service_credential_bindings/:service_credential_binding_guid/details", Method: http.MethodGet},
+	GetServiceOfferingsRequest:                                  {Path: "/v3/service_offerings", Method: http.MethodGet},
+	PatchServiceOfferingRequest:                                 {Path: "/v3/service_offerings/:service_offering_guid", Method: http.MethodPatch},
+	DeleteServiceOfferingRequest:                                {Path: "/v3/service_offerings/:service_offering_guid", Method: http.MethodDelete},
+	GetServicePlansRequest:                                      {Path: "/v3/service_plans", Method: http.MethodGet},
+	PatchServicePlanRequest:                                     {Path: "/v3/service_plans/:service_plan_guid", Method: http.MethodPatch},
+	GetServicePlanVisibilityRequest:                             {Path: "/v3/service_plans/:service_plan_guid/visibility", Method: http.MethodGet},
+	PostServicePlanVisibilityRequest:                            {Path: "/v3/service_plans/:service_plan_guid/visibility", Method: http.MethodPost},
+	DeleteServicePlanVisibilityRequest:                          {Path: "/v3/service_plans/:service_plan_guid/visibility/:organization_guid", Method: http.MethodDelete},
+	GetSpacesRequest:                                            {Path: "/v3/spaces", Method: http.MethodGet},
+	PostSpaceRequest:                                            {Path: "/v3/spaces", Method: http.MethodPost},
+	DeleteSpaceRequest:                                          {Path: "/v3/spaces/:space_guid", Method: http.MethodDelete},
+	PatchSpaceRequest:                                           {Path: "/v3/spaces/:space_guid", Method: http.MethodPatch},
+	PostSpaceActionApplyManifestRequest:                         {Path: "/v3/spaces/:space_guid/actions/apply_manifest", Method: http.MethodPost},
+	GetSpaceRelationshipIsolationSegmentRequest:                 {Path: "/v3/spaces/:space_guid/relationships/isolation_segment", Method: http.MethodGet},
+	PatchSpaceRelationshipIsolationSegmentRequest:               {Path: "/v3/spaces/:space_guid/relationships/isolation_segment", Method: http.MethodPatch},
+	DeleteOrphanedRoutesRequest:                                 {Path: "/v3/spaces/:space_guid/routes", Method: http.MethodDelete},
+	GetSpaceRunningSecurityGroupsRequest:                        {Path: "/v3/spaces/:space_guid/running_security_groups", Method: http.MethodGet},
+	GetSpaceStagingSecurityGroupsRequest:                        {Path: "/v3/spaces/:space_guid/staging_security_groups", Method: http.MethodGet},
+	PatchSpaceFeaturesRequest:                                   {Path: "/v3/spaces/:space_guid/features/:feature", Method: http.MethodPatch},
+	GetSpaceFeatureRequest:                                      {Path: "/v3/spaces/:space_guid/features/:feature", Method: http.MethodGet},
+	PostSpaceQuotaRequest:                                       {Path: "/v3/space_quotas", Method: http.MethodPost},
+	GetSpaceQuotaRequest:                                        {Path: "/v3/space_quotas/:quota_guid", Method: http.MethodGet},
+	DeleteSpaceQuotaRequest:                                     {Path: "/v3/space_quotas/:quota_guid", Method: http.MethodDelete},
+	PostSpaceQuotaRelationshipsRequest:                          {Path: "/v3/space_quotas/:quota_guid/relationships/spaces", Method: http.MethodPost},
+	GetSpaceQuotasRequest:                                       {Path: "/v3/space_quotas", Method: http.MethodGet},
+	PatchSpaceQuotaRequest:                                      {Path: "/v3/space_quotas/:quota_guid", Method: http.MethodPatch},
+	DeleteSpaceQuotaFromSpaceRequest:                            {Path: "/v3/space_quotas/:quota_guid/relationships/spaces/:space_guid", Method: http.MethodDelete},
+	GetStacksRequest:                                            {Path: "/v3/stacks", Method: http.MethodGet},
+	PatchStackRequest:                                           {Path: "/v3/stacks/:stack_guid", Method: http.MethodPatch},
+	PatchSidecarRequest:                                         {Path: "/v3/sidecars/:sidecar_guid", Method: http.MethodPatch},
+	PutTaskCancelRequest:                                        {Path: "/v3/tasks/:task_guid/cancel", Method: http.MethodPut},
+	GetUsersRequest:                                             {Path: "/v3/users", Method: http.MethodGet},
+	GetSidecarRequest:                                           {Path: "/v3/sidecars/:sidecar_guid", Method: http.MethodGet},
+	GetUserRequest:                                              {Path: "/v3/users/:user_guid", Method: http.MethodGet},
+	PostUserRequest:                                             {Path: "/v3/users", Method: http.MethodPost},
+	DeleteUserRequest:                                           {Path: "/v3/users/:user_guid", Method: http.MethodDelete},
+	DeleteSidecarRequest:                                        {Path: "/v3/sidecars/:sidecar_guid", Method: http.MethodDelete},
 }

@@ -1,10 +1,12 @@
 package v7action
 
 import (
-	"code.cloudfoundry.org/cli/resources"
 	"io"
 
+	"code.cloudfoundry.org/cli/resources"
+
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 )
 
 //go:generate counterfeiter . CloudControllerClient
@@ -42,8 +44,10 @@ type CloudControllerClient interface {
 	GetDomains(query ...ccv3.Query) ([]resources.Domain, ccv3.Warnings, error)
 	GetDroplet(guid string) (resources.Droplet, ccv3.Warnings, error)
 	GetDroplets(query ...ccv3.Query) ([]resources.Droplet, ccv3.Warnings, error)
+	GetEnvironmentVariableGroup(group constant.EnvironmentVariableGroupName) (ccv3.EnvironmentVariables, ccv3.Warnings, error)
+	GetEvents(query ...ccv3.Query) ([]ccv3.Event, ccv3.Warnings, error)
 	GetFeatureFlag(featureFlagName string) (resources.FeatureFlag, ccv3.Warnings, error)
-	GetFeatureFlags() ([]resources.FeatureFlag, ccv3.Warnings, error)
+	GetInfo() (ccv3.Info, ccv3.Warnings, error)
 	GetIsolationSegment(guid string) (resources.IsolationSegment, ccv3.Warnings, error)
 	GetIsolationSegmentOrganizations(isolationSegmentGUID string) ([]resources.Organization, ccv3.Warnings, error)
 	GetIsolationSegments(query ...ccv3.Query) ([]resources.IsolationSegment, ccv3.Warnings, error)

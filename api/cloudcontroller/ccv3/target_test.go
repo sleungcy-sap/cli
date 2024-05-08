@@ -60,27 +60,6 @@ var _ = Describe("Target", func() {
 						http.Header{"X-Cf-Warnings": {"warning 1"}}),
 				),
 			)
-
-			v3Response := fmt.Sprintf(`{
-				"links": {
-					"self": {
-						"href": "%s/v3"
-					},
-					"tasks": {
-						"href": "%s/v3/tasks"
-					}
-				}
-			}`, serverURL, serverURL)
-
-			server.AppendHandlers(
-				CombineHandlers(
-					VerifyRequest(http.MethodGet, "/v3"),
-					RespondWith(
-						http.StatusOK,
-						v3Response,
-						http.Header{"X-Cf-Warnings": {"warning 2"}}),
-				),
-			)
 		})
 
 		When("client has wrappers", func() {
@@ -130,7 +109,7 @@ var _ = Describe("Target", func() {
 							URL:               server.URL(),
 						})
 						Expect(err).NotTo(HaveOccurred())
-						Expect(warnings).To(ConsistOf("warning 1", "warning 2"))
+						Expect(warnings).To(ConsistOf("warning 1"))
 
 						Expect(client.UAA()).To(Equal("https://uaa.bosh-lite.com"))
 						Expect(client.CloudControllerAPIVersion()).To(Equal("3.0.0-alpha.5"))
@@ -141,9 +120,9 @@ var _ = Describe("Target", func() {
 
 		When("the cloud controller encounters an error", func() {
 			BeforeEach(func() {
-				server.SetHandler(1,
+				server.SetHandler(0,
 					CombineHandlers(
-						VerifyRequest(http.MethodGet, "/v3"),
+						VerifyRequest(http.MethodGet, "/"),
 						RespondWith(
 							http.StatusNotFound,
 							`{"errors": [{}]}`,
@@ -158,7 +137,8 @@ var _ = Describe("Target", func() {
 					URL:               server.URL(),
 				})
 				Expect(err).To(MatchError(ccerror.ResourceNotFoundError{}))
-				Expect(warnings).To(ConsistOf("warning 1", "this is a warning"))
+				Expect(warnings).To(ConsistOf("this is a warning"))
+				Expect(rootInfo).To(Equal(Info{}))
 			})
 		})
 	})

@@ -4,6 +4,7 @@ import (
 	. "code.cloudfoundry.org/cli/actor/v3action"
 	"code.cloudfoundry.org/cli/actor/v3action/v3actionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -48,15 +49,15 @@ var _ = Describe("Targeting", func() {
 			meta.Version = expectedAPIVersion
 			fakeCloudControllerClient.GetInfoReturns(ccv3.Info{
 				Links: ccv3.InfoLinks{
-					CCV3: ccv3.APILink{
+					CCV3: resources.APILink{
 						Meta: meta},
-					Logging: ccv3.APILink{
+					Logging: resources.APILink{
 						HREF: expectedDoppler,
 					},
-					Routing: ccv3.APILink{
+					Routing: resources.APILink{
 						HREF: expectedRouting,
 					},
-					UAA: ccv3.APILink{
+					UAA: resources.APILink{
 						HREF: expectedAuth,
 					}}}, ccv3.ResourceLinks{}, ccv3.Warnings{}, nil)
 		})

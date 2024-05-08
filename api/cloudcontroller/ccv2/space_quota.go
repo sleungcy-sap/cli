@@ -2,11 +2,23 @@ package ccv2
 
 import (
 	"bytes"
+	"encoding/json"
+
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/internal"
-	"encoding/json"
 )
+
+// SpaceQuota represents the Cloud Controller configured quota assigned to the
+// space.
+type SpaceQuota struct {
+
+	// GUID is the unique space quota identifier.
+	GUID string
+
+	// Name is the name given to the space quota.
+	Name string
+}
 
 // GetSpaceQuotaDefinition returns a Space Quota.
 func (client *Client) GetSpaceQuotaDefinition(guid string) (Quota, Warnings, error) {

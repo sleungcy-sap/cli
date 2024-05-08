@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/cli/actor/v3action/v3actionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -27,7 +28,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 		When("the create is successful", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.CreateIsolationSegmentReturns(
-					ccv3.IsolationSegment{},
+					resources.IsolationSegment{},
 					ccv3.Warnings{"warning-1", "warning-2"},
 					nil,
 				)
@@ -41,7 +42,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 
 				Expect(fakeCloudControllerClient.CreateIsolationSegmentCallCount()).To(Equal(1))
 				isolationSegmentName := fakeCloudControllerClient.CreateIsolationSegmentArgsForCall(0)
-				Expect(isolationSegmentName).To(Equal(ccv3.IsolationSegment{Name: "some-isolation-segment"}))
+				Expect(isolationSegmentName).To(Equal(resources.IsolationSegment{Name: "some-isolation-segment"}))
 			})
 		})
 
@@ -52,7 +53,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 				BeforeEach(func() {
 					expectedErr = errors.New("I am a CloudControllerClient Error")
 					fakeCloudControllerClient.CreateIsolationSegmentReturns(
-						ccv3.IsolationSegment{},
+						resources.IsolationSegment{},
 						ccv3.Warnings{"warning-1", "warning-2"},
 						expectedErr,
 					)
@@ -68,7 +69,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 			When("an UnprocessableEntityError occurs", func() {
 				BeforeEach(func() {
 					fakeCloudControllerClient.CreateIsolationSegmentReturns(
-						ccv3.IsolationSegment{},
+						resources.IsolationSegment{},
 						ccv3.Warnings{"warning-1", "warning-2"},
 						ccerror.UnprocessableEntityError{},
 					)
@@ -86,7 +87,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 	Describe("DeleteIsolationSegmentByName", func() {
 		When("the isolation segment is found", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.GetIsolationSegmentsReturns([]ccv3.IsolationSegment{
+				fakeCloudControllerClient.GetIsolationSegmentsReturns([]resources.IsolationSegment{
 					{
 						GUID: "some-iso-guid",
 						Name: "some-iso-seg",
@@ -151,7 +152,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 	Describe("EntitleIsolationSegmentToOrganizationByName", func() {
 		When("the isolation segment exists", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.GetIsolationSegmentsReturns([]ccv3.IsolationSegment{
+				fakeCloudControllerClient.GetIsolationSegmentsReturns([]resources.IsolationSegment{
 					{
 						Name: "some-iso-seg",
 						GUID: "some-iso-guid",
@@ -161,7 +162,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 
 			When("the organization exists", func() {
 				BeforeEach(func() {
-					fakeCloudControllerClient.GetOrganizationsReturns([]ccv3.Organization{
+					fakeCloudControllerClient.GetOrganizationsReturns([]resources.Organization{
 						{
 							Name: "some-org",
 							GUID: "some-org-guid",
@@ -172,7 +173,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 				When("the relationship succeeds", func() {
 					BeforeEach(func() {
 						fakeCloudControllerClient.EntitleIsolationSegmentToOrganizationsReturns(
-							ccv3.RelationshipList{GUIDs: []string{"some-relationship-guid"}},
+							resources.RelationshipList{GUIDs: []string{"some-relationship-guid"}},
 							ccv3.Warnings{"entitle-iso-to-org-warning"},
 							nil)
 					})
@@ -193,7 +194,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 					BeforeEach(func() {
 						expectedErr = errors.New("toxic-relationship")
 						fakeCloudControllerClient.EntitleIsolationSegmentToOrganizationsReturns(
-							ccv3.RelationshipList{},
+							resources.RelationshipList{},
 							ccv3.Warnings{"entitle-iso-to-org-warning"},
 							expectedErr)
 					})
@@ -242,7 +243,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 	Describe("AssignIsolationSegmentToSpaceByNameAndSpace", func() {
 		When("the retrieving the isolation segment succeeds", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.GetIsolationSegmentsReturns([]ccv3.IsolationSegment{
+				fakeCloudControllerClient.GetIsolationSegmentsReturns([]resources.IsolationSegment{
 					{
 						GUID: "some-iso-guid",
 						Name: "some-iso-seg",
@@ -254,7 +255,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 
 			When("the assignment is successful", func() {
 				BeforeEach(func() {
-					fakeCloudControllerClient.UpdateSpaceIsolationSegmentRelationshipReturns(ccv3.Relationship{GUID: "doesn't matter"}, ccv3.Warnings{"assignment-warnings-1", "assignment-warnings-2"}, nil)
+					fakeCloudControllerClient.UpdateSpaceIsolationSegmentRelationshipReturns(resources.Relationship{GUID: "doesn't matter"}, ccv3.Warnings{"assignment-warnings-1", "assignment-warnings-2"}, nil)
 				})
 
 				It("returns the warnings", func() {
@@ -278,7 +279,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 				var expectedErr error
 				BeforeEach(func() {
 					expectedErr = errors.New("foo bar")
-					fakeCloudControllerClient.UpdateSpaceIsolationSegmentRelationshipReturns(ccv3.Relationship{}, ccv3.Warnings{"assignment-warnings-1", "assignment-warnings-2"}, expectedErr)
+					fakeCloudControllerClient.UpdateSpaceIsolationSegmentRelationshipReturns(resources.Relationship{}, ccv3.Warnings{"assignment-warnings-1", "assignment-warnings-2"}, expectedErr)
 				})
 
 				It("returns the warnings and error", func() {
@@ -307,7 +308,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 	Describe("GetEffectiveIsolationSegmentBySpace", func() {
 		When("the retrieving the space isolation segment succeeds", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.GetSpaceIsolationSegmentReturns(ccv3.Relationship{
+				fakeCloudControllerClient.GetSpaceIsolationSegmentReturns(resources.Relationship{
 					GUID: "some-iso-guid",
 				}, ccv3.Warnings{"I r warnings", "I are two warnings"},
 					nil,
@@ -316,7 +317,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 
 			When("retrieving the isolation segment succeeds", func() {
 				BeforeEach(func() {
-					fakeCloudControllerClient.GetIsolationSegmentReturns(ccv3.IsolationSegment{
+					fakeCloudControllerClient.GetIsolationSegmentReturns(resources.IsolationSegment{
 						Name: "some-iso",
 					},
 						ccv3.Warnings{"iso-warnings-1", "iso-warnings-2"}, nil)
@@ -341,7 +342,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 				var expectedErr error
 				BeforeEach(func() {
 					expectedErr = errors.New("foo bar")
-					fakeCloudControllerClient.GetIsolationSegmentReturns(ccv3.IsolationSegment{}, ccv3.Warnings{"iso-warnings-1", "iso-warnings-2"}, expectedErr)
+					fakeCloudControllerClient.GetIsolationSegmentReturns(resources.IsolationSegment{}, ccv3.Warnings{"iso-warnings-1", "iso-warnings-2"}, expectedErr)
 				})
 
 				It("returns the warnings and error", func() {
@@ -353,7 +354,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 
 			When("the space does not have an isolation segment", func() {
 				BeforeEach(func() {
-					fakeCloudControllerClient.GetSpaceIsolationSegmentReturns(ccv3.Relationship{
+					fakeCloudControllerClient.GetSpaceIsolationSegmentReturns(resources.Relationship{
 						GUID: "",
 					}, ccv3.Warnings{"warning-1", "warning-2"},
 						nil,
@@ -372,7 +373,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 					When("retrieving the isolation segment is successful", func() {
 						BeforeEach(func() {
 							fakeCloudControllerClient.GetIsolationSegmentReturns(
-								ccv3.IsolationSegment{
+								resources.IsolationSegment{
 									Name: "some-iso-segment",
 									GUID: "some-org-default-isolation-segment-guid",
 								},
@@ -401,7 +402,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 			var expectedErr error
 			BeforeEach(func() {
 				expectedErr = errors.New("foo bar")
-				fakeCloudControllerClient.GetSpaceIsolationSegmentReturns(ccv3.Relationship{}, ccv3.Warnings{"I r warnings", "I are two warnings"}, expectedErr)
+				fakeCloudControllerClient.GetSpaceIsolationSegmentReturns(resources.Relationship{}, ccv3.Warnings{"I r warnings", "I are two warnings"}, expectedErr)
 			})
 
 			It("returns the warnings and error", func() {
@@ -415,7 +416,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 	Describe("GetIsolationSegmentByName", func() {
 		When("the isolation segment exists", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.GetIsolationSegmentsReturns([]ccv3.IsolationSegment{
+				fakeCloudControllerClient.GetIsolationSegmentsReturns([]resources.IsolationSegment{
 					{
 						GUID: "some-iso-guid",
 						Name: "some-iso-seg",
@@ -472,7 +473,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 		When("there are isolation segments entitled to this org", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.GetIsolationSegmentsReturns(
-					[]ccv3.IsolationSegment{
+					[]resources.IsolationSegment{
 						{Name: "some-iso-seg-1"},
 						{Name: "some-iso-seg-2"},
 					},
@@ -493,7 +494,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 
 				Expect(fakeCloudControllerClient.GetIsolationSegmentsCallCount()).To(Equal(1))
 				Expect(fakeCloudControllerClient.GetIsolationSegmentsArgsForCall(0)).To(ConsistOf(
-					ccv3.Query{Key: ccv3.OrganizationGUIDFilter, Values: []string{"some-org-guid"}},
+					ccv3.Query{Key: resources.OrganizationGUIDFilter, Values: []string{"some-org-guid"}},
 				))
 			})
 		})
@@ -504,7 +505,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 			BeforeEach(func() {
 				expectedError = errors.New("some cc error")
 				fakeCloudControllerClient.GetIsolationSegmentsReturns(
-					[]ccv3.IsolationSegment{},
+					[]resources.IsolationSegment{},
 					ccv3.Warnings{"get isolation segments warning"},
 					expectedError)
 			})
@@ -520,7 +521,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 	Describe("GetIsolationSegmentSummaries", func() {
 		When("getting isolation segments succeeds", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.GetIsolationSegmentsReturns([]ccv3.IsolationSegment{
+				fakeCloudControllerClient.GetIsolationSegmentsReturns([]resources.IsolationSegment{
 					{
 						Name: "iso-seg-1",
 						GUID: "iso-guid-1",
@@ -534,8 +535,8 @@ var _ = Describe("Isolation Segment Actions", func() {
 
 			When("getting entitled organizations succeeds", func() {
 				BeforeEach(func() {
-					fakeCloudControllerClient.GetIsolationSegmentOrganizationsReturnsOnCall(0, []ccv3.Organization{}, ccv3.Warnings{"get-entitled-orgs-warning-1"}, nil)
-					fakeCloudControllerClient.GetIsolationSegmentOrganizationsReturnsOnCall(1, []ccv3.Organization{
+					fakeCloudControllerClient.GetIsolationSegmentOrganizationsReturnsOnCall(0, []resources.Organization{}, ccv3.Warnings{"get-entitled-orgs-warning-1"}, nil)
+					fakeCloudControllerClient.GetIsolationSegmentOrganizationsReturnsOnCall(1, []resources.Organization{
 						{
 							Name: "iso-2-org-1",
 							GUID: "iso-2-org-guid-1",
@@ -605,7 +606,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 	Describe("DeleteIsolationSegmentOrganizationByName", func() {
 		When("the isolation segment exists", func() {
 			BeforeEach(func() {
-				fakeCloudControllerClient.GetIsolationSegmentsReturns([]ccv3.IsolationSegment{
+				fakeCloudControllerClient.GetIsolationSegmentsReturns([]resources.IsolationSegment{
 					{
 						Name: "iso-1",
 						GUID: "iso-1-guid-1",
@@ -615,7 +616,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 
 			When("the organization exists", func() {
 				BeforeEach(func() {
-					fakeCloudControllerClient.GetOrganizationsReturns([]ccv3.Organization{
+					fakeCloudControllerClient.GetOrganizationsReturns([]resources.Organization{
 						{
 							Name: "org-1",
 							GUID: "org-guid-1",
@@ -691,7 +692,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 		When("the assignment is successful", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.UpdateOrganizationDefaultIsolationSegmentRelationshipReturns(
-					ccv3.Relationship{GUID: "some-guid"},
+					resources.Relationship{GUID: "some-guid"},
 					ccv3.Warnings{"warning-1", "warning-2"},
 					nil,
 				)
@@ -713,7 +714,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 		When("the assignment fails", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.UpdateOrganizationDefaultIsolationSegmentRelationshipReturns(
-					ccv3.Relationship{GUID: "some-guid"},
+					resources.Relationship{GUID: "some-guid"},
 					ccv3.Warnings{"warning-1", "warning-2"},
 					errors.New("some-error"),
 				)
@@ -732,7 +733,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 		When("the assignment is successful", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.UpdateOrganizationDefaultIsolationSegmentRelationshipReturns(
-					ccv3.Relationship{GUID: "some-guid"},
+					resources.Relationship{GUID: "some-guid"},
 					ccv3.Warnings{"warning-1", "warning-2"},
 					nil,
 				)
@@ -754,7 +755,7 @@ var _ = Describe("Isolation Segment Actions", func() {
 		When("the assignment fails", func() {
 			BeforeEach(func() {
 				fakeCloudControllerClient.UpdateOrganizationDefaultIsolationSegmentRelationshipReturns(
-					ccv3.Relationship{GUID: "some-guid"},
+					resources.Relationship{GUID: "some-guid"},
 					ccv3.Warnings{"warning-1", "warning-2"},
 					errors.New("some-error"),
 				)

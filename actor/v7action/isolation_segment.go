@@ -149,7 +149,7 @@ func (actor Actor) GetIsolationSegmentSummaries() ([]IsolationSegmentSummary, Wa
 
 func (actor Actor) GetIsolationSegmentsByOrganization(orgGUID string) ([]IsolationSegment, Warnings, error) {
 	ccv3IsolationSegments, warnings, err := actor.CloudControllerClient.GetIsolationSegments(
-		ccv3.Query{Key: ccv3.OrganizationGUIDFilter, Values: []string{orgGUID}},
+		ccv3.Query{Key: resources.OrganizationGUIDFilter, Values: []string{orgGUID}},
 	)
 	if err != nil {
 		return []IsolationSegment{}, Warnings(warnings), err

@@ -1,9 +1,10 @@
 package v7action_test
 
 import (
-	"code.cloudfoundry.org/cli/resources"
 	"errors"
 	"time"
+
+	"code.cloudfoundry.org/cli/resources"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	. "code.cloudfoundry.org/cli/actor/v7action"

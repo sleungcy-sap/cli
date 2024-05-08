@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -25,7 +26,7 @@ func (actor Actor) StagePackage(packageGUID string, appName string) (<-chan Drop
 		defer close(warningsStream)
 		defer close(errorStream)
 
-		build := ccv3.Build{PackageGUID: packageGUID}
+		build := resources.Build{PackageGUID: packageGUID}
 		build, allWarnings, err := actor.CloudControllerClient.CreateBuild(build)
 		warningsStream <- Warnings(allWarnings)
 
@@ -61,7 +62,7 @@ func (actor Actor) StagePackage(packageGUID string, appName string) (<-chan Drop
 				// 	return
 				// }
 
-				ccv3Droplet := ccv3.Droplet{
+				ccv3Droplet := resources.Droplet{
 					GUID:      build.DropletGUID,
 					State:     constant.DropletState(build.State),
 					CreatedAt: build.CreatedAt,
@@ -81,7 +82,7 @@ func (actor Actor) StagePackage(packageGUID string, appName string) (<-chan Drop
 func (actor Actor) StageApplicationPackage(packageGUID string) (Build, Warnings, error) {
 	var allWarnings Warnings
 
-	build := ccv3.Build{PackageGUID: packageGUID}
+	build := resources.Build{PackageGUID: packageGUID}
 	build, warnings, err := actor.CloudControllerClient.CreateBuild(build)
 	log.Debug("created build")
 	allWarnings = append(allWarnings, warnings...)

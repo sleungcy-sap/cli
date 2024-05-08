@@ -6,6 +6,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccversion"
+	"code.cloudfoundry.org/cli/resources"
 )
 
 type Space struct {
@@ -49,7 +50,7 @@ func (actor Actor) ResetSpaceIsolationSegment(orgGUID string, spaceGUID string) 
 func (actor Actor) GetSpaceByNameAndOrganization(spaceName string, orgGUID string) (Space, Warnings, error) {
 	spaces, warnings, err := actor.CloudControllerClient.GetSpaces(
 		ccv3.Query{Key: ccv3.NameFilter, Values: []string{spaceName}},
-		ccv3.Query{Key: ccv3.OrganizationGUIDFilter, Values: []string{orgGUID}},
+		ccv3.Query{Key: resources.OrganizationGUIDFilter, Values: []string{orgGUID}},
 	)
 
 	if err != nil {
@@ -81,8 +82,8 @@ func (actor Actor) GetSpacesByGUIDs(guids ...string) ([]Space, Warnings, error) 
 		return []Space{}, Warnings(warnings), err
 	}
 
-	var filteredSpaces []ccv3.Space
-	guidToSpaces := map[string]ccv3.Space{}
+	var filteredSpaces []resources.Space
+	guidToSpaces := map[string]resources.Space{}
 	for _, space := range spaces {
 		guidToSpaces[space.GUID] = space
 	}
@@ -100,7 +101,7 @@ func (actor Actor) GetSpacesByGUIDs(guids ...string) ([]Space, Warnings, error) 
 	return v3Spaces, Warnings(warnings), nil
 }
 
-func (actor Actor) convertCCToActorSpace(space ccv3.Space) Space {
+func (actor Actor) convertCCToActorSpace(space resources.Space) Space {
 	return Space{
 		GUID:             space.GUID,
 		Name:             space.Name,

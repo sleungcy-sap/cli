@@ -2,11 +2,18 @@ package ccv2
 
 import (
 	"bytes"
+	"encoding/json"
+
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/internal"
-	"encoding/json"
 )
+
+// OrganizationQuota is the definition of a quota for an organization.
+type OrganizationQuota struct {
+	GUID string
+	Name string
+}
 
 // GetOrganizationQuota returns an Organization Quota associated with the
 // provided GUID.
