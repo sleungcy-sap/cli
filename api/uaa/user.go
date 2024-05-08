@@ -248,8 +248,7 @@ func (client *Client) ChangeUserPassword(guid, oldPass, newPass string) error {
 		return err
 	}
 
-	response := Response{
-	}
+	response := Response{}
 
 	err = client.connection.Make(request, &response)
 	if err != nil {

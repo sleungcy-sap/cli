@@ -144,7 +144,7 @@
 [[projects]]
   branch = "master"
   digest = "1:d460dfec5d2bb8a053b9145d1f56b2373a1bd0bdaedf8f12ae5bab66da97370a"
-  name = "github.com/cloudfoundry/cli-plugin-repo"
+  name = "code.cloudfoundry.org/cli-plugin-repo"
   packages = ["web"]
   pruneopts = "NUT"
   revision = "e3bb94a32f8ffc29d1040354d8f081b07dc6e489"
@@ -579,7 +579,7 @@
     "github.com/SermoDigital/jose/jwt",
     "github.com/blang/semver",
     "github.com/cloudfoundry/bosh-cli/director/template",
-    "github.com/cloudfoundry/cli-plugin-repo/web",
+    "code.cloudfoundry.org/cli-plugin-repo/web",
     "github.com/cloudfoundry/noaa",
     "github.com/cloudfoundry/noaa/consumer",
     "github.com/cloudfoundry/noaa/errors",

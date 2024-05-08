@@ -298,8 +298,7 @@ func (client *Client) DeleteApplication(guid string) (Warnings, error) {
 		return nil, err
 	}
 
-	response := cloudcontroller.Response{
-	}
+	response := cloudcontroller.Response{}
 
 	err = client.connection.Make(request, &response)
 	return response.Warnings, err

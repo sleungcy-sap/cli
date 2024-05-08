@@ -16,6 +16,7 @@ const (
 	ResourceMatches           = "resource_matches"
 	ServiceInstancesResource  = "service_instances"
 	SpacesResource            = "spaces"
+	SidecarResource           = "sidecars"
 	StacksResource            = "stacks"
 	TasksResource             = "tasks"
 

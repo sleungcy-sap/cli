@@ -121,8 +121,7 @@ func (client *Client) AddMemberByName(userGuid, origin, groupName string) error 
 			return err
 		}
 
-		response := Response{
-		}
+		response := Response{}
 
 		err = client.connection.Make(request, &response)
 		if err != nil {
@@ -151,8 +150,7 @@ func (client *Client) DeleteMemberByName(userGuid, groupName string) error {
 			return err
 		}
 
-		response := Response{
-		}
+		response := Response{}
 		err = client.connection.Make(request, &response)
 		if err != nil {
 			return err

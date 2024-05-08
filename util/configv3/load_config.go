@@ -44,14 +44,14 @@ func (c *Config) loadPluginConfig() error {
 //
 // The '.cf' directory will be read in one of the following locations on UNIX
 // Systems:
-//   1. $CF_HOME/.cf if $CF_HOME is set
-//   2. $HOME/.cf as the default
+//  1. $CF_HOME/.cf if $CF_HOME is set
+//  2. $HOME/.cf as the default
 //
 // The '.cf' directory will be read in one of the following locations on
 // Windows Systems:
-//   1. CF_HOME\.cf if CF_HOME is set
-//   2. HOMEDRIVE\HOMEPATH\.cf if HOMEDRIVE or HOMEPATH is set
-//   3. USERPROFILE\.cf as the default
+//  1. CF_HOME\.cf if CF_HOME is set
+//  2. HOMEDRIVE\HOMEPATH\.cf if HOMEDRIVE or HOMEPATH is set
+//  3. USERPROFILE\.cf as the default
 func LoadConfig(flags ...FlagOverride) (*Config, error) {
 	err := removeOldTempConfigFiles()
 	if err != nil {

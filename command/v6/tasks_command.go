@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/cli/util/ui"
 )
 
-//These constants are only for filling in translations.
+// These constants are only for filling in translations.
 const (
 	runningState   = "RUNNING"
 	cancelingState = "CANCELING"

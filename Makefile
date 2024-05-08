@@ -219,6 +219,9 @@ rsrc.syso:
 
 test: units ## (synonym for units)
 
+sam:
+	cd api/cloudcontroller/ccv3; ginkgo -focus 'Sidecars.*'
+
 units: format vet lint build golangci-lint ## Ensure the code looks good, compiles, and passes unit tests
 	ginkgo -r -p -randomizeAllSpecs -randomizeSuites \
 		$(PACKAGES)

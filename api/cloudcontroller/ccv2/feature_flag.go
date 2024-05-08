@@ -57,8 +57,7 @@ func (client Client) SetConfigFeatureFlags(ff FeatureFlag) (Warnings, error) {
 		return nil, err
 	}
 
-	response := cloudcontroller.Response{
-	}
+	response := cloudcontroller.Response{}
 
 	err = client.connection.Make(request, &response)
 	return response.Warnings, err

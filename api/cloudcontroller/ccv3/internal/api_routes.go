@@ -17,6 +17,7 @@ const (
 	DeleteIsolationSegmentRelationshipOrganizationRequest       = "DeleteIsolationSegmentRelationshipOrganization"
 	DeleteIsolationSegmentRequest                               = "DeleteIsolationSegment"
 	DeleteServiceInstanceRelationshipsSharedSpaceRequest        = "DeleteServiceInstanceRelationshipsSharedSpace"
+	DeleteSidecarRequest                                        = "DeleteSidecar"
 	GetApplicationDropletCurrentRequest                         = "GetApplicationDropletCurrent"
 	GetApplicationEnvRequest                                    = "GetApplicationEnv"
 	GetApplicationManifestRequest                               = "GetApplicationManifest"
@@ -24,6 +25,7 @@ const (
 	GetApplicationProcessRequest                                = "GetApplicationProcess"
 	GetApplicationsRequest                                      = "GetApplications"
 	GetApplicationTasksRequest                                  = "GetApplicationTasks"
+	GetApplicationSidecarsRequest                               = "GetApplicationSidecars"
 	GetBuildpacksRequest                                        = "GetBuildpacks"
 	GetBuildRequest                                             = "GetBuild"
 	GetDeploymentRequest                                        = "GetDeployment"
@@ -42,10 +44,12 @@ const (
 	GetPackageRequest                                           = "GetPackage"
 	GetPackagesRequest                                          = "GetPackages"
 	GetProcessStatsRequest                                      = "GetProcessStats"
+	GetProcessSidecarsRequest                                   = "GetProcessSidecars"
 	GetServiceInstancesRequest                                  = "GetServiceInstances"
 	GetSpaceRelationshipIsolationSegmentRequest                 = "GetSpaceRelationshipIsolationSegment"
 	GetSpacesRequest                                            = "GetSpaces"
 	GetStacksRequest                                            = "GetStacks"
+	GetSidecarRequest                                           = "GetSidecar"
 	PatchApplicationCurrentDropletRequest                       = "PatchApplicationCurrentDroplet"
 	PatchApplicationEnvironmentVariablesRequest                 = "PatchApplicationEnvironmentVariables"
 	PatchApplicationRequest                                     = "PatchApplication"
@@ -55,6 +59,7 @@ const (
 	PatchOrganizationRelationshipDefaultIsolationSegmentRequest = "PatchOrganizationRelationshipDefaultIsolationSegment"
 	PatchProcessRequest                                         = "PatchProcess"
 	PatchSpaceRelationshipIsolationSegmentRequest               = "PatchSpaceRelationshipIsolationSegment"
+	PatchSidecarRequest                                         = "PatchSidecar"
 	PostApplicationActionApplyManifest                          = "PostApplicationActionApplyM"
 	PostApplicationActionRestartRequest                         = "PostApplicationActionRestart"
 	PostApplicationActionStartRequest                           = "PostApplicationActionStart"
@@ -63,6 +68,7 @@ const (
 	PostApplicationDeploymentRequest                            = "PostApplicationDeployment"
 	PostApplicationProcessActionScaleRequest                    = "PostApplicationProcessActionScale"
 	PostApplicationRequest                                      = "PostApplication"
+	PostApplicationSidecarRequest                               = "PostApplicationSidecar"
 	PostApplicationTasksRequest                                 = "PostApplicationTasks"
 	PostBuildRequest                                            = "PostBuild"
 	PostBuildpackBitsRequest                                    = "PostBuildpackBits"
@@ -187,6 +193,7 @@ var APIRoutes = []Route{
 	// v3 process add missing endpoints
 	{Resource: ProcessesResource, Path: "/", Method: http.MethodGet, Name: GetProcessesRequest},
 	{Resource: ProcessesResource, Path: "/:process_guid", Method: http.MethodGet, Name: GetProcessRequest},
+	{Resource: ProcessesResource, Path: "/:process_guid/sidecars", Method: http.MethodGet, Name: GetProcessSidecarsRequest},
 
 	{Resource: RoutesResource, Path: "/:route_guid/destinations/:destination_guid", Method: http.MethodDelete, Name: UnmapRouteRequest},
 	{Resource: RoutesResource, Path: "/:route_guid/destinations", Method: http.MethodPost, Name: MapRouteRequest},
@@ -260,6 +267,8 @@ var APIRoutes = []Route{
 	{Resource: AppsResource, Path: "/:app_guid/relationships/current_droplet", Method: http.MethodPatch, Name: PatchApplicationCurrentDropletRequest},
 	{Resource: AppsResource, Path: "/:app_guid/tasks", Method: http.MethodGet, Name: GetApplicationTasksRequest},
 	{Resource: AppsResource, Path: "/:app_guid/tasks", Method: http.MethodPost, Name: PostApplicationTasksRequest},
+	{Resource: AppsResource, Path: "/:app_guid/sidecars", Method: http.MethodGet, Name: GetApplicationSidecarsRequest},
+	{Resource: AppsResource, Path: "/:app_guid/sidecars", Method: http.MethodPost, Name: PostApplicationSidecarRequest},
 	{Resource: BuildpacksResource, Path: "/", Method: http.MethodGet, Name: GetBuildpacksRequest},
 	{Resource: BuildpacksResource, Path: "/", Method: http.MethodPost, Name: PostBuildpackRequest},
 	{Resource: BuildpacksResource, Path: "/:buildpack_guid", Method: http.MethodPatch, Name: PatchBuildpackRequest},
@@ -306,6 +315,9 @@ var APIRoutes = []Route{
 	{Resource: SpacesResource, Path: "/:space_guid/relationships/isolation_segment", Method: http.MethodGet, Name: GetSpaceRelationshipIsolationSegmentRequest},
 	{Resource: SpacesResource, Path: "/:space_guid/relationships/isolation_segment", Method: http.MethodPatch, Name: PatchSpaceRelationshipIsolationSegmentRequest},
 	{Resource: SpacesResource, Path: "/:space_guid/actions/apply_manifest", Method: http.MethodPost, Name: PostSpaceActionApplyManifestRequest},
+	{Resource: SidecarResource, Path: "/:sidecar_guid", Method: http.MethodGet, Name: GetSidecarRequest},
+	{Resource: SidecarResource, Path: "/:sidecar_guid", Method: http.MethodPatch, Name: PatchSidecarRequest},
+	{Resource: SidecarResource, Path: "/:sidecar_guid", Method: http.MethodDelete, Name: DeleteSidecarRequest},
 	{Resource: StacksResource, Path: "/", Method: http.MethodGet, Name: GetStacksRequest},
 	{Resource: TasksResource, Path: "/:task_guid/cancel", Method: http.MethodPut, Name: PutTaskCancelRequest},
 }

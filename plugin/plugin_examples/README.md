@@ -27,7 +27,7 @@ Our current plugin architecture currently requires a review and possible large o
 This README discusses how to develop a cf CLI plugin.
 For user-focused documentation, see [Using the cf CLI](http://docs.cloudfoundry.org/cf-cli/use-cli-plugins.html).
 
-*If you wish to share your plugin with the community, see [here](http://github.com/cloudfoundry/cli-plugin-repo) for plugin submission.
+*If you wish to share your plugin with the community, see [here](http://code.cloudfoundry.org/cli-plugin-repo) for plugin submission.
 
 
 ## Development Requirements

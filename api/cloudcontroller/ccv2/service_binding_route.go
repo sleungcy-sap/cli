@@ -89,8 +89,7 @@ func (client *Client) CreateServiceBindingRoute(serviceID, routeID string, param
 		return nil, err
 	}
 
-	response := cloudcontroller.Response{
-	}
+	response := cloudcontroller.Response{}
 
 	err = client.connection.Make(request, &response)
 	return response.Warnings, err
@@ -120,8 +119,7 @@ func (client *Client) deleteServiceBindingRouteRequest(requestName string, servi
 		return nil, err
 	}
 
-	response := cloudcontroller.Response{
-	}
+	response := cloudcontroller.Response{}
 
 	err = client.connection.Make(request, &response)
 	return response.Warnings, err
