@@ -29,64 +29,56 @@ var _ = Describe("Sidecars", func() {
 		)
 
 		When("sidecar exist", func() {
-			BeforeEach(func() {
-				response1 := `{
-					"guid": "some-sidecar-guid",
-					"name": "auth-sidecar",
-					"command": "bundle exec rackup",
-					"process_types": ["web", "worker"],
-					"memory_in_mb": 300,
-					"origin": "user",
-					"relationships": {
-					  "app": {
-						"data": {
-						  "guid": "some-app-guid"
-						}
-					  }
-					},
-					"created_at": "2017-02-01T01:33:58Z",
-					"updated_at": "2017-02-01T01:33:58Z"
-				  }
-				  `
-				response2 := `{
-					"errors": [
-					  {
-						"code": 10010,
-						"detail": "Sidecar not found",
-						"title": "CF-ResourceNotFound"
-					  }
-					]
-				  }`
-
+			It("finds a sidecar which exists", func() {
 				server.AppendHandlers(
 					CombineHandlers(
 						VerifyRequest(http.MethodGet, "/v3/sidecars/some-sidecar-guid"),
-						RespondWith(http.StatusOK, response1),
+						RespondWith(http.StatusOK, `{
+							"guid": "some-sidecar-guid",
+							"name": "auth-sidecar",
+							"command": "bundle exec rackup",
+							"process_types": ["web", "worker"],
+							"memory_in_mb": 300,
+							"origin": "user",
+							"relationships": {
+							  "app": {
+								"data": {
+								  "guid": "some-app-guid"
+								}
+							  }
+							},
+							"created_at": "2017-02-01T01:33:58Z",
+							"updated_at": "2017-02-01T01:33:58Z"
+						  }
+						  `),
 					),
 				)
-				server.AppendHandlers(
-					CombineHandlers(
-						VerifyRequest(http.MethodGet, "/v3/sidecars/some-missing-sidecar-guid"),
-						RespondWith(http.StatusNotFound, response2),
-					),
-				)
-			})
-
-			It("finds a sidecar which exists", func() {
-
 				sidecar, _, executeErr = client.GetSidecar("some-sidecar-guid")
 				Expect(executeErr).NotTo(HaveOccurred())
 
 				Expect(sidecar.GUID).To(Equal("some-sidecar-guid"))
 				Expect(sidecar.Name).To(Equal("auth-sidecar"))
-				Expect(sidecar.Command).To(Equal("bundle exec rackup"))
+				Expect(sidecar.Command.Value).To(Equal("bundle exec rackup"))
 				Expect(sidecar.ProcessTypes).To(Equal([]string{"web", "worker"}))
-				Expect(sidecar.MemoryInMB).To(Equal(300))
-				Expect(sidecar.Origin).To(Equal("user"))
+				Expect(*sidecar.MemoryInMB).To(Equal(300))
+				Expect(*sidecar.Origin).To(Equal("user"))
 				Expect(sidecar.Relationships[constant.RelationshipTypeApplication].GUID).To(Equal("some-app-guid"))
 			})
 			It("cannot find a sidecar", func() {
-
+				server.AppendHandlers(
+					CombineHandlers(
+						VerifyRequest(http.MethodGet, "/v3/sidecars/some-missing-sidecar-guid"),
+						RespondWith(http.StatusNotFound, `{
+							"errors": [
+							  {
+								"code": 10010,
+								"detail": "Sidecar not found",
+								"title": "CF-ResourceNotFound"
+							  }
+							]
+						  }`),
+					),
+				)
 				sidecar, _, executeErr = client.GetSidecar("some-missing-sidecar-guid")
 				Expect(executeErr).To(HaveOccurred())
 				Expect(sidecar).To(Equal(resources.Sidecar{}))
@@ -94,31 +86,27 @@ var _ = Describe("Sidecars", func() {
 		})
 
 		When("the cloud controller returns errors and warnings", func() {
-			BeforeEach(func() {
-				response := `{
-  "errors": [
-    {
-      "code": 10008,
-      "detail": "The request is semantically invalid: command presence",
-      "title": "CF-UnprocessableEntity"
-    },
-    {
-      "code": 10010,
-      "detail": "Space not found",
-      "title": "CF-SidecarNotFound"
-    }
-  ]
-}`
+			It("returns the error and all warnings", func() {
 				server.AppendHandlers(
 					CombineHandlers(
-						VerifyRequest(http.MethodGet, "/v3/sidecars/some-sidecar-guid"),
-						RespondWith(http.StatusTeapot, response, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
+						VerifyRequest(http.MethodGet, "/v3/sidecars/some-missing-sidecar-guid"),
+						RespondWith(http.StatusTeapot, `{
+								"errors": [
+								  {
+									"code": 10008,
+									"detail": "The request is semantically invalid: command presence",
+									"title": "CF-UnprocessableEntity"
+								  },
+								  {
+									"code": 10010,
+									"detail": "Space not found",
+									"title": "CF-SidecarNotFound"
+								  }
+								]
+							  }`, http.Header{"X-Cf-Warnings": {"this is a warning"}}),
 					),
 				)
-			})
-
-			It("returns the error and all warnings", func() {
-				sidecar, _, executeErr = client.GetSidecar("some-missing-sidecar-guid")
+				sidecar, warnings, executeErr = client.GetSidecar("some-missing-sidecar-guid")
 				Expect(executeErr).To(MatchError(ccerror.MultiError{
 					ResponseCode: http.StatusTeapot,
 					Errors: []ccerror.V3Error{
