@@ -1,10 +1,11 @@
 package ccv3_test
 
 import (
-	"code.cloudfoundry.org/cli/resources"
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"code.cloudfoundry.org/cli/resources"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	. "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
@@ -344,6 +345,13 @@ var _ = Describe("Process", func() {
 					"instances": 22,
 					"memory_in_mb": 32,
 					"disk_in_mb": 1024,
+					"relationships": {
+						"app": {
+								"data": {
+										"guid": "some-app-guid"
+								}
+						}
+					},
 					"health_check": {
 						"type": "http",
 						"data": {
@@ -367,6 +375,7 @@ var _ = Describe("Process", func() {
 				Expect(process).To(MatchAllFields(Fields{
 					"GUID":                         Equal("process-1-guid"),
 					"Type":                         Equal("some-type"),
+					"AppGUID":                      Equal("some-app-guid"),
 					"Command":                      Equal(types.FilteredString{IsSet: true, Value: "start-command-1"}),
 					"Instances":                    Equal(types.NullInt{Value: 22, IsSet: true}),
 					"MemoryInMB":                   Equal(types.NullUint64{Value: 32, IsSet: true}),

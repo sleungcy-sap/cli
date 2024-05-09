@@ -31,7 +31,7 @@ var _ = Describe("Cloud Controller Client", func() {
 		})
 
 		It("wraps the existing connection in the provided wrapper", func() {
-			client.WrapConnection(fakeConnectionWrapper)
+			client.Requester.WrapConnection(fakeConnectionWrapper)
 			Expect(fakeConnectionWrapper.WrapCallCount()).To(Equal(1))
 
 			client.GetApplicationTasks("fake-guid")

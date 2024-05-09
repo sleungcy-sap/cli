@@ -165,8 +165,8 @@ var _ = Describe("Spaces", func() {
 
 	Describe("UpdateSpace", func() {
 		var (
-			spaceToUpdate Space
-			updatedSpace  Space
+			spaceToUpdate resources.Space
+			updatedSpace  resources.Space
 			warnings      Warnings
 			executeErr    error
 		)
@@ -206,10 +206,10 @@ var _ = Describe("Spaces", func() {
 					),
 				)
 
-				spaceToUpdate = Space{
+				spaceToUpdate = resources.Space{
 					Name: "some-space-name",
 					GUID: "some-guid",
-					Metadata: &Metadata{
+					Metadata: &resources.Metadata{
 						Labels: map[string]types.NullString{
 							"k1": types.NewNullString("v1"),
 							"k2": types.NewNullString("v2"),

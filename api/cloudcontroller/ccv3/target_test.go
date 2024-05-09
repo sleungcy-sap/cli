@@ -132,7 +132,7 @@ var _ = Describe("Target", func() {
 			})
 
 			It("returns the same error", func() {
-				_, warnings, err := client.TargetCF(TargetSettings{
+				rootInfo, warnings, err := client.TargetCF(TargetSettings{
 					SkipSSLValidation: true,
 					URL:               server.URL(),
 				})
