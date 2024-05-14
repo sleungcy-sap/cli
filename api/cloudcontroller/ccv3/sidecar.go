@@ -37,10 +37,11 @@ func (client *Client) GetApplicationSidecars(appGuid string) ([]resources.Sideca
 	return sidecars, warnings, err
 }
 
-func (client *Client) CreateApplicationSidecar(sidecar resources.Sidecar) (resources.Sidecar, Warnings, error) {
+func (client *Client) CreateApplicationSidecar(appGUID string, sidecar resources.Sidecar) (resources.Sidecar, Warnings, error) {
 	var responseBody resources.Sidecar
 	_, warnings, err := client.MakeRequest(RequestParams{
 		RequestName:  internal.PostApplicationSidecarRequest,
+		URIParams:    internal.Params{"app_guid": appGUID},
 		RequestBody:  sidecar,
 		ResponseBody: &responseBody,
 	})

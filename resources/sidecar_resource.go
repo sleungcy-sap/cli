@@ -3,7 +3,7 @@ package resources
 import "code.cloudfoundry.org/cli/types"
 
 type Sidecar struct {
-	GUID          string               `json:"guid"`
+	GUID          string               `json:"guid,omitempty"`
 	Name          string               `json:"name"`
 	Command       types.FilteredString `json:"command"`
 	ProcessTypes  []string             `json:"process_types"`
