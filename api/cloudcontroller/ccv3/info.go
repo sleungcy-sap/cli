@@ -1,8 +1,9 @@
 package ccv3
 
 import (
-	"code.cloudfoundry.org/cli/resources"
 	"net/http"
+
+	"code.cloudfoundry.org/cli/resources"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
@@ -27,6 +28,8 @@ type InfoLinks struct {
 
 	// UAA is the link to the UAA API.
 	UAA resources.APILink `json:"uaa"`
+
+	Login resources.APILink `json:"login"`
 }
 
 // Info represents a GET response from the '/' endpoint of the cloud
